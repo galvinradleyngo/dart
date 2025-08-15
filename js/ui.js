@@ -1,6 +1,6 @@
 // ui.js
 import { loginWithGoogle, logout, watchAuth } from './auth.js';
-import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db } from './db.js';
+import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db } from './db.js?v=2';
 import { collection, getDocs, query, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app = document.getElementById('app');

@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -6,9 +7,13 @@ service cloud.firestore {
     function hasRole(uid, role) { return user(uid).data.roles[role] == true; }
 
     match /users/{uid} {
-      allow read: if isSignedIn() && request.auth.uid == uid || hasRole(request.auth.uid, 'pc');
+      // Users can read their own doc; PCs can read any user
+      allow read: if isSignedIn() && (request.auth.uid == uid || hasRole(request.auth.uid, 'pc'));
+      // Create own user doc on first sign-in
       allow create: if isSignedIn() && request.auth.uid == uid;
-      allow update: if isSignedIn() && hasRole(request.auth.uid, 'pc');
+      // Allow users to update their own doc (bootstrap the first PC)
+      // PCs can update any user doc.
+      allow update: if isSignedIn() && (request.auth.uid == uid || hasRole(request.auth.uid, 'pc'));
     }
 
     match /courses/{courseId} {
@@ -18,7 +23,7 @@ service cloud.firestore {
       match /tasks/{taskId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn() && hasRole(request.auth.uid,'pc');
-        allow update: if isSignedIn(); // tighten later
+        allow update: if isSignedIn(); // MVP; can tighten later
       }
     }
 
