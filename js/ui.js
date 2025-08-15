@@ -1,6 +1,6 @@
 // ui.js
 import { loginWithGoogle, logout, watchAuth } from './auth.js';
-import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db } from './db.js?v=3';
+import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db, listUsers, updateUserRoles, createInvite, listInvites, deleteInvite } from './db.js?v=4';
 import { collection, getDocs, query, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app = document.getElementById('app');
@@ -383,7 +383,7 @@ function openSectionsWizard(courseId){
 }
 
 async function seedSample(){
-  const { createSampleCourseSeed } = await import('./db.js?v=3');
+  
   const id = await createSampleCourseSeed();
   alert('Sample course created.');
   renderCourses();
@@ -393,7 +393,7 @@ async function seedSample(){
 async function openRoleManager(){
   const modal = document.getElementById('modal');
   modal.classList.add('open');
-  const { listUsers, updateUserRoles, createInvite, listInvites, deleteInvite } = await import('./db.js?v=3');
+  
   const users = await listUsers();
   const invites = await listInvites();
 
