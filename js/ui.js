@@ -1,6 +1,6 @@
 // ui.js
 import { loginWithGoogle, logout, watchAuth } from './auth.js';
-import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db, listUsers, updateUserRoles, createInvite, listInvites, deleteInvite } from './db.js?v=4';
+import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db, listUsers, updateUserRoles, createInvite, listInvites, deleteInvite, createSampleCourseSeed } from './db.js?v=5';
 import { collection, getDocs, query, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app = document.getElementById('app');
