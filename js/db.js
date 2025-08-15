@@ -186,3 +186,67 @@ export async function injectMediaChain(courseId, type, label){
   });
   await updates.commit();
 }
+
+
+// Compute a due date when a task is started (Yellow)
+export async function updateTaskStatus(courseId, task, status){
+  const ref = doc(db, 'courses', courseId, 'tasks', task.id);
+  const updates = { status };
+  const now = new Date();
+  // When moving to Yellow for the first time, set an initial due date
+  if(status === 'yellow' && !task.dueDate){
+    const target = (typeof task.targetDays === 'number' ? task.targetDays : 0);
+    const due = addDays(now, target, !!task.businessDays);
+    updates.dueDate = due;
+    updates.startedAt = now;
+  }
+  if(status === 'green'){
+    updates.completedAt = now;
+  }
+  await updateDoc(ref, updates);
+}
+
+
+// Grant more time and cascade to dependents
+export async function extendTask(courseId, task, extraDays, reasonNote){
+  const tasksCol = collection(db, 'courses', courseId, 'tasks');
+  const taskRef = doc(db, 'courses', courseId, 'tasks', task.id);
+
+  // 1) Extend the task's own due date (create one if it exists and status is yellow)
+  const now = new Date();
+  let baseDue = null;
+  if(task.dueDate && task.dueDate.seconds){
+    baseDue = new Date(task.dueDate.seconds * 1000);
+  }else if(task.status === 'yellow'){
+    // If it's in progress but no due date yet (edge case), set one from now
+    const target = (typeof task.targetDays === 'number' ? task.targetDays : 0);
+    baseDue = addDays(now, target, !!task.businessDays);
+  }
+
+  const newDue = baseDue ? addDays(baseDue, extraDays, !!task.businessDays) : null;
+
+  const updates = {
+    extensionRequestedAt: now,
+    extensionDays: extraDays,
+    extensionReason: reasonNote || ''
+  };
+  if(newDue) updates.dueDate = newDue;
+
+  await updateDoc(taskRef, updates);
+
+  // 2) Cascade: find dependents and add the same number of days to their due dates if they have one already
+  // We only shift tasks that are not completed (green)
+  const qSnap = await getDocs(query(tasksCol, where('dependencies', 'array-contains', task.id)));
+  const batch = writeBatch(db);
+  qSnap.forEach(d => {
+    const dep = d.data();
+    if(dep.status === 'green') return;
+    let depDue = null;
+    if(dep.dueDate && dep.dueDate.seconds){
+      depDue = new Date(dep.dueDate.seconds * 1000);
+      const shifted = addDays(depDue, extraDays, !!dep.businessDays);
+      batch.update(d.ref, { dueDate: shifted });
+    }
+  });
+  await batch.commit();
+}
