@@ -1,7 +1,7 @@
 // ui.js
 import { loginWithGoogle, logout, watchAuth } from './auth.js';
-import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db } from './db.js?v=2';
-import { collection, getDocs, query, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { seedTemplatesIfMissing, createCourse, createAnalyzeAndDesignTasks, createNarrativeSectionTasks, injectMediaChain, updateTaskStatus, extendTask, auth, db } from './db.js?v=3';
+import { collection, getDocs, query, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app = document.getElementById('app');
 
@@ -48,9 +48,11 @@ function pcDashboard(user){
     <div class="container vstack">
       <div class="card vstack">
         <div class="cardline">
-          <h2 style="margin:0">Portfolio</h2>
+          <h2 style="margin:0">Portfolio</h2><span class="badge">PC</span>
           <div class="hstack">
             <button class="btn" id="btn-seed">Seed Templates</button>
+            <button class="btn" id="btn-sample">Add Sample Course</button>
+            <button class="btn" id="btn-roles">Role Manager</button>
             <button class="btn primary" id="btn-new-course">New Course</button>
           </div>
         </div>
@@ -73,6 +75,8 @@ function pcDashboard(user){
     alert('Templates seeded/verified.');
   };
   document.getElementById('btn-new-course').onclick = () => openCourseWizard();
+  document.getElementById('btn-roles').onclick = () => openRoleManager();
+  document.getElementById('btn-sample').onclick = () => seedSample();
   renderCourses();
 }
 
@@ -91,12 +95,26 @@ async function renderCourses(){
           </div>
           <div class="chip">${(c.phase||'analyze').toUpperCase()}</div>
         </div>
-        <button class="btn" data-open-course="${c.id}">Open</button>
+        <div class="hstack">
+          <button class="btn" data-open-course="${c.id}">Open</button>
+          <button class="btn ghost" data-delete-course="${c.id}">Remove</button>
+        </div>
       </div>
     `;
   });
   grid.querySelectorAll('[data-open-course]').forEach(b=>{
     b.onclick = () => openCourse(b.getAttribute('data-open-course'));
+  });
+  grid.querySelectorAll('[data-delete-course]').forEach(b=>{
+    b.onclick = async ()=>{
+      if(!confirm('Delete this course? This cannot be undone.')) return;
+      const id = b.getAttribute('data-delete-course');
+      const tasksSnap = await getDocs(collection(db,'courses',id,'tasks'));
+      for(const d of tasksSnap.docs){ await deleteDoc(d.ref); }
+      await deleteDoc(doc(db,'courses',id));
+      toast('Course deleted.');
+      renderCourses();
+    };
   });
 }
 
@@ -150,7 +168,7 @@ async function openCourse(courseId){
         </div>
 
         <div class="section-title">Kanban Overview</div>
-        <div class="kb" id="kboard"></div>
+        <div class="kboard" id="kboard"></div>
 
         <div class="section-title">Tasks (All)</div>
         <div id="tasklist" class="vstack"></div>
@@ -176,11 +194,17 @@ function renderKanban(tasks){
   const kb = document.getElementById('kboard');
   kb.innerHTML='';
   cols.forEach(c=>{
-    const count = tasks.filter(t=>t.phase===c.key).length;
+    const columnCards = tasks.filter(t=>t.phase===c.key).map(t=>`
+      <div class="card">
+        <div class="hstack"><span class="dot ${t.status}"></span><b>${t.title}</b></div>
+        <div class="small">${t.role.toUpperCase()} • Target ${t.targetDays}d</div>
+      </div>
+    `).join('');
     kb.innerHTML += `
       <div class="kcol">
         <h4>${c.name}</h4>
-        <div class="count">${count} tasks</div>
+        <div class="count">${tasks.filter(t=>t.phase===c.key).length} tasks</div>
+        <div>${columnCards}</div>
       </div>`;
   });
 }
@@ -356,6 +380,123 @@ function openSectionsWizard(courseId){
     modal.classList.remove('open');
     openCourse(courseId);
   };
+}
+
+async function seedSample(){
+  const { createSampleCourseSeed } = await import('./db.js?v=3');
+  const id = await createSampleCourseSeed();
+  alert('Sample course created.');
+  renderCourses();
+  openCourse(id);
+}
+
+async function openRoleManager(){
+  const modal = document.getElementById('modal');
+  modal.classList.add('open');
+  const { listUsers, updateUserRoles, createInvite, listInvites, deleteInvite } = await import('./db.js?v=3');
+  const users = await listUsers();
+  const invites = await listInvites();
+
+  function rolesRow(r){
+    return `<div class="role-grid">
+      ${['pc','ld','sme','md','chair','dean'].map(k => `
+        <label><input type="checkbox" data-role="${k}" ${r && r[k]?'checked':''}> ${k.toUpperCase()}</label>
+      `).join('')}
+    </div>`;
+  }
+
+  modal.innerHTML = `
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Role Manager">
+    <header><b>Role Manager</b><button class="btn ghost" id="close">Close</button></header>
+    <section class="vstack">
+      <div class="card vstack">
+        <h3 style="margin:0">Invite by Email</h3>
+        <div class="hstack" style="gap:8px;flex-wrap:wrap">
+          <input id="invite-email" placeholder="name@school.edu" style="max-width:320px">
+          <span class="small">Assign roles:</span>
+        </div>
+        ${rolesRow({pc:false,ld:false,sme:false,md:false,chair:false,dean:false})}
+        <div class="hstack"><button class="btn primary" id="send-invite">Create Invite</button></div>
+        <p class="small">They’ll receive instructions to open the DART link and sign in with Google using this email. Roles apply automatically.</p>
+      </div>
+
+      <div class="card vstack">
+        <h3 style="margin:0">Pending Invites</h3>
+        <div id="inv-list">${invites.filter(i=>i.status==='pending').map(i=>`
+          <div class="cardline">
+            <div>${i.email} <span class="small">(${Object.keys(i.roles||{}).filter(k=>i.roles[k]).map(k=>k.toUpperCase()).join(', ')||'No roles'})</span></div>
+            <div class="hstack">
+              <button class="chip" data-copy="${i.email}">Copy email</button>
+              <button class="chip" data-mailto="${i.email}">Send email…</button>
+              <button class="chip" data-revoke="${i.id}">Revoke</button>
+            </div>
+          </div>
+        `).join('')}
+        </div>
+      </div>
+
+      <div class="card vstack">
+        <h3 style="margin:0">Existing Users</h3>
+        <table class="table">
+          <thead><tr><th>Email</th><th>Display</th><th>Roles</th><th></th></tr></thead>
+          <tbody id="user-rows">
+            ${users.map(u=>`
+              <tr>
+                <td>${u.email||''}</td>
+                <td>${u.displayName||''}</td>
+                <td>${rolesRow(u.roles||{})}</td>
+                <td><button class="btn" data-save="${u.id}">Save</button></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>`;
+
+  document.getElementById('close').onclick = ()=> modal.classList.remove('open');
+
+  modal.querySelectorAll('[data-save]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const tr = btn.closest('tr');
+      const roles = {};
+      tr.querySelectorAll('input[type="checkbox"][data-role]').forEach(cb=> roles[cb.getAttribute('data-role')] = cb.checked );
+      await updateUserRoles(btn.getAttribute('data-save'), roles);
+      toast('Roles updated.');
+    };
+  });
+
+  document.getElementById('send-invite').onclick = async ()=>{
+    const email = document.getElementById('invite-email').value.trim();
+    if(!email){ alert('Enter an email'); return; }
+    const grid = modal.querySelector('.role-grid');
+    const roles = {}; grid.querySelectorAll('input[data-role]').forEach(cb=> roles[cb.getAttribute('data-role')] = cb.checked );
+    await createInvite(email, roles, 'pc');
+    toast('Invite created. Send them an email with your DART link.');
+    openRoleManager();
+  };
+
+  modal.querySelectorAll('[data-copy]').forEach(btn=>{
+    btn.onclick = ()=> { navigator.clipboard.writeText(btn.getAttribute('data-copy')); toast('Email copied'); };
+  });
+  modal.querySelectorAll('[data-mailto]').forEach(btn=>{
+    btn.onclick = ()=> {
+      const email = btn.getAttribute('data-mailto');
+      const subj = encodeURIComponent('You are invited to DART');
+      const body = encodeURIComponent('Hi!\n\nYou have been invited to DART (Design & Development Accountability & Responsibility Tracker).\n\n1) Open: '+location.href.split('#')[0]+'\n2) Click "Continue with Google" using this email: '+email+'\n3) You will see your assigned roles and tasks.\n\nThanks!');
+      location.href = 'mailto:'+email+'?subject='+subj+'&body='+body;
+    };
+  });
+  modal.querySelectorAll('[data-revoke]').forEach(btn=>{
+    btn.onclick = async ()=>{ await deleteInvite(btn.getAttribute('data-revoke')); toast('Invite revoked'); openRoleManager(); };
+  });
+}
+
+function toast(msg){
+  let t = document.getElementById('toast');
+  if(!t){ t = document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t);}
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 1800);
 }
 
 export function mountApp(){

@@ -7,7 +7,7 @@ export { auth, db };
 
 import {
   doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, addDoc,
-  query, where, getDocs, orderBy, writeBatch
+  query, where, getDocs, orderBy, writeBatch, deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 export function addDays(date, days, business=false){
@@ -37,6 +37,7 @@ export async function ensureUserDoc(user){
       createdAt: serverTimestamp()
     });
   }
+  // If no PC exists, auto-promote first user
   const q = await getDocs(query(collection(db,'users'), where('roles.pc','==', true)));
   if(q.empty){
     await updateDoc(uref, { 'roles.pc': true, status: 'active' });
@@ -134,12 +135,10 @@ export async function createNarrativeSectionTasks(courseId, moduleMap){
       const t3 = setTask('Revise Narrative', 'ld', 1);
       const t5 = setTask('Publish in Canvas', 'ld', 1);
 
-      // sequence
       batch.update(doc(db,'courses',courseId,'tasks', t2), { dependencies: [t1] });
       batch.update(doc(db,'courses',courseId,'tasks', t3), { dependencies: [t2] });
       batch.update(doc(db,'courses',courseId,'tasks', t5), { dependencies: [t3] });
 
-      // graphics after narrative
       const gId = doc(tasksCol).id;
       batch.set(doc(db,'courses',courseId,'tasks', gId), {
         id: gId, courseId, title: `In-course Graphic Design: ${base}`, role:'md',
@@ -147,7 +146,6 @@ export async function createNarrativeSectionTasks(courseId, moduleMap){
         dependencies:[t1], lane:'graphics', phase:'develop', createdAt: serverTimestamp()
       });
 
-      // QA by PC
       const qaId = doc(tasksCol).id;
       batch.set(doc(db,'courses',courseId,'tasks', qaId), {
         id: qaId, courseId, title: `QA – Canvas Narrative + Graphics: ${base}`, role:'pc',
@@ -187,16 +185,13 @@ export async function injectMediaChain(courseId, type, label){
   await updates.commit();
 }
 
-
-// Compute a due date when a task is started (Yellow)
+// Status & extensions
 export async function updateTaskStatus(courseId, task, status){
   const ref = doc(db, 'courses', courseId, 'tasks', task.id);
   const updates = { status };
   const now = new Date();
-  // When moving to Yellow for the first time, set an initial due date
   if(status === 'yellow' && !task.dueDate){
-    const target = (typeof task.targetDays === 'number' ? task.targetDays : 0);
-    const due = addDays(now, target, !!task.businessDays);
+    const due = addDays(now, Number(task.targetDays||0), !!task.businessDays);
     updates.dueDate = due;
     updates.startedAt = now;
   }
@@ -206,47 +201,96 @@ export async function updateTaskStatus(courseId, task, status){
   await updateDoc(ref, updates);
 }
 
-
-// Grant more time and cascade to dependents
 export async function extendTask(courseId, task, extraDays, reasonNote){
   const tasksCol = collection(db, 'courses', courseId, 'tasks');
   const taskRef = doc(db, 'courses', courseId, 'tasks', task.id);
-
-  // 1) Extend the task's own due date (create one if it exists and status is yellow)
   const now = new Date();
   let baseDue = null;
   if(task.dueDate && task.dueDate.seconds){
     baseDue = new Date(task.dueDate.seconds * 1000);
   }else if(task.status === 'yellow'){
-    // If it's in progress but no due date yet (edge case), set one from now
-    const target = (typeof task.targetDays === 'number' ? task.targetDays : 0);
-    baseDue = addDays(now, target, !!task.businessDays);
+    baseDue = addDays(now, Number(task.targetDays||0), !!task.businessDays);
   }
-
-  const newDue = baseDue ? addDays(baseDue, extraDays, !!task.businessDays) : null;
-
-  const updates = {
-    extensionRequestedAt: now,
-    extensionDays: extraDays,
-    extensionReason: reasonNote || ''
-  };
+  const newDue = baseDue ? addDays(baseDue, Number(extraDays||0), !!task.businessDays) : null;
+  const updates = { extensionRequestedAt: now, extensionDays: extraDays, extensionReason: reasonNote||'' };
   if(newDue) updates.dueDate = newDue;
-
   await updateDoc(taskRef, updates);
 
-  // 2) Cascade: find dependents and add the same number of days to their due dates if they have one already
-  // We only shift tasks that are not completed (green)
-  const qSnap = await getDocs(query(tasksCol, where('dependencies', 'array-contains', task.id)));
+  const depSnap = await getDocs(query(tasksCol, where('dependencies','array-contains', task.id)));
   const batch = writeBatch(db);
-  qSnap.forEach(d => {
+  depSnap.forEach(d=>{
     const dep = d.data();
-    if(dep.status === 'green') return;
-    let depDue = null;
+    if(dep.status==='green') return;
     if(dep.dueDate && dep.dueDate.seconds){
-      depDue = new Date(dep.dueDate.seconds * 1000);
-      const shifted = addDays(depDue, extraDays, !!dep.businessDays);
-      batch.update(d.ref, { dueDate: shifted });
+      const depDue = new Date(dep.dueDate.seconds*1000);
+      batch.update(d.ref, { dueDate: addDays(depDue, Number(extraDays||0), !!dep.businessDays) });
     }
   });
   await batch.commit();
+}
+
+// === INVITES & ROLE MANAGEMENT ===
+export async function listUsers(){
+  const qs = await getDocs(query(collection(db,'users')));
+  const arr = [];
+  qs.forEach(d=> arr.push({ id: d.id, ...d.data() }));
+  return arr;
+}
+
+export async function updateUserRoles(uid, roles){
+  await updateDoc(doc(db,'users',uid), { roles, status: 'active' });
+}
+
+export async function createInvite(email, roles, createdBy){
+  const id = doc(collection(db,'invites')).id;
+  await setDoc(doc(db,'invites', id), {
+    id, email, roles, createdBy, status:'pending', createdAt: serverTimestamp()
+  });
+  return id;
+}
+
+export async function listInvites(){
+  const qs = await getDocs(query(collection(db,'invites'), orderBy('createdAt','desc')));
+  const arr = []; qs.forEach(d=> arr.push(d.data())); return arr;
+}
+export async function deleteInvite(id){
+  await updateDoc(doc(db,'invites', id), { status:'revoked', revokedAt: serverTimestamp() });
+}
+
+export async function applyInvitesForUser(user){
+  const email = user.email || '';
+  const qs = await getDocs(query(collection(db,'invites'), where('email','==', email)));
+  const rolesUpd = {};
+  let found = false;
+  qs.forEach(d=>{
+    const inv = d.data();
+    if(inv.status==='pending'){
+      found = true;
+      Object.assign(rolesUpd, inv.roles || {});
+    }
+  });
+  if(found){
+    const uref = doc(db,'users', user.uid);
+    const u = await getDoc(uref);
+    const roles = { ...(u.exists()? u.data().roles || {} : {}), ...rolesUpd };
+    await updateDoc(uref, { roles, status: 'active', invitedAt: serverTimestamp() });
+    const qs2 = await getDocs(query(collection(db,'invites'), where('email','==', email)));
+    const batch = writeBatch(db);
+    qs2.forEach(d=>{
+      const inv = d.data();
+      if(inv.status==='pending'){
+        batch.update(d.ref, { status:'used', usedBy: user.uid, usedAt: serverTimestamp() });
+      }
+    });
+    await batch.commit();
+  }
+}
+
+// === SAMPLE COURSE ===
+export async function createSampleCourseSeed(){
+  const courseId = await createCourse({ code:'DART101', title:'Sample Course', ldUid:null, smeUid:null });
+  await createAnalyzeAndDesignTasks(courseId);
+  await createNarrativeSectionTasks(courseId, [{module:1, sections:3},{module:2, sections:3}]);
+  await injectMediaChain(courseId, 'video', 'Welcome Video');
+  return courseId;
 }
