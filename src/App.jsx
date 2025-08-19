@@ -673,7 +673,9 @@ function UserDashboard({ onBack, onOpenCourse }) {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
-  const gotoMonth = (offset) => setCalMonth((m) => new Date(m.getFullYear(), m.getMonth() + offset, 1));
+  const gotoMonth = (offset) => {
+    setCalMonth((m) => new Date(m.getFullYear(), m.getMonth() + offset, 1));
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
