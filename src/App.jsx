@@ -565,12 +565,116 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
 }
 
 // =====================================================
+// User Dashboard (NEW)
+// =====================================================
+function UserDashboard({ onBack, onOpenCourse }) {
+  const [courses, setCourses] = useState(() => loadCourses());
+  useEffect(() => {
+    const onStorage = () => setCourses(loadCourses());
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const members = useMemo(() => {
+    const map = new Map();
+    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
+    return Array.from(map.values());
+  }, [courses]);
+
+  const [userId, setUserId] = useState(() => members[0]?.id || '');
+  const user = members.find((m) => m.id === userId);
+
+  const myCourses = useMemo(() => courses.filter((c) => c.team.some((m) => m.id === userId)), [courses, userId]);
+  const myTasks = useMemo(() => {
+    const arr = [];
+    courses.forEach((c) => {
+      c.tasks.forEach((t) => {
+        if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
+      });
+    });
+    return arr.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+  }, [courses, userId]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><ArrowLeft size={16}/> Back</button>
+            <div className="min-w-0">
+              <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
+              {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
+              {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
+            </select>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <section>
+          <h2 className="text-lg font-semibold mb-2">My Courses</h2>
+          {myCourses.length === 0 ? (
+            <div className="text-sm text-black/60">No courses</div>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {myCourses.map((c) => {
+                const tCount = c.tasks.filter((t) => t.assigneeId === userId).length;
+                return (
+                  <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{c.course.name}</div>
+                      <div className="text-xs text-black/60 truncate">{tCount} task{tCount!==1?'s':''}</div>
+                    </div>
+                    <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold mb-2">My Tasks</h2>
+          {myTasks.length === 0 ? (
+            <div className="text-sm text-black/60">No tasks assigned.</div>
+          ) : (
+            <div className="space-y-2">
+              {myTasks.map((t) => (
+                <div key={t.id} className="rounded-xl border border-black/10 bg-white p-3 text-sm flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{t.title}</div>
+                    <div className="text-xs text-black/60 truncate">{t.courseName}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DuePill date={t.dueDate} status={t.status} />
+                    <button
+                      onClick={() => onOpenCourse(t.courseId)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
+                    >
+                      Open
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+// =====================================================
 // Courses Hub (NEW)
 // =====================================================
 function computeTotals(state) {
   const tasks = state.tasks || []; const total = tasks.length; const done = tasks.filter((t)=>t.status==="done").length; const inprog = tasks.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const pct = total ? Math.round((done/total)*100) : 0; const nextDue = tasks.filter((t)=>t.status!=="done" && t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate))[0]?.dueDate || null; return { total, done, inprog, todo, pct, nextDue };
 }
-function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse }) {
+function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => { const onStorage = () => setCourses(loadCourses()); window.addEventListener('storage', onStorage); return () => window.removeEventListener('storage', onStorage); }, []);
   const removeCourse = (id) => { const next = courses.filter((c)=>c.id!==id); saveCourses(next); setCourses(next); };
@@ -587,7 +691,11 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse }) {
               <div className="text-xs text-black/60 truncate">Courses Hub</div>
             </div>
           </div>
-          <div className="flex items-center gap-2"><button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button><button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button></div>
+          <div className="flex items-center gap-2">
+            <button onClick={onOpenUser} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Users size={16}/> User View</button>
+            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
+            <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
+          </div>
         </div>
       </header>
 
@@ -639,20 +747,27 @@ export default function PMApp() {
   const [view, setView] = useState(() => {
     const hasCourses = loadCourses().length > 0; return hasCourses ? "hub" : "hub"; // start at hub
   });
+  const [prevView, setPrevView] = useState("hub");
   const [currentCourseId, setCurrentCourseId] = useState(null);
-  const openCourse = (id) => { setCurrentCourseId(id); setView("course"); };
-  const editTemplate = () => { setCurrentCourseId("__TEMPLATE__"); setView("course"); };
+  const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
+  const openUser = () => { setPrevView(view); setView("user"); };
+  const editTemplate = () => { setPrevView(view); setCurrentCourseId("__TEMPLATE__"); setView("course"); };
   const addCourse = () => {
     const tpl = loadTemplate() || remapSeed(seed());
     const base = remapSeed(JSON.parse(JSON.stringify(tpl)));
     base.course = { ...base.course, id: uid(), name: base.course.name || "New Course" };
     const all = loadCourses(); const next = [...all, base]; saveCourses(next);
+    setPrevView(view);
     setCurrentCourseId(base.course.id); setView("course");
   };
-  const onBack = () => { setView("hub"); setCurrentCourseId(null); };
+  const onBack = () => { setView(prevView); setPrevView("hub"); setCurrentCourseId(null); };
 
   if (view === "hub") {
-    return <CoursesHub onOpenCourse={openCourse} onEditTemplate={editTemplate} onAddCourse={addCourse} />;
+    return <CoursesHub onOpenCourse={openCourse} onEditTemplate={editTemplate} onAddCourse={addCourse} onOpenUser={openUser} />;
+  }
+
+  if (view === "user") {
+    return <UserDashboard onBack={onBack} onOpenCourse={openCourse} />;
   }
 
   // Course mode
