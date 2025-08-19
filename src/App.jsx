@@ -669,7 +669,7 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
         if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
-    // Sort by actual due dates; tasks without a date fall to the end.
+    // Sort by actual due dates; undated tasks fall to the end.
     return arr.sort((a, b) => {
       const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
       const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
