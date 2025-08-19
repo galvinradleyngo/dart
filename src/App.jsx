@@ -234,11 +234,28 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
   const [view, setView] = useState("board");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
+  const [saveState, setSaveState] = useState('saved');
+  const firstRun = useRef(true);
 
   // Persist
   useEffect(() => { localStorage.setItem("healthPM:state:v8", JSON.stringify(state)); }, [state]);
   useEffect(() => { saveGlobalSchedule(state.schedule); }, [state.schedule]);
-  useEffect(() => { onStateChange?.(state); }, [state, onStateChange]);
+  useEffect(() => {
+    onStateChange?.(state);
+    if (firstRun.current) {
+      firstRun.current = false;
+    } else {
+      setSaveState('unsaved');
+    }
+  }, [state, onStateChange]);
+
+const handleSave = async () => {
+  setSaveState('saving');
+    onStateChange?.(state);
+    const all = loadCourses();
+    await saveCoursesRemote(all);
+    setSaveState('saved');
+  };
 
   // Listen for global schedule changes from other tabs
   useEffect(() => {
@@ -354,6 +371,8 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
           <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
+            <span className="text-xs text-black/60">{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}</span>
             <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
             <button onClick={() => saveTemplate(state)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
             <button onClick={() => { const tpl = loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
@@ -819,6 +838,15 @@ function computeTotals(state) {
 function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => { const onStorage = () => setCourses(loadCourses()); window.addEventListener('storage', onStorage); return () => window.removeEventListener('storage', onStorage); }, []);
+  useEffect(() => {
+    (async () => {
+      const remote = await loadCoursesRemote();
+      if (remote.length) {
+        saveCourses(remote);
+        setCourses(remote);
+      }
+    })();
+  }, []);
   const removeCourse = (id) => { const next = courses.filter((c)=>c.id!==id); saveCourses(next); setCourses(next); };
   const duplicateCourse = (id) => { const src = courses.find((c)=>c.id===id); if(!src) return; const copy = JSON.parse(JSON.stringify(src)); copy.id = uid(); copy.course.id = copy.id; copy.course.name = `${src.course.name} (copy)`; const next = [...courses, copy]; saveCourses(next); setCourses(next); };
   const open = (id) => onOpenCourse(id);
