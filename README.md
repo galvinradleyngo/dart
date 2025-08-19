@@ -1,21 +1,42 @@
-# DART — Design & Development Accountability & Responsibility Tracker
+# DART – Course Design & Development PM
 
-This build includes:
-- In-app **Role Manager** with **Invites** (email + roles, mailto helper)
-- Improved, Trello/Notion-inspired UI
-- One-click **Sample Course** seeding
-- Google Sign-in only (no email-link auth needed)
+This is your React + Vite project containing the DART prototype. TailwindCSS, framer-motion, and lucide-react are prewired.
 
-## Deploy
-1) Upload all files to a GitHub repo (root), enable GitHub Pages.
-2) Firebase Console:
-   - Auth → Sign-in method → enable Google
-   - Auth → Authorized domains → add `YOUR_USERNAME.github.io`
-   - Firestore → Create DB → Rules: paste `firestore.rules` and Publish
-3) Open your site → Google sign-in.
-4) As PC, open **Role Manager** to invite teammates; share the site link.
+## Quick start
 
-## Dynamic Links / Email Link Auth Note
-Per Firebase’s FAQ, web **email actions are not impacted** by Dynamic Links shutdown; mobile email-link and Cordova OAuth are. We use **Google popup** sign-in, so you’re unaffected.
+```bash
+npm i
+npm run dev
+```
 
-If you later add email-link sign-in, follow Firebase’s migration guides and latest SDKs.
+Open http://localhost:5173
+
+## Build
+
+```bash
+npm run build
+npm run preview
+```
+
+## Firebase Hosting
+
+This repo includes `firebase.json` and `.firebaserc` for project **dart-ed2ab**.
+
+1. Install the CLI and login:
+
+```bash
+npm i -g firebase-tools
+firebase login
+```
+
+2. Deploy (after `npm run build`):
+
+```bash
+firebase deploy --only hosting
+```
+
+> SPA rewrite is configured so deep links work.
+
+## GitHub
+
+Create a new repo, push this folder, then (optional) set up **Firebase Hosting GitHub Action** from the Firebase console for automatic deploys on push.
