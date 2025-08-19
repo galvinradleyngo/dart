@@ -649,7 +649,15 @@ function UserDashboard({ onBack, onOpenCourse }) {
                     <div className="font-medium truncate">{t.title}</div>
                     <div className="text-xs text-black/60 truncate">{t.courseName}</div>
                   </div>
-                  <DuePill date={t.dueDate} status={t.status} />
+                  <div className="flex items-center gap-2">
+                    <DuePill date={t.dueDate} status={t.status} />
+                    <button
+                      onClick={() => onOpenCourse(t.courseId)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
+                    >
+                      Open
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
