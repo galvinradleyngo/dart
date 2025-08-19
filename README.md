@@ -1,42 +1,18 @@
-# DART – Course Design & Development PM
+# DART — GitHub Pages Starter
 
-This is your React + Vite project containing the DART prototype. TailwindCSS, framer-motion, and lucide-react are prewired.
+This ZIP is preconfigured for `https://galvinradleyngo.github.io/dart/`.
 
-## Quick start
+- `vite.config.js` has `base: '/dart/'`
+- `public/404.html` handles deep-link refresh on Pages
+- GitHub Actions workflow builds and deploys automatically
 
+## Using this
+1. Upload all files to your `galvinradleyngo/dart` repo (commit to `main`).
+2. In **Settings → Pages**, choose **Source: GitHub Actions**.
+3. Replace `src/App.jsx` with your full app code from ChatGPT canvas (the placeholder just shows a stub).
+
+## Local dev
 ```bash
 npm i
 npm run dev
 ```
-
-Open http://localhost:5173
-
-## Build
-
-```bash
-npm run build
-npm run preview
-```
-
-## Firebase Hosting
-
-This repo includes `firebase.json` and `.firebaserc` for project **dart-ed2ab**.
-
-1. Install the CLI and login:
-
-```bash
-npm i -g firebase-tools
-firebase login
-```
-
-2. Deploy (after `npm run build`):
-
-```bash
-firebase deploy --only hosting
-```
-
-> SPA rewrite is configured so deep links work.
-
-## GitHub
-
-Create a new repo, push this folder, then (optional) set up **Firebase Hosting GitHub Action** from the Firebase console for automatic deploys on push.
