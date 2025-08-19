@@ -6,6 +6,14 @@ This ZIP is preconfigured for `https://galvinradleyngo.github.io/dart/`.
 - `public/404.html` handles deep-link refresh on Pages
 - GitHub Actions workflow builds and deploys automatically
 
+## Features
+
+- **Courses Hub** – overview of all courses with progress and quick actions
+- **User Dashboard** – pick a team member to view all tasks assigned to them
+  - Switch between **List**, **Board**, and **Calendar** layouts
+  - Each task links back to its course for seamless navigation
+- Data persists locally in the browser so edits survive refreshes
+
 ## Using this
 1. Upload all files to your `galvinradleyngo/dart` repo (commit to `main`).
 2. In **Settings → Pages**, choose **Source: GitHub Actions**.

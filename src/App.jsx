@@ -8,6 +8,7 @@ import {
   ListChecks,
   Download,
   Upload,
+  Save,
   Filter,
   Trash2,
   Clock3,
@@ -74,7 +75,21 @@ const COURSES_KEY  = "healthPM:courses:v1";
 const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(state)); } catch {} };
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
-const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
+const loadCourses = () => {
+  try {
+    const raw = localStorage.getItem(COURSES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    const normalized = parsed.map((c) => {
+      const id = c.id || c.course?.id || uid();
+      return { ...c, id, course: { ...c.course, id } };
+    });
+    if (parsed.some((c) => !c.id || !c.course?.id)) saveCourses(normalized);
+    return normalized;
+  } catch {
+    return [];
+  }
+};
 
 // =====================================================
 // Seed + Migration
@@ -211,6 +226,13 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
   const [view, setView] = useState("board");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
+  const [saveStatus, setSaveStatus] = useState("Saved");
+
+  useEffect(() => {
+    setSaveStatus("Saving...");
+    const t = setTimeout(() => setSaveStatus("Saved"), 800);
+    return () => clearTimeout(t);
+  }, [state]);
 
   // Persist
   useEffect(() => { localStorage.setItem("healthPM:state:v8", JSON.stringify(state)); }, [state]);
@@ -330,7 +352,9 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
           {/* DART banner title */}
           <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
+          <div className="text-xs text-black/60 mr-2">{saveStatus}</div>
           <div className="flex items-center gap-2">
+            <button onClick={() => onStateChange?.(state)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Save size={16}/> Save</button>
             <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
             <button onClick={() => saveTemplate(state)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
             <button onClick={() => { const tpl = loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
@@ -565,12 +589,197 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
 }
 
 // =====================================================
+// User Task Board (helper)
+// =====================================================
+function UserTaskBoard({ tasks, onOpenCourse }) {
+  const cols = [
+    { id: "todo", title: "To Do" },
+    { id: "inprogress", title: "In Progress" },
+    { id: "done", title: "Done" },
+  ];
+  return (
+    <div className="grid md:grid-cols-3 gap-3">
+      {cols.map((c) => (
+        <div key={c.id} className="rounded-xl border border-black/10 bg-white/60 p-3">
+          <div className="text-sm font-medium text-black/70 mb-2">{c.title}</div>
+          <div className="space-y-2 min-h-[96px]">
+            {tasks
+              .filter((t) => t.status === c.id)
+              .map((t) => (
+                <div key={t.id} className="rounded-lg border border-black/10 bg-white p-3 text-sm">
+                  <div className="font-medium truncate">{t.title}</div>
+                  <div className="text-xs text-black/60 truncate">{t.courseName}</div>
+                  <div className="flex items-center justify-between mt-1 text-xs">
+                    <DuePill date={t.dueDate} status={t.status} />
+                    <button
+                      onClick={() => onOpenCourse(t.courseId)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 bg-slate-900 text-white"
+                    >
+                      Open
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// =====================================================
+// User Dashboard (NEW)
+// =====================================================
+function UserDashboard({ onBack, onOpenCourse }) {
+  const [courses, setCourses] = useState(() => loadCourses());
+  useEffect(() => {
+    const onStorage = () => setCourses(loadCourses());
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === GLOBAL_SCHEDULE_KEY && e.newValue) {
+        try { setSchedule(JSON.parse(e.newValue)); } catch {}
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const members = useMemo(() => {
+    const map = new Map();
+    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
+    return Array.from(map.values());
+  }, [courses]);
+
+  const [userId, setUserId] = useState(() => members[0]?.id || '');
+  const user = members.find((m) => m.id === userId);
+
+  const myCourses = useMemo(() => courses.filter((c) => c.team.some((m) => m.id === userId)), [courses, userId]);
+  const myTasks = useMemo(() => {
+    const arr = [];
+    courses.forEach((c) => {
+      c.tasks.forEach((t) => {
+        if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
+      });
+    });
+    return arr.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+  }, [courses, userId]);
+
+  const [view, setView] = useState("list");
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const gotoMonth = (offset) => setCalMonth((m) => new Date(m.getFullYear(), m.getMonth() + offset, 1));
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><ArrowLeft size={16}/> Back</button>
+            <div className="min-w-0">
+              <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
+              {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
+              {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
+            </select>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <section>
+          <h2 className="text-lg font-semibold mb-2">My Courses</h2>
+          {myCourses.length === 0 ? (
+            <div className="text-sm text-black/60">No courses</div>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {myCourses.map((c) => {
+                const tCount = c.tasks.filter((t) => t.assigneeId === userId).length;
+                return (
+                  <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{c.course.name}</div>
+                      <div className="text-xs text-black/60 truncate">{tCount} task{tCount!==1?'s':''}</div>
+                    </div>
+                    <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold">My Tasks</h2>
+            <Toggle
+              value={view}
+              onChange={setView}
+              options={[
+                { id: "list", label: "List" },
+                { id: "board", label: "Board" },
+                { id: "calendar", label: "Calendar" },
+              ]}
+            />
+          </div>
+          {myTasks.length === 0 ? (
+            <div className="text-sm text-black/60">No tasks assigned.</div>
+          ) : view === "list" ? (
+            <div className="space-y-2">
+              {myTasks.map((t) => (
+                <div key={t.id} className="rounded-xl border border-black/10 bg-white p-3 text-sm flex items-center justify-between">
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{t.title}</div>
+                    <div className="text-xs text-black/60 truncate">{t.courseName}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DuePill date={t.dueDate} status={t.status} />
+                    <button
+                      onClick={() => onOpenCourse(t.courseId)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
+                    >
+                      Open
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : view === "board" ? (
+            <UserTaskBoard tasks={myTasks} onOpenCourse={onOpenCourse} />
+          ) : (
+            <CalendarView
+              monthDate={calMonth}
+              tasks={myTasks}
+              milestones={[]}
+              team={[]}
+              onPrev={() => gotoMonth(-1)}
+              onNext={() => gotoMonth(1)}
+              onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
+              schedule={schedule}
+            />
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+// =====================================================
 // Courses Hub (NEW)
 // =====================================================
 function computeTotals(state) {
   const tasks = state.tasks || []; const total = tasks.length; const done = tasks.filter((t)=>t.status==="done").length; const inprog = tasks.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const pct = total ? Math.round((done/total)*100) : 0; const nextDue = tasks.filter((t)=>t.status!=="done" && t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate))[0]?.dueDate || null; return { total, done, inprog, todo, pct, nextDue };
 }
-function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse }) {
+function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => { const onStorage = () => setCourses(loadCourses()); window.addEventListener('storage', onStorage); return () => window.removeEventListener('storage', onStorage); }, []);
   const removeCourse = (id) => { const next = courses.filter((c)=>c.id!==id); saveCourses(next); setCourses(next); };
@@ -587,7 +796,11 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse }) {
               <div className="text-xs text-black/60 truncate">Courses Hub</div>
             </div>
           </div>
-          <div className="flex items-center gap-2"><button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button><button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button></div>
+          <div className="flex items-center gap-2">
+            <button onClick={onOpenUser} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Users size={16}/> User View</button>
+            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
+            <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
+          </div>
         </div>
       </header>
 
@@ -639,20 +852,31 @@ export default function PMApp() {
   const [view, setView] = useState(() => {
     const hasCourses = loadCourses().length > 0; return hasCourses ? "hub" : "hub"; // start at hub
   });
+  const [prevView, setPrevView] = useState("hub");
   const [currentCourseId, setCurrentCourseId] = useState(null);
-  const openCourse = (id) => { setCurrentCourseId(id); setView("course"); };
-  const editTemplate = () => { setCurrentCourseId("__TEMPLATE__"); setView("course"); };
+  const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
+  const openUser = () => { setPrevView(view); setView("user"); };
+  const editTemplate = () => { setPrevView(view); setCurrentCourseId("__TEMPLATE__"); setView("course"); };
   const addCourse = () => {
     const tpl = loadTemplate() || remapSeed(seed());
     const base = remapSeed(JSON.parse(JSON.stringify(tpl)));
-    base.course = { ...base.course, id: uid(), name: base.course.name || "New Course" };
-    const all = loadCourses(); const next = [...all, base]; saveCourses(next);
+    const newId = uid();
+    base.course = { ...base.course, id: newId, name: base.course.name || "New Course" };
+    base.id = newId;
+    const all = loadCourses();
+    const next = [...all, base];
+    saveCourses(next);
+    setPrevView(view);
     setCurrentCourseId(base.course.id); setView("course");
   };
-  const onBack = () => { setView("hub"); setCurrentCourseId(null); };
+  const onBack = () => { setView(prevView); setPrevView("hub"); setCurrentCourseId(null); };
 
   if (view === "hub") {
-    return <CoursesHub onOpenCourse={openCourse} onEditTemplate={editTemplate} onAddCourse={addCourse} />;
+    return <CoursesHub onOpenCourse={openCourse} onEditTemplate={editTemplate} onAddCourse={addCourse} onOpenUser={openUser} />;
+  }
+
+  if (view === "user") {
+    return <UserDashboard onBack={onBack} onOpenCourse={openCourse} />;
   }
 
   // Course mode
@@ -667,7 +891,13 @@ export default function PMApp() {
   const courses = loadCourses();
   const course = courses.find((c)=>c.id===currentCourseId || c.course.id===currentCourseId) || courses[0];
   const handleCourseChange = (s) => {
-    const next = loadCourses().map((c)=> (c.id===currentCourseId || c.course.id===currentCourseId) ? s : c );
+    const next = loadCourses().map((c) => {
+      if (c.id === currentCourseId || c.course.id === currentCourseId) {
+        const courseId = c.id || c.course.id;
+        return { ...s, id: courseId, course: { ...s.course, id: courseId } };
+      }
+      return c;
+    });
     saveCourses(next);
   };
   return <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} />;
