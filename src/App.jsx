@@ -20,6 +20,8 @@ import {
   Minus,
   ArrowLeft,
 } from "lucide-react";
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { db } from "./firebase.js";
 
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
@@ -75,6 +77,19 @@ const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
 const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
+const loadCoursesRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'courses'));
+    return snap.exists() ? snap.data().courses || [] : [];
+  } catch {
+    return [];
+  }
+};
+const saveCoursesRemote = async (arr) => {
+  try {
+    await setDoc(doc(db, 'app', 'courses'), { courses: arr });
+  } catch {}
+};
 
 // =====================================================
 // Seed + Migration
@@ -171,7 +186,7 @@ function LinkChips({ links = [], onRemove }) { return (<div className="mt-1 flex
 // =====================================================
 // Calendar View
 // =====================================================
-function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onToday, schedule }) {
+function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onToday, schedule, onTaskClick }) {
   const year = monthDate.getFullYear(); const month = monthDate.getMonth(); const first = new Date(year, month, 1);
   const startDay = new Date(year, month, 1 - first.getDay());
   const days = Array.from({ length: 42 }, (_, i) => new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + i));
@@ -185,7 +200,7 @@ function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onTo
         {days.map((d, idx) => { const key = fmt(d); const inMonth = d.getMonth() === month; const isHolidayDay = holidaySet.has(key); const isWork = workSet.has(d.getDay()); const items = tasksByDue[key] || []; const isToday = key === todayStr(); return (
           <div key={idx} className={`min-h-[96px] p-2 border-b border-r border-black/5 ${inMonth?"bg-white":"bg-slate-50"} ${isToday?"ring-2 ring-indigo-500":""}`}>
             <div className="flex items-center justify-between"><div className={`text-xs ${inMonth?"text-slate-700":"text-slate-400"} ${isToday?"px-1 rounded bg-indigo-600 text-white":""}`}>{d.getDate()}</div>{!isWork && <span className="text-[10px] px-1 rounded bg-slate-100 text-slate-600 border border-slate-200">Off</span>}{isHolidayDay && <span className="text-[10px] px-1 rounded bg-rose-100 text-rose-700 border border-rose-200">Holiday</span>}</div>
-            <div className="mt-1 space-y-1">{items.slice(0,3).map((t)=>(<div key={t.id} className="text-[11px] truncate px-2 py-1 rounded border border-black/10 bg-sky-50 text-sky-800">{t.title}</div>))}{items.length>3 && <div className="text-[10px] text-slate-500">+{items.length-3} more…</div>}</div>
+            <div className="mt-1 space-y-1">{items.slice(0,3).map((t)=>(<div key={t.id} className="text-[11px] truncate px-2 py-1 rounded border border-black/10 bg-sky-50 text-sky-800 cursor-pointer" onClick={()=>onTaskClick?.(t)}>{t.title}</div>))}{items.length>3 && <div className="text-[10px] text-slate-500">+{items.length-3} more…</div>}</div>
           </div>
         ); })}
       </div>
@@ -574,6 +589,30 @@ function UserDashboard({ onBack, onOpenCourse }) {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+  useEffect(() => {
+    (async () => {
+      const remote = await loadCoursesRemote();
+      if (remote.length) {
+        saveCourses(remote);
+        setCourses(remote);
+      }
+    })();
+  }, []);
+
+  const [taskView, setTaskView] = useState('list');
+  const [saveState, setSaveState] = useState('saved');
+  const updateTaskStatus = (courseId, taskId, status) => {
+    setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.map((t) => t.id === taskId ? { ...t, status } : t) } : c));
+    setSaveState('unsaved');
+  };
+  const handleSave = async () => {
+    setSaveState('saving');
+    saveCourses(courses);
+    await saveCoursesRemote(courses);
+    setSaveState('saved');
+  };
+  const cycleStatus = (s) => (s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'done' : 'todo');
+  const [calMonth, setCalMonth] = useState(() => new Date());
 
   const members = useMemo(() => {
     const map = new Map();
@@ -598,6 +637,11 @@ function UserDashboard({ onBack, onOpenCourse }) {
       return da - db;
     });
   }, [courses, userId]);
+  const groupedTasks = useMemo(() => {
+    const g = { todo: [], inprogress: [], done: [] };
+    myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
+    return g;
+  }, [myTasks]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
@@ -614,6 +658,10 @@ function UserDashboard({ onBack, onOpenCourse }) {
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
+            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
+            <span className="text-xs text-black/60">
+              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
+            </span>
           </div>
         </div>
       </header>
@@ -646,25 +694,68 @@ function UserDashboard({ onBack, onOpenCourse }) {
           {myTasks.length === 0 ? (
             <div className="text-sm text-black/60">No tasks assigned.</div>
           ) : (
-            <div className="space-y-2">
-              {myTasks.map((t) => (
-                <div key={t.id} className="rounded-xl border border-black/10 bg-white p-3 text-sm flex items-center justify-between">
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{t.title}</div>
-                    <div className="text-xs text-black/60 truncate">{t.courseName}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <DuePill date={t.dueDate} status={t.status} />
-                    <button
-                      onClick={() => onOpenCourse(t.courseId)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
-                    >
-                      Open
-                    </button>
-                  </div>
+            <>
+              <div className="flex items-center gap-2 mb-2">
+                <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-xs rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>List</button>
+                <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-xs rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Board</button>
+                <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-xs rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Calendar</button>
+              </div>
+              {taskView === 'list' && (
+                <div className="space-y-2">
+                  {myTasks.map((t) => (
+                    <div key={t.id} className="rounded-xl border border-black/10 bg-white p-3 text-sm flex items-center justify-between">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{t.title}</div>
+                        <div className="text-xs text-black/60 truncate">{t.courseName}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <select value={t.status} onChange={(e)=>updateTaskStatus(t.courseId, t.id, e.target.value)} className="text-xs border rounded px-1 py-0.5">
+                          <option value="todo">To do</option>
+                          <option value="inprogress">In progress</option>
+                          <option value="done">Done</option>
+                        </select>
+                        <DuePill date={t.dueDate} status={t.status} />
+                        <button onClick={() => onOpenCourse(t.courseId)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow">Open</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+              {taskView === 'board' && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {['todo','inprogress','done'].map((s) => (
+                    <div key={s} className="rounded-xl border border-black/10 bg-white p-2">
+                      <div className="font-medium text-sm capitalize mb-2">{s}</div>
+                      <div className="space-y-2">
+                        {groupedTasks[s].map((t) => (
+                          <div key={t.id} className="p-2 rounded border border-black/10 bg-slate-50 text-sm">
+                            <div className="font-medium truncate">{t.title}</div>
+                            <select value={t.status} onChange={(e)=>updateTaskStatus(t.courseId, t.id, e.target.value)} className="mt-1 text-xs border rounded px-1 py-0.5">
+                              <option value="todo">To do</option>
+                              <option value="inprogress">In progress</option>
+                              <option value="done">Done</option>
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {taskView === 'calendar' && (
+                <CalendarView
+                  monthDate={calMonth}
+                  tasks={myTasks}
+                  milestones={[]}
+                  team={[]}
+                  onPrev={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
+                  onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
+                  onToday={() => setCalMonth(new Date())}
+                  schedule={loadGlobalSchedule()}
+                  onTaskClick={(t) => updateTaskStatus(t.courseId, t.id, cycleStatus(t.status))}
+                />
+              )}
+            </>
           )}
         </section>
       </main>

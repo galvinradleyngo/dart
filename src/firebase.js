@@ -1,4 +1,5 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js';
+import { getFirestore } from 'https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js';
 
 // You can safely expose this config in web apps; do NOT commit service account files.
 export const firebaseConfig = {
@@ -11,3 +12,4 @@ export const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
+export const db = getFirestore(app);
