@@ -251,11 +251,17 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
 
 const handleSave = async () => {
   setSaveState('saving');
-    onStateChange?.(state);
-    const all = loadCourses();
-    await saveCoursesRemote(all);
-    setSaveState('saved');
-  };
+  const all = loadCourses();
+  const idx = all.findIndex(
+    (c) => c.id === state.course.id || c.course?.id === state.course.id
+  );
+  if (idx >= 0) all[idx] = state;
+  else all.push(state);
+  saveCourses(all);
+  await saveCoursesRemote(all);
+  onStateChange?.(state);
+  setSaveState('saved');
+};
 
   // Listen for global schedule changes from other tabs
   useEffect(() => {
@@ -355,6 +361,8 @@ const handleSave = async () => {
   // Calendar
   const [calMonth, setCalMonth] = useState(() => { const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const gotoMonth = (offset) => setCalMonth((m)=>new Date(m.getFullYear(), m.getMonth()+offset, 1));
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const editingTask = state.tasks.find((t) => t.id === editingTaskId) || null;
 
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
@@ -535,9 +543,22 @@ const handleSave = async () => {
           ) : view === "board" ? (
             <BoardView tasks={filteredBase} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
           ) : (
-            <CalendarView monthDate={calMonth} tasks={filteredBase} milestones={milestones} team={team} onPrev={() => gotoMonth(-1)} onNext={() => gotoMonth(1)} onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} schedule={state.schedule} />
+            <CalendarView monthDate={calMonth} tasks={filteredBase} milestones={milestones} team={team} onPrev={() => gotoMonth(-1)} onNext={() => gotoMonth(1)} onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} schedule={state.schedule} onTaskClick={(t)=>setEditingTaskId(t.id)} />
           )}
         </section>
+      {editingTask && (
+        <TaskModal
+          task={editingTask}
+          tasks={state.tasks}
+          team={team}
+          milestones={milestones}
+          onUpdate={updateTask}
+          onDelete={deleteTask}
+          onAddLink={(id, url)=>patchTaskLinks(id,'add',url)}
+          onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)}
+          onClose={()=>setEditingTaskId(null)}
+        />
+      )}
       </main>
 
       <footer className="max-w-7xl mx-auto px-4 pb-10 text-xs text-black/50">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
@@ -598,6 +619,36 @@ function statusBg(status) { if (status === "done") return "bg-emerald-50"; if (s
 function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState(false); const peers = tasks.filter((x)=>x.milestoneId===task.milestoneId && x.id!==task.id); const current = peers.find((p)=>p.id===task.depTaskId); return (
   <div className="text-xs"><button onClick={()=>setOpen((v)=>!v)} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"><GitBranch size={12}/> {current ? `Depends on: ${current.title}` : "Add dependency"}</button>{open && (<div className="mt-1"><select value={task.depTaskId || ""} onChange={(e)=>{ const val = e.target.value || null; onUpdate(task.id,{ depTaskId:val }); setOpen(false); }} className="border rounded px-2 py-1"><option value="">— none —</option>{peers.map((p)=>(<option key={p.id} value={p.id}>{p.title}</option>))}</select></div>)}</div>
 ); }
+
+function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
+  if (!task) return null;
+  const assignee = team.find((m) => m.id === task.assigneeId);
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl p-4 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="font-semibold"><InlineText value={task.title} onChange={(v)=>onUpdate(task.id,{ title:v })} /></div>
+            <div className="text-sm text-black/60"><InlineText value={task.details} onChange={(v)=>onUpdate(task.id,{ details:v })} placeholder="Details…" multiline /></div>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-black">×</button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <select value={task.milestoneId} onChange={(e)=>onUpdate(task.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
+          <div className="flex items-center gap-1">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-black/40">—</span>}<select value={task.assigneeId || ""} onChange={(e)=>onUpdate(task.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{team.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
+          <select value={task.status} onChange={(e)=>onUpdate(task.id,{ status:e.target.value })} className={`border rounded px-1.5 py-1 ${statusBg(task.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>
+          <div className="flex items-center gap-2"><span>Start</span>{task.status === "done" ? (<span className="text-slate-500">—</span>) : (<input type="date" value={task.startDate || ""} onChange={(e)=>onUpdate(task.id,{ startDate:e.target.value })} disabled={task.status === "todo"} className={`border rounded px-1.5 py-1 ${task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
+          <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={task.workDays ?? 0} onChange={(e)=>onUpdate(task.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
+          <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(task.id,url)} />{task.links && task.links.length>0 && (<LinkChips links={task.links} onRemove={(i)=>onRemoveLink(task.id,i)} />)}</div>
+          <div className="basis-full text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={task.note} onChange={(v)=>onUpdate(task.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
+          <DepPicker task={task} tasks={tasks} onUpdate={onUpdate} />
+          <div className="ml-auto flex items-center gap-2"><DuePill date={task.dueDate} status={task.status} />{task.status === "done" && <span className="text-slate-500">Completed: {task.completedDate || "—"}</span>}</div>
+        </div>
+        {onDelete && <div className="mt-4 flex justify-end"><button onClick={()=>{ onDelete(task.id); onClose(); }} className="text-rose-600 hover:text-rose-700 text-sm">Delete</button></div>}
+      </div>
+    </div>
+  );
+}
 
 function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
@@ -678,8 +729,87 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
 
   const [taskView, setTaskView] = useState('list');
   const [saveState, setSaveState] = useState('saved');
-  const updateTaskStatus = (courseId, taskId, status) => {
-    setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.map((t) => t.id === taskId ? { ...t, status } : t) } : c));
+
+  const recomputeDue = (t, patch = {}, schedule) => {
+    const start = patch.startDate ?? t.startDate;
+    const work = patch.workDays ?? t.workDays;
+    const due = start ? addBusinessDays(start, work, schedule.workweek || [1,2,3,4,5], schedule.holidays || []) : "";
+    return { ...patch, dueDate: due };
+  };
+
+  const propagateDependentForecasts = (tasks, schedule) => {
+    const map = new Map(tasks.map((x) => [x.id, x]));
+    return tasks.map((t) => {
+      if (!t.depTaskId || t.status === 'done') return t;
+      const src = map.get(t.depTaskId);
+      if (!src) return t;
+      const startForecast = src.dueDate || '';
+      if (t.status !== 'inprogress' && startForecast) {
+        const due = addBusinessDays(startForecast, t.workDays, schedule.workweek || [1,2,3,4,5], schedule.holidays || []);
+        return { ...t, startDate: startForecast, dueDate: due };
+      }
+      return t;
+    });
+  };
+
+  const updateTask = (courseId, taskId, patch) => {
+    setCourses((cs) => cs.map((c) => {
+      if (c.course.id !== courseId) return c;
+      const sched = c.schedule || loadGlobalSchedule();
+      let changedTo = null;
+      const tasks1 = c.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        let adjusted = { ...patch };
+        if (patch.status && patch.status !== t.status) {
+          changedTo = patch.status;
+          if (patch.status === 'inprogress') { if (!t.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr(); }
+          if (patch.status === 'todo') { adjusted.startDate = ''; adjusted.dueDate = ''; adjusted.completedDate = ''; }
+          if (patch.status === 'done') { adjusted.completedDate = todayStr(); }
+        }
+        if ('startDate' in adjusted || 'workDays' in adjusted) adjusted = recomputeDue({ ...t, ...adjusted }, adjusted, sched);
+        return { ...t, ...adjusted };
+      });
+      let tasks2 = tasks1;
+      if (changedTo === 'inprogress') tasks2 = tasks2.map((d) => (d.depTaskId === taskId && d.status !== 'done' ? { ...d, status: 'inprogress' } : d));
+      if (changedTo === 'done') {
+        const doneDate = todayStr();
+        tasks2 = tasks2.map((x) => (x.id === taskId ? { ...x, completedDate: x.completedDate || doneDate } : x));
+        tasks2 = tasks2.map((d) => {
+          if (d.depTaskId === taskId && d.status !== 'done') {
+            const start = doneDate;
+            const due = addBusinessDays(start, d.workDays, sched.workweek || [1,2,3,4,5], sched.holidays || []);
+            return { ...d, status: 'inprogress', startDate: start, dueDate: due };
+          }
+          return d;
+        });
+      }
+      const tasks3 = propagateDependentForecasts(tasks2, sched);
+      return { ...c, tasks: tasks3 };
+    }));
+    setSaveState('unsaved');
+  };
+
+  const updateTaskStatus = (courseId, taskId, status) => updateTask(courseId, taskId, { status });
+
+  const patchTaskLinks = (courseId, id, op, payload) => {
+    setCourses((cs) => cs.map((c) => {
+      if (c.course.id !== courseId) return c;
+      return {
+        ...c,
+        tasks: c.tasks.map((t) => {
+          if (t.id !== id) return t;
+          const links = Array.isArray(t.links) ? [...t.links] : [];
+          if (op === 'add') links.push(payload);
+          if (op === 'remove') links.splice(payload,1);
+          return { ...t, links };
+        })
+      };
+    }));
+    setSaveState('unsaved');
+  };
+
+  const deleteTask = (courseId, id) => {
+    setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.filter((t) => t.id !== id) } : c));
     setSaveState('unsaved');
   };
   const handleSave = async () => {
@@ -690,6 +820,7 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
   };
   const cycleStatus = (s) => (s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'done' : 'todo');
   const [calMonth, setCalMonth] = useState(() => new Date());
+  const [editing, setEditing] = useState(null);
 
   const members = useMemo(() => {
     const map = new Map();
@@ -719,12 +850,13 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
         if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
-return arr.sort((a, b) => {
-  const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-  const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-  return da - db;
-});
-main
+    return arr.sort((a, b) => {
+      const nameCmp = a.courseName.localeCompare(b.courseName);
+      if (nameCmp !== 0) return nameCmp;
+      const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return da - db;
+    });
   }, [courses, userId]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
@@ -762,7 +894,6 @@ main
     <option value="🐱">🐱</option>
   </select>
 )}
-main
             <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
             <span className="text-xs text-black/60">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
@@ -880,10 +1011,9 @@ main
           ))}
         </div>
       </div>
-    ))}
+  ))}
   </div>
 )}
- main
               {taskView === 'calendar' && (
                 <CalendarView
                   monthDate={calMonth}
@@ -894,12 +1024,30 @@ main
                   onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
                   onToday={() => setCalMonth(new Date())}
                   schedule={loadGlobalSchedule()}
-                  onTaskClick={(t) => updateTaskStatus(t.courseId, t.id, cycleStatus(t.status))}
+                  onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
                 />
               )}
             </>
           )}
         </section>
+        {editing && (() => {
+          const c = courses.find((x) => x.course.id === editing.courseId);
+          const task = c?.tasks.find((t) => t.id === editing.taskId);
+          if (!c || !task) return null;
+          return (
+            <TaskModal
+              task={task}
+              tasks={c.tasks}
+              team={c.team}
+              milestones={c.milestones}
+              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+              onDelete={(id) => { deleteTask(c.course.id, id); setEditing(null); }}
+              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+              onClose={() => setEditing(null)}
+            />
+          );
+        })()}
       </main>
     </div>
   );
@@ -1063,10 +1211,15 @@ export default function PMApp() {
   }
   // open selected course
   const courses = loadCourses();
-  const course = courses.find((c)=>c.id===currentCourseId || c.course.id===currentCourseId) || courses[0];
+  const course = courses.find((c)=>c.id===currentCourseId || c.course?.id===currentCourseId) || courses[0];
   const handleCourseChange = (s) => {
-    const next = loadCourses().map((c)=> (c.id===currentCourseId || c.course.id===currentCourseId) ? s : c );
-    saveCourses(next);
+    const all = loadCourses();
+    const idx = all.findIndex(
+      (c) => c.id === currentCourseId || c.course?.id === currentCourseId
+    );
+    if (idx >= 0) all[idx] = s;
+    else all.push(s);
+    saveCourses(all);
   };
   return <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} />;
 }
