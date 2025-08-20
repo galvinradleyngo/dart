@@ -371,8 +371,15 @@ const handleSave = async () => {
           <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
-            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
-            <span className="text-xs text-black/60">{saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}</span>
+            <button
+              onClick={handleSave}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white shadow-sm hover:bg-slate-800"
+            >
+              Save
+            </button>
+            <span className="text-xs text-black/60">
+              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
+            </span>
             <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
             <button onClick={() => saveTemplate(state)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
             <button onClick={() => { const tpl = loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
@@ -418,11 +425,46 @@ const handleSave = async () => {
               <div key={m.id} className="rounded-xl border border-black/10 p-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0"><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /><InlineText value={m.name} onChange={(v) => updateMember(m.id, { name: v })} className="font-medium truncate" /></div>
                 <div className="flex items-center gap-2">
-                  <select value={m.roleType} onChange={(e) => updateMember(m.id, { roleType: e.target.value })} className="border rounded px-2 py-1 text-sm">{Object.keys(rolePalette).map((r) => (<option key={r} value={r}>{r}</option>))}</select>
+                  <select
+                    value={m.roleType}
+                    onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
+                    className="border rounded px-2 py-1 text-sm"
+                  >
+                    {Object.keys(rolePalette).map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={m.avatar || ''}
+                    onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
+                    className="border rounded px-2 py-1 text-sm"
+                  >
+                    <option value="">🙂</option>
+                    <option value="😀">😀</option>
+                    <option value="😎">😎</option>
+                    <option value="🚀">🚀</option>
+                    <option value="🎨">🎨</option>
+                    <option value="🐱">🐱</option>
+                  </select>
                   {(m.roleType === "LD" || m.roleType === "SME") && (
-                    <label className="text-xs inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)} onChange={() => toggleCourseWide(m.roleType, m.id)} /> course-wide</label>
+                    <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
+                        onChange={() => toggleCourseWide(m.roleType, m.id)}
+                      />
+                      course-wide
+                    </label>
                   )}
-                  <button className="text-black/40 hover:text-red-500" title="Remove member" onClick={() => deleteMember(m.id)}><Trash2 size={16}/></button>
+                  <button
+                    className="text-black/40 hover:text-red-500"
+                    title="Remove member"
+                    onClick={() => deleteMember(m.id)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
