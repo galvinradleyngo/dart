@@ -719,9 +719,7 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
         if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
-codex/update-task-sorting-by-due-date-vzwy0x
-    // Sort by actual due dates; undated tasks fall to the end.
-    return arr.sort((a, b) => {
+return arr.sort((a, b) => {
   const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
   const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
   return da - db;
@@ -885,6 +883,7 @@ main
     ))}
   </div>
 )}
+ main
               {taskView === 'calendar' && (
                 <CalendarView
                   monthDate={calMonth}
@@ -960,6 +959,14 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
               {members.map((m) => (
                 <button
                   key={m.id}
+<button
+  type="button"
+  onClick={() => onOpenUser(m.id)}
+  className="flex  {/* remaining classes... */}
+>
+  {/* button contents... */}
+</button>
+main
                   onClick={() => onOpenUser(m.id)}
                   className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2 hover:opacity-90"
                   style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
