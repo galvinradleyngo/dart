@@ -631,11 +631,11 @@ function UserDashboard({ onBack, onOpenCourse }) {
         if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
-    return arr.sort((a, b) => {
-      const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-      return da - db;
-    });
+   return arr.sort((a, b) => {
+  const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+  const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+  return da - db;
+});
   }, [courses, userId]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
