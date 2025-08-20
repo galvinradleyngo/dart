@@ -251,11 +251,17 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
 
 const handleSave = async () => {
   setSaveState('saving');
-    onStateChange?.(state);
-    const all = loadCourses();
-    await saveCoursesRemote(all);
-    setSaveState('saved');
-  };
+  const all = loadCourses();
+  const idx = all.findIndex(
+    (c) => c.id === state.course.id || c.course?.id === state.course.id
+  );
+  if (idx >= 0) all[idx] = state;
+  else all.push(state);
+  saveCourses(all);
+  await saveCoursesRemote(all);
+  onStateChange?.(state);
+  setSaveState('saved');
+};
 
   // Listen for global schedule changes from other tabs
   useEffect(() => {
@@ -1205,10 +1211,15 @@ export default function PMApp() {
   }
   // open selected course
   const courses = loadCourses();
-  const course = courses.find((c)=>c.id===currentCourseId || c.course.id===currentCourseId) || courses[0];
+  const course = courses.find((c)=>c.id===currentCourseId || c.course?.id===currentCourseId) || courses[0];
   const handleCourseChange = (s) => {
-    const next = loadCourses().map((c)=> (c.id===currentCourseId || c.course.id===currentCourseId) ? s : c );
-    saveCourses(next);
+    const all = loadCourses();
+    const idx = all.findIndex(
+      (c) => c.id === currentCourseId || c.course?.id === currentCourseId
+    );
+    if (idx >= 0) all[idx] = s;
+    else all.push(s);
+    saveCourses(all);
   };
   return <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} />;
 }
