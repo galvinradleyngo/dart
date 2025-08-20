@@ -203,7 +203,7 @@ function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onTo
   return (
     <div className="border border-black/10 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between p-3 bg-white border-b border-black/10"><div className="font-medium">{monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}</div><div className="flex items-center gap-2"><button onClick={onPrev} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Prev</button><button onClick={onToday} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Today</button><button onClick={onNext} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Next</button></div></div>
-      <div className="grid grid-cols-7 text-xs bg-slate-50 border-b border-black/10">{["Sun","Mon","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i)=>(<div key={i} className="p-2 text-center font-medium text-slate-700">{d}</div>))}</div>
+      <div className="grid grid-cols-7 text-xs bg-slate-50 border-b border-black/10">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i)=>(<div key={i} className="p-2 text-center font-medium text-slate-700">{d}</div>))}</div>
       <div className="grid grid-cols-7">
         {days.map((d, idx) => { const key = fmt(d); const inMonth = d.getMonth() === month; const isHolidayDay = holidaySet.has(key); const isWork = workSet.has(d.getDay()); const items = tasksByDue[key] || []; const isToday = key === todayStr(); return (
           <div key={idx} className={`min-h-[96px] p-2 border-b border-r border-black/5 ${inMonth?"bg-white":"bg-slate-50"} ${isToday?"ring-2 ring-indigo-500":""}`}>
