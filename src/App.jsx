@@ -98,11 +98,11 @@ const seed = () => ({
   course: { id: uid(), name: "Intro to Learning Design", description: "From analysis to deployment, track the whole build.", accent: "from-fuchsia-500 via-pink-500 to-rose-500", courseLDIds: [], courseSMEIds: [] },
   schedule: { workweek: [1,2,3,4,5], holidays: [] }, // back-compat; overridden by global
   team: [
-    { id: uid(), name: "Alex Cruz", roleType: "LD",  color: roleColor("LD") },
-    { id: uid(), name: "Dr. Reyes", roleType: "SME", color: roleColor("SME") },
-    { id: uid(), name: "Pat Santos", roleType: "PM",  color: roleColor("PM") },
-    { id: uid(), name: "Jae Lim", roleType: "MM",     color: roleColor("MM") },
-    { id: uid(), name: "Rio Tan", roleType: "PA",     color: roleColor("PA") },
+    { id: uid(), name: "Alex Cruz", roleType: "LD",  color: roleColor("LD"),  avatar: "" },
+    { id: uid(), name: "Dr. Reyes", roleType: "SME", color: roleColor("SME"), avatar: "" },
+    { id: uid(), name: "Pat Santos", roleType: "PM",  color: roleColor("PM"),  avatar: "" },
+    { id: uid(), name: "Jae Lim", roleType: "MM",     color: roleColor("MM"),   avatar: "" },
+    { id: uid(), name: "Rio Tan", roleType: "PA",     color: roleColor("PA"),   avatar: "" },
   ],
   milestones: [
     { id: uid(), title: "A–D Blueprint Approved", start: todayStr(), goal: "Complete sections A–D of blueprint" },
@@ -133,7 +133,7 @@ const remapSeed = (s) => {
     return { ...t, workDays, startDate, dueDate, links, note, depTaskId: t.depTaskId ?? null, completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : "") };
   });
   s.milestones = s.milestones.map((m) => { const { due, ...rest } = m; return rest; });
-  s.team = s.team.map((m) => ({ ...m, color: roleColor(m.roleType) }));
+  s.team = s.team.map((m) => ({ ...m, color: roleColor(m.roleType), avatar: m.avatar || "" }));
   const LD = s.team.find((m) => m.roleType === "LD");
   const SME = s.team.find((m) => m.roleType === "SME");
   s.course.courseLDIds  = s.course.courseLDIds?.length  ? s.course.courseLDIds  : (LD  ? [LD.id]  : []);
@@ -159,7 +159,15 @@ function InlineText({ value, onChange, className = "", placeholder = "Untitled",
   if (!editing) return (<span className={`cursor-text hover:bg-black/5 rounded px-1 ${className}`} onClick={() => setEditing(true)} title="Click to edit">{value?.trim() ? value : <span className="text-black/40">{placeholder}</span>}</span>);
   return multiline ? (<textarea autoFocus className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`} value={draft} onChange={(e)=>setDraft(e.target.value)} onBlur={commit} onKeyDown={(e)=>{ if(e.key==="Escape"){ setDraft(value??""); setEditing(false);} if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="enter") commit(); }} rows={3} />) : (<input autoFocus className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`} value={draft} onChange={(e)=>setDraft(e.target.value)} onBlur={commit} onKeyDown={(e)=> e.key==="Enter" ? commit() : (e.key==="Escape" && (setDraft(value??""), setEditing(false)))} />);
 }
-const Avatar = ({ name, roleType }) => (<span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-medium text-white" style={{ background: roleColor(roleType) }} title={name}>{name.split(" ").map((w)=>w[0]).join("")}</span>);
+const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-[10px]" }) => (
+  <span
+    className={`inline-flex items-center justify-center rounded-full font-medium ${className}`}
+    style={avatar ? { background: roleColor(roleType) } : { background: roleColor(roleType), color: "#fff" }}
+    title={name}
+  >
+    {avatar || name.split(" ").map((w) => w[0]).join("")}
+  </span>
+);
 function DuePill({ date, status }) {
   if (!date) return <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-500 border border-slate-200">—</span>;
   const today = new Date(todayStr()); const d = new Date(date); const diffDays = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
@@ -226,11 +234,28 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
   const [view, setView] = useState("board");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
+  const [saveState, setSaveState] = useState('saved');
+  const firstRun = useRef(true);
 
   // Persist
   useEffect(() => { localStorage.setItem("healthPM:state:v8", JSON.stringify(state)); }, [state]);
   useEffect(() => { saveGlobalSchedule(state.schedule); }, [state.schedule]);
-  useEffect(() => { onStateChange?.(state); }, [state, onStateChange]);
+  useEffect(() => {
+    onStateChange?.(state);
+    if (firstRun.current) {
+      firstRun.current = false;
+    } else {
+      setSaveState('unsaved');
+    }
+  }, [state, onStateChange]);
+
+const handleSave = async () => {
+  setSaveState('saving');
+    onStateChange?.(state);
+    const all = loadCourses();
+    await saveCoursesRemote(all);
+    setSaveState('saved');
+  };
 
   // Listen for global schedule changes from other tabs
   useEffect(() => {
@@ -312,7 +337,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
 
   // Members
   const updateMember = (id, patch) => setState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
-  const addMember    = () => setState((s)=>({ ...s, team: [...s.team, { id: uid(), name:"New Member", roleType:"Other", color: roleColor("Other") }] }));
+  const addMember    = () => setState((s)=>({ ...s, team: [...s.team, { id: uid(), name:"New Member", roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
   const deleteMember = (id) => setState((s)=>({ ...s, team: s.team.filter((m)=>m.id!==id), course: { ...s.course, courseLDIds: s.course.courseLDIds.filter((mId)=>mId!==id), courseSMEIds: s.course.courseSMEIds.filter((mId)=>mId!==id) }, tasks: s.tasks.map((t)=>(t.assigneeId===id?{...t, assigneeId:null}:t)) }));
   const toggleCourseWide = (kind, id) => setState((s)=>{ const key = kind === "LD" ? "courseLDIds" : "courseSMEIds"; const list = new Set(s.course[key]); list.has(id)?list.delete(id):list.add(id); return { ...s, course: { ...s.course, [key]: Array.from(list) } }; });
 
@@ -346,6 +371,15 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
           <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white shadow-sm hover:bg-slate-800"
+            >
+              Save
+            </button>
+            <span className="text-xs text-black/60">
+              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
+            </span>
             <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
             <button onClick={() => saveTemplate(state)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
             <button onClick={() => { const tpl = loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
@@ -365,8 +399,8 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
           <p className="text-sm text-black/60"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
           {/* Course-wide LDs & SMEs */}
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            {state.course.courseLDIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} /> LD</span>; })}
-            {state.course.courseSMEIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} /> SME</span>; })}
+            {state.course.courseLDIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> LD</span>; })}
+            {state.course.courseSMEIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> SME</span>; })}
           </div>
         </div>
       </header>
@@ -389,13 +423,48 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
             {team.map((m) => (
               <div key={m.id} className="rounded-xl border border-black/10 p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0"><Avatar name={m.name} roleType={m.roleType} /><InlineText value={m.name} onChange={(v) => updateMember(m.id, { name: v })} className="font-medium truncate" /></div>
+                <div className="flex items-center gap-2 min-w-0"><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /><InlineText value={m.name} onChange={(v) => updateMember(m.id, { name: v })} className="font-medium truncate" /></div>
                 <div className="flex items-center gap-2">
-                  <select value={m.roleType} onChange={(e) => updateMember(m.id, { roleType: e.target.value })} className="border rounded px-2 py-1 text-sm">{Object.keys(rolePalette).map((r) => (<option key={r} value={r}>{r}</option>))}</select>
+                  <select
+                    value={m.roleType}
+                    onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
+                    className="border rounded px-2 py-1 text-sm"
+                  >
+                    {Object.keys(rolePalette).map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={m.avatar || ''}
+                    onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
+                    className="border rounded px-2 py-1 text-sm"
+                  >
+                    <option value="">🙂</option>
+                    <option value="😀">😀</option>
+                    <option value="😎">😎</option>
+                    <option value="🚀">🚀</option>
+                    <option value="🎨">🎨</option>
+                    <option value="🐱">🐱</option>
+                  </select>
                   {(m.roleType === "LD" || m.roleType === "SME") && (
-                    <label className="text-xs inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)} onChange={() => toggleCourseWide(m.roleType, m.id)} /> course-wide</label>
+                    <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
+                        onChange={() => toggleCourseWide(m.roleType, m.id)}
+                      />
+                      course-wide
+                    </label>
                   )}
-                  <button className="text-black/40 hover:text-red-500" title="Remove member" onClick={() => deleteMember(m.id)}><Trash2 size={16}/></button>
+                  <button
+                    className="text-black/40 hover:text-red-500"
+                    title="Remove member"
+                    onClick={() => deleteMember(m.id)}
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -509,7 +578,7 @@ function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAd
                 <LinksEditor links={t.links} onAdd={(url)=>onAddLink(t.id,url)} onRemove={(i)=>onRemoveLink(t.id,i)} />
               </td>
               <td className="py-2 pr-4"><select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-2 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select></td>
-              <td className="py-2 pr-4"><div className="flex items-center gap-2">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} /> : <span className="text-xs text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-2 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div></td>
+              <td className="py-2 pr-4"><div className="flex items-center gap-2">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-xs text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-2 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div></td>
               <td className="py-2 pr-4"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`border rounded px-2 py-1 ${statusBg(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></td>
               <td className="py-2 pr-4">{t.status === "done" ? (<span className="text-xs text-slate-500">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e)=>onUpdate(t.id,{ startDate:e.target.value })} disabled={t.status === "todo"} className={`border rounded px-2 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} placeholder="—" />)}</td>
               <td className="py-2 pr-4"><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-24 border rounded px-2 py-1" /></td>
@@ -533,7 +602,15 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
 function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
-  const [collapsedIds, setCollapsedIds] = React.useState(() => new Set()); const isCollapsed = (id) => collapsedIds.has(id); const toggleCollapse = (id) => setCollapsedIds((prev)=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
+  const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
+  React.useEffect(() => {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      tasks.forEach((t) => { if (!next.has(t.id)) next.add(t.id); });
+      return next;
+    });
+  }, [tasks]);
+  const isCollapsed = (id) => collapsedIds.has(id); const toggleCollapse = (id) => setCollapsedIds((prev)=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
   const statusPillClass = (status) => { if(status==="done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300"; if(status==="inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300"; return "bg-slate-100 text-slate-700 border-slate-300"; };
   return (
     <div>
@@ -552,14 +629,14 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
                     <>
                       <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
-                      <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
+                      <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
                   ) : (
                     <>
                       <div className="mt-1"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
-                        <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} /> : <span className="text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
+                        <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
                         <div className="flex items-center gap-2"><span>Start</span>{t.status === "done" ? (<span className="text-slate-500 text-xs">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e)=>onUpdate(t.id,{ startDate:e.target.value })} disabled={t.status === "todo"} className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
                         <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
                         <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(t.id,url)} />{t.links && t.links.length>0 && (<LinkChips links={t.links} onRemove={(i)=>onRemoveLink(t.id,i)} />)}</div>
@@ -582,7 +659,7 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
 // =====================================================
 // User Dashboard (NEW)
 // =====================================================
-function UserDashboard({ onBack, onOpenCourse }) {
+function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
     const onStorage = () => setCourses(loadCourses());
@@ -620,8 +697,19 @@ function UserDashboard({ onBack, onOpenCourse }) {
     return Array.from(map.values());
   }, [courses]);
 
-  const [userId, setUserId] = useState(() => members[0]?.id || '');
+  const [userId, setUserId] = useState(initialUserId || '');
+  useEffect(() => {
+    if (!userId && members[0]) setUserId(members[0].id);
+  }, [members, userId]);
+  useEffect(() => {
+    if (initialUserId) setUserId(initialUserId);
+  }, [initialUserId]);
   const user = members.find((m) => m.id === userId);
+
+  const updateAvatar = (memberId, avatar) => {
+    setCourses((cs) => cs.map((c) => ({ ...c, team: c.team.map((m) => m.id === memberId ? { ...m, avatar } : m) })));
+    setSaveState('unsaved');
+  };
 
   const myCourses = useMemo(() => courses.filter((c) => c.team.some((m) => m.id === userId)), [courses, userId]);
   const myTasks = useMemo(() => {
@@ -631,11 +719,14 @@ function UserDashboard({ onBack, onOpenCourse }) {
         if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
-   return arr.sort((a, b) => {
+codex/update-task-sorting-by-due-date-vzwy0x
+    // Sort by actual due dates; undated tasks fall to the end.
+    return arr.sort((a, b) => {
   const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
   const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
   return da - db;
 });
+main
   }, [courses, userId]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
@@ -655,9 +746,25 @@ function UserDashboard({ onBack, onOpenCourse }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {user && <Avatar name={user.name} roleType={user.roleType} avatar={user.avatar} className="w-8 h-8 text-base" />}
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
+{user && (
+  <select
+    value={user.avatar || ''}
+    onChange={(e) => updateAvatar(userId, e.target.value)}
+    className="text-sm border rounded px-2 py-1"
+  >
+    <option value="">🙂</option>
+    <option value="😀">😀</option>
+    <option value="😎">😎</option>
+    <option value="🚀">🚀</option>
+    <option value="🎨">🎨</option>
+    <option value="🐱">🐱</option>
+  </select>
+)}
+main
             <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
             <span className="text-xs text-black/60">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
@@ -719,29 +826,65 @@ function UserDashboard({ onBack, onOpenCourse }) {
                       </div>
                     </div>
                   ))}
-                </div>
+</div>
+)}
+{taskView === 'board' && (
+  <div className="grid gap-4 sm:grid-cols-3">
+    {['todo', 'inprogress', 'done'].map((s) => (
+      <div
+        key={s}
+        className="rounded-xl border border-black/10 bg-white p-2"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          const tid = e.dataTransfer.getData('text/task');
+          const cid = e.dataTransfer.getData('text/course');
+          if (tid && cid) updateTaskStatus(cid, tid, s);
+        }}
+      >
+        <div className="font-medium text-sm capitalize mb-2">{s}</div>
+        <div className="space-y-2 min-h-[50px]">
+          {groupedTasks[s].map((t) => (
+            <div
+              key={t.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/task', t.id);
+                e.dataTransfer.setData('text/course', t.courseId);
+              }}
+              className="p-2 rounded border border-black/10 bg-slate-50 text-sm space-y-1 cursor-move"
+            >
+              <div className="font-medium truncate">{t.title}</div>
+              {t.details && (
+                <div className="text-xs text-black/60 truncate">{t.details}</div>
               )}
-              {taskView === 'board' && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {['todo','inprogress','done'].map((s) => (
-                    <div key={s} className="rounded-xl border border-black/10 bg-white p-2">
-                      <div className="font-medium text-sm capitalize mb-2">{s}</div>
-                      <div className="space-y-2">
-                        {groupedTasks[s].map((t) => (
-                          <div key={t.id} className="p-2 rounded border border-black/10 bg-slate-50 text-sm">
-                            <div className="font-medium truncate">{t.title}</div>
-                            <select value={t.status} onChange={(e)=>updateTaskStatus(t.courseId, t.id, e.target.value)} className="mt-1 text-xs border rounded px-1 py-0.5">
-                              <option value="todo">To do</option>
-                              <option value="inprogress">In progress</option>
-                              <option value="done">Done</option>
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-xs text-black/60 truncate">{t.courseName}</div>
+              <div className="flex items-center justify-between mt-1 gap-1">
+                <select
+                  value={t.status}
+                  onChange={(e) =>
+                    updateTaskStatus(t.courseId, t.id, e.target.value)
+                  }
+                  className="text-xs border rounded px-1 py-0.5"
+                >
+                  <option value="todo">To do</option>
+                  <option value="inprogress">In progress</option>
+                  <option value="done">Done</option>
+                </select>
+                <DuePill date={t.dueDate} status={t.status} />
+                <button
+                  onClick={() => onOpenCourse(t.courseId)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
+                >
+                  Open
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
               {taskView === 'calendar' && (
                 <CalendarView
                   monthDate={calMonth}
@@ -772,9 +915,23 @@ function computeTotals(state) {
 function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => { const onStorage = () => setCourses(loadCourses()); window.addEventListener('storage', onStorage); return () => window.removeEventListener('storage', onStorage); }, []);
+  useEffect(() => {
+    (async () => {
+      const remote = await loadCoursesRemote();
+      if (remote.length) {
+        saveCourses(remote);
+        setCourses(remote);
+      }
+    })();
+  }, []);
   const removeCourse = (id) => { const next = courses.filter((c)=>c.id!==id); saveCourses(next); setCourses(next); };
   const duplicateCourse = (id) => { const src = courses.find((c)=>c.id===id); if(!src) return; const copy = JSON.parse(JSON.stringify(src)); copy.id = uid(); copy.course.id = copy.id; copy.course.name = `${src.course.name} (copy)`; const next = [...courses, copy]; saveCourses(next); setCourses(next); };
   const open = (id) => onOpenCourse(id);
+  const members = useMemo(() => {
+    const map = new Map();
+    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
+    return Array.from(map.values());
+  }, [courses]);
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
@@ -787,7 +944,6 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={onOpenUser} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Users size={16}/> User View</button>
             <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
             <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
           </div>
@@ -795,41 +951,68 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {courses.length === 0 ? (
-          <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
-            <div className="text-lg font-semibold mb-2">No courses yet</div>
-            <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
-            <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((c) => { const t = computeTotals(c); return (
-              <motion.div
-                key={c.id}
-                layout
-                role="button"
-                tabIndex={0}
-                aria-label={`Open ${c.course.name}`}
-                onClick={() => open(c.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') open(c.id); }}
-                className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 truncate">{c.course.description}</div></div>
-                </div>
-                <div className="flex items-center gap-4 mt-3">
-                  <Ring size={72} stroke={10} progress={t.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{t.pct}%</div><div className="text-[10px] text-black/60">{t.done}/{t.total}</div></div></Ring>
-                  <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
-                  <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
-                  <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
-                </div>
-              </motion.div>
-            ); })}
-          </div>
-        )}
+        <section>
+          <h2 className="text-lg font-semibold mb-2">My View</h2>
+          {members.length === 0 ? (
+            <div className="text-sm text-black/60">No team members</div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {members.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => onOpenUser(m.id)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2 hover:opacity-90"
+                  style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
+                >
+                  <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
+                  <div className="text-left">
+                    <div className="font-medium leading-tight">{m.name}</div>
+                    <div className="text-xs text-black/60">{m.roleType}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold mb-2">All Courses</h2>
+          {courses.length === 0 ? (
+            <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
+              <div className="text-lg font-semibold mb-2">No courses yet</div>
+              <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
+              <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((c) => { const t = computeTotals(c); return (
+                <motion.div
+                  key={c.id}
+                  layout
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Open ${c.course.name}`}
+                  onClick={() => open(c.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') open(c.id); }}
+                  className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 truncate">{c.course.description}</div></div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-3">
+                    <Ring size={72} stroke={10} progress={t.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{t.pct}%</div><div className="text-[10px] text-black/60">{t.done}/{t.total}</div></div></Ring>
+                    <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                    <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
+                    <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
+                  </div>
+                </motion.div>
+              ); })}
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );
@@ -844,8 +1027,9 @@ export default function PMApp() {
   });
   const [prevView, setPrevView] = useState("hub");
   const [currentCourseId, setCurrentCourseId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
-  const openUser = () => { setPrevView(view); setView("user"); };
+  const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
   const editTemplate = () => { setPrevView(view); setCurrentCourseId("__TEMPLATE__"); setView("course"); };
   const addCourse = () => {
     const tpl = loadTemplate() || remapSeed(seed());
@@ -862,7 +1046,7 @@ export default function PMApp() {
   }
 
   if (view === "user") {
-    return <UserDashboard onBack={onBack} onOpenCourse={openCourse} />;
+    return <UserDashboard onBack={onBack} onOpenCourse={openCourse} initialUserId={currentUserId} />;
   }
 
   // Course mode
