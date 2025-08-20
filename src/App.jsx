@@ -944,7 +944,12 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
-            <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
+            <button
+              onClick={onAddCourse}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
+            >
+              <Plus size={16}/> Add Course
+            </button>
           </div>
         </div>
       </header>
@@ -959,14 +964,6 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
               {members.map((m) => (
                 <button
                   key={m.id}
-<button
-  type="button"
-  onClick={() => onOpenUser(m.id)}
-  className="flex  {/* remaining classes... */}
->
-  {/* button contents... */}
-</button>
-main
                   onClick={() => onOpenUser(m.id)}
                   className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2 hover:opacity-90"
                   style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
