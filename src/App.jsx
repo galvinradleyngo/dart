@@ -719,12 +719,14 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
         if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
+codex/update-task-sorting-by-due-date-vzwy0x
     // Sort by actual due dates; undated tasks fall to the end.
     return arr.sort((a, b) => {
-      const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-      return da - db;
-    });
+  const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+  const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+  return da - db;
+});
+main
   }, [courses, userId]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
@@ -748,16 +750,21 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
-            {user && (
-              <select value={user.avatar || ''} onChange={(e)=>updateAvatar(userId, e.target.value)} className="text-sm border rounded px-2 py-1">
-                <option value="">🙂</option>
-                <option value="😀">😀</option>
-                <option value="😎">😎</option>
-                <option value="🚀">🚀</option>
-                <option value="🎨">🎨</option>
-                <option value="🐱">🐱</option>
-              </select>
-            )}
+{user && (
+  <select
+    value={user.avatar || ''}
+    onChange={(e) => updateAvatar(userId, e.target.value)}
+    className="text-sm border rounded px-2 py-1"
+  >
+    <option value="">🙂</option>
+    <option value="😀">😀</option>
+    <option value="😎">😎</option>
+    <option value="🚀">🚀</option>
+    <option value="🎨">🎨</option>
+    <option value="🐱">🐱</option>
+  </select>
+)}
+main
             <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
             <span className="text-xs text-black/60">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
@@ -819,45 +826,65 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
                       </div>
                     </div>
                   ))}
-                </div>
+</div>
+)}
+{taskView === 'board' && (
+  <div className="grid gap-4 sm:grid-cols-3">
+    {['todo', 'inprogress', 'done'].map((s) => (
+      <div
+        key={s}
+        className="rounded-xl border border-black/10 bg-white p-2"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          const tid = e.dataTransfer.getData('text/task');
+          const cid = e.dataTransfer.getData('text/course');
+          if (tid && cid) updateTaskStatus(cid, tid, s);
+        }}
+      >
+        <div className="font-medium text-sm capitalize mb-2">{s}</div>
+        <div className="space-y-2 min-h-[50px]">
+          {groupedTasks[s].map((t) => (
+            <div
+              key={t.id}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/task', t.id);
+                e.dataTransfer.setData('text/course', t.courseId);
+              }}
+              className="p-2 rounded border border-black/10 bg-slate-50 text-sm space-y-1 cursor-move"
+            >
+              <div className="font-medium truncate">{t.title}</div>
+              {t.details && (
+                <div className="text-xs text-black/60 truncate">{t.details}</div>
               )}
-              {taskView === 'board' && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {['todo','inprogress','done'].map((s) => (
-                    <div
-                      key={s}
-                      className="rounded-xl border border-black/10 bg-white p-2"
-                      onDragOver={(e)=>e.preventDefault()}
-                      onDrop={(e)=>{const tid=e.dataTransfer.getData('text/task'); const cid=e.dataTransfer.getData('text/course'); if(tid && cid) updateTaskStatus(cid, tid, s);}}
-                    >
-                      <div className="font-medium text-sm capitalize mb-2">{s}</div>
-                      <div className="space-y-2 min-h-[50px]">
-                        {groupedTasks[s].map((t) => (
-                          <div
-                            key={t.id}
-                            draggable
-                            onDragStart={(e)=>{e.dataTransfer.setData('text/task', t.id); e.dataTransfer.setData('text/course', t.courseId);}}
-                            className="p-2 rounded border border-black/10 bg-slate-50 text-sm space-y-1 cursor-move"
-                          >
-                            <div className="font-medium truncate">{t.title}</div>
-                            {t.details && <div className="text-xs text-black/60 truncate">{t.details}</div>}
-                            <div className="text-xs text-black/60 truncate">{t.courseName}</div>
-                            <div className="flex items-center justify-between mt-1 gap-1">
-                              <select value={t.status} onChange={(e)=>updateTaskStatus(t.courseId, t.id, e.target.value)} className="text-xs border rounded px-1 py-0.5">
-                                <option value="todo">To do</option>
-                                <option value="inprogress">In progress</option>
-                                <option value="done">Done</option>
-                              </select>
-                              <DuePill date={t.dueDate} status={t.status} />
-                              <button onClick={()=>onOpenCourse(t.courseId)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow">Open</button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <div className="text-xs text-black/60 truncate">{t.courseName}</div>
+              <div className="flex items-center justify-between mt-1 gap-1">
+                <select
+                  value={t.status}
+                  onChange={(e) =>
+                    updateTaskStatus(t.courseId, t.id, e.target.value)
+                  }
+                  className="text-xs border rounded px-1 py-0.5"
+                >
+                  <option value="todo">To do</option>
+                  <option value="inprogress">In progress</option>
+                  <option value="done">Done</option>
+                </select>
+                <DuePill date={t.dueDate} status={t.status} />
+                <button
+                  onClick={() => onOpenCourse(t.courseId)}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
+                >
+                  Open
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
               {taskView === 'calendar' && (
                 <CalendarView
                   monthDate={calMonth}
