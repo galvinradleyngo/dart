@@ -915,9 +915,9 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
     return (
       <motion.div
         {...dragHandlers}
-        className={`rounded-lg border border-black/10 p-3 shadow-sm bg-white ${
-          dragHandlers.draggable ? 'cursor-move' : ''
-        }`}
+        className={`rounded-lg border border-black/10 p-3 shadow-sm ${
+          t.status === 'inprogress' ? 'bg-emerald-50' : 'bg-white'
+        } ${dragHandlers.draggable ? 'cursor-move' : ''}`}
       >
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
