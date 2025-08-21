@@ -629,72 +629,51 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     return 'bg-slate-100 text-slate-700 border-slate-300';
   };
   return (
-    <motion.div
-      {...dragHandlers}
-      className={`rounded-lg border border-black/10 p-3 shadow-sm ${
-        t.status === 'inprogress' ? 'bg-emerald-50' : 'bg-white'
-      } ${dragHandlers.draggable ? 'cursor-move' : ''}`}
-    >
+    <motion.div {...dragHandlers} className={`rounded-lg border border-black/10 p-3 shadow-sm ${t.status === 'inprogress' ? 'bg-emerald-50' : 'bg-white'} ${dragHandlers.draggable ? 'cursor-move' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-[15px] sm:text-base font-semibold leading-tight truncate">
-            <InlineText value={t.title} onChange={(v) => onUpdate(t.id, { title: v })} />
+            <InlineText value={t.title} onChange={(v) => onUpdate?.(t.id, { title: v })} />
           </div>
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setCollapsed((c) => !c)}
+            onClick={() => setCollapsed((v) => !v)}
             className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
             {collapsed ? <Plus size={16} /> : <Minus size={16} />}
           </button>
-          <button
-            onClick={() => onDuplicate(t.id)}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
-            title="Duplicate"
-          >
-            <CopyIcon size={16} />
-          </button>
-          <button
-            onClick={() => onDelete(t.id)}
-            className="text-black/40 hover:text-red-500"
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
+          {onDuplicate && (
+            <button
+              onClick={() => onDuplicate(t.id)}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              title="Duplicate"
+            >
+              <CopyIcon size={16} />
+            </button>
+          )}
+          {onDelete && (
+            <button onClick={() => onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete">
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
       </div>
       {collapsed ? (
         <>
           <div className="text-xs text-black/60 mt-1 truncate">
-            <InlineText
-              value={t.details}
-              onChange={(v) => onUpdate(t.id, { details: v })}
-              placeholder="Details…"
-            />
+            <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
           </div>
-          {t.note && (
-            <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>
-          )}
+          {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
           <div className="mt-2 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 min-w-0">
-              {a ? (
-                <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
-              ) : (
-                <span className="text-black/40">—</span>
-              )}
-              <span className="truncate">
-                {a ? `${a.name} (${a.roleType})` : 'Unassigned'}
-              </span>
+              {a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}
+              <span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span>
             </div>
             <div className="flex items-center gap-2">
               <DuePill date={t.dueDate} status={t.status} />
-              {t.status === 'done' && (
-                <span className="text-slate-500">
-                  Completed: {t.completedDate || '—'}
-                </span>
-              )}
+              {t.status === 'done' && <span className="text-slate-500">Completed: {t.completedDate || '—'}</span>}
             </div>
           </div>
         </>
@@ -703,7 +682,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
           <div className="mt-1">
             <select
               value={t.status}
-              onChange={(e) => onUpdate(t.id, { status: e.target.value })}
+              onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
               className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
             >
               <option value="todo">To Do</option>
@@ -714,7 +693,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
             <select
               value={t.milestoneId}
-              onChange={(e) => onUpdate(t.id, { milestoneId: e.target.value })}
+              onChange={(e) => onUpdate?.(t.id, { milestoneId: e.target.value })}
               className="border rounded px-1.5 py-1"
             >
               {milestones.map((m) => (
@@ -724,14 +703,10 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
               ))}
             </select>
             <div className="flex items-center gap-1">
-              {a ? (
-                <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
-              ) : (
-                <span className="text-black/40">—</span>
-              )}
+              {a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}
               <select
                 value={t.assigneeId || ''}
-                onChange={(e) => onUpdate(t.id, { assigneeId: e.target.value || null })}
+                onChange={(e) => onUpdate?.(t.id, { assigneeId: e.target.value || null })}
                 className="border rounded px-1.5 py-1"
               >
                 <option value="">Unassigned</option>
@@ -750,11 +725,9 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                 <input
                   type="date"
                   value={t.startDate || ''}
-                  onChange={(e) => onUpdate(t.id, { startDate: e.target.value })}
+                  onChange={(e) => onUpdate?.(t.id, { startDate: e.target.value })}
                   disabled={t.status === 'todo'}
-                  className={`border rounded px-1.5 py-1 ${
-                    t.status === 'todo' ? 'bg-slate-50 text-slate-500' : ''
-                  }`}
+                  className={`border rounded px-1.5 py-1 ${t.status === 'todo' ? 'bg-slate-50 text-slate-500' : ''}`}
                 />
               )}
             </div>
@@ -764,24 +737,21 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                 type="number"
                 min={0}
                 value={t.workDays ?? 0}
-                onChange={(e) => onUpdate(t.id, { workDays: Number(e.target.value) })}
+                onChange={(e) => onUpdate?.(t.id, { workDays: Number(e.target.value) })}
                 className="w-20 border rounded px-1.5 py-1"
               />
             </div>
             <div className="basis-full w-full">
-              <DocumentInput onAdd={(url) => onAddLink(t.id, url)} />
+              <DocumentInput onAdd={(url) => onAddLink?.(t.id, url)} />
               {t.links && t.links.length > 0 && (
-                <LinkChips
-                  links={t.links}
-                  onRemove={(i) => onRemoveLink(t.id, i)}
-                />
+                <LinkChips links={t.links} onRemove={(i) => onRemoveLink?.(t.id, i)} />
               )}
             </div>
             <div className="basis-full text-xs text-slate-700">
               <span className="font-medium mr-1">Note:</span>
               <InlineText
                 value={t.note}
-                onChange={(v) => onUpdate(t.id, { note: v })}
+                onChange={(v) => onUpdate?.(t.id, { note: v })}
                 placeholder="Add a quick note…"
                 multiline
               />
@@ -790,9 +760,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
             <div className="ml-auto flex items-center gap-2">
               <DuePill date={t.dueDate} status={t.status} />
               {t.status === 'done' && (
-                <span className="text-slate-500">
-                  Completed: {t.completedDate || '—'}
-                </span>
+                <span className="text-slate-500">Completed: {t.completedDate || '—'}</span>
               )}
             </div>
           </div>
