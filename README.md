@@ -18,4 +18,9 @@ npm run dev
 ```
 
 ## Testing
-This project does not include an automated test suite yet. Running `npm test` will result in a "Missing script" error.
+
+```bash
+npm test
+```
+
+The test script uses Node's built-in test runner (`node --test`), which requires Node.js 18 or newer.
