@@ -16,3 +16,6 @@ This ZIP is preconfigured for `https://galvinradleyngo.github.io/dart/`.
 npm i
 npm run dev
 ```
+
+## Testing
+This project does not include an automated test suite yet. Running `npm test` will result in a "Missing script" error.
