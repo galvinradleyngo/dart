@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { db } from "./firebase.js";
+import { uid } from "./utils.js";
 
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
@@ -36,7 +37,6 @@ import { db } from "./firebase.js";
 // =====================================================
 // Utilities
 // =====================================================
-const uid = () => Math.random().toString(36).slice(2, 9);
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmt = (d) => new Date(d).toISOString().slice(0, 10);
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -251,11 +251,17 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
 
 const handleSave = async () => {
   setSaveState('saving');
-    onStateChange?.(state);
-    const all = loadCourses();
-    await saveCoursesRemote(all);
-    setSaveState('saved');
-  };
+  const all = loadCourses();
+  const idx = all.findIndex(
+    (c) => c.id === state.course.id || c.course?.id === state.course.id
+  );
+  if (idx >= 0) all[idx] = state;
+  else all.push(state);
+  saveCourses(all);
+  await saveCoursesRemote(all);
+  onStateChange?.(state);
+  setSaveState('saved');
+};
 
   // Listen for global schedule changes from other tabs
   useEffect(() => {
@@ -355,6 +361,8 @@ const handleSave = async () => {
   // Calendar
   const [calMonth, setCalMonth] = useState(() => { const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const gotoMonth = (offset) => setCalMonth((m)=>new Date(m.getFullYear(), m.getMonth()+offset, 1));
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const editingTask = state.tasks.find((t) => t.id === editingTaskId) || null;
 
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
@@ -535,9 +543,22 @@ const handleSave = async () => {
           ) : view === "board" ? (
             <BoardView tasks={filteredBase} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
           ) : (
-            <CalendarView monthDate={calMonth} tasks={filteredBase} milestones={milestones} team={team} onPrev={() => gotoMonth(-1)} onNext={() => gotoMonth(1)} onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} schedule={state.schedule} />
+            <CalendarView monthDate={calMonth} tasks={filteredBase} milestones={milestones} team={team} onPrev={() => gotoMonth(-1)} onNext={() => gotoMonth(1)} onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} schedule={state.schedule} onTaskClick={(t)=>setEditingTaskId(t.id)} />
           )}
         </section>
+      {editingTask && (
+        <TaskModal
+          task={editingTask}
+          tasks={state.tasks}
+          team={team}
+          milestones={milestones}
+          onUpdate={updateTask}
+          onDelete={deleteTask}
+          onAddLink={(id, url)=>patchTaskLinks(id,'add',url)}
+          onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)}
+          onClose={()=>setEditingTaskId(null)}
+        />
+      )}
       </main>
 
       <footer className="max-w-7xl mx-auto px-4 pb-10 text-xs text-black/50">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
@@ -599,55 +620,261 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
   <div className="text-xs"><button onClick={()=>setOpen((v)=>!v)} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"><GitBranch size={12}/> {current ? `Depends on: ${current.title}` : "Add dependency"}</button>{open && (<div className="mt-1"><select value={task.depTaskId || ""} onChange={(e)=>{ const val = e.target.value || null; onUpdate(task.id,{ depTaskId:val }); setOpen(false); }} className="border rounded px-2 py-1"><option value="">— none —</option>{peers.map((p)=>(<option key={p.id} value={p.id}>{p.title}</option>))}</select></div>)}</div>
 ); }
 
+function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
+  const [collapsed, setCollapsed] = useState(true);
+  const a = team.find((m) => m.id === t.assigneeId);
+  const statusPillClass = (status) => {
+    if (status === 'done') return 'bg-emerald-200/80 text-emerald-900 border-emerald-300';
+    if (status === 'inprogress') return 'bg-emerald-100 text-emerald-900 border-emerald-300';
+    return 'bg-slate-100 text-slate-700 border-slate-300';
+  };
+  return (
+    <motion.div
+      {...dragHandlers}
+      className={`rounded-lg border border-black/10 p-3 shadow-sm ${
+        t.status === 'inprogress' ? 'bg-emerald-50' : 'bg-white'
+      } ${dragHandlers.draggable ? 'cursor-move' : ''}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[15px] sm:text-base font-semibold leading-tight truncate">
+            <InlineText value={t.title} onChange={(v) => onUpdate(t.id, { title: v })} />
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCollapsed((c) => !c)}
+            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? <Plus size={16} /> : <Minus size={16} />}
+          </button>
+          <button
+            onClick={() => onDuplicate(t.id)}
+            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            title="Duplicate"
+          >
+            <CopyIcon size={16} />
+          </button>
+          <button
+            onClick={() => onDelete(t.id)}
+            className="text-black/40 hover:text-red-500"
+            title="Delete"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+      {collapsed ? (
+        <>
+          <div className="text-xs text-black/60 mt-1 truncate">
+            <InlineText
+              value={t.details}
+              onChange={(v) => onUpdate(t.id, { details: v })}
+              placeholder="Details…"
+            />
+          </div>
+          {t.note && (
+            <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>
+          )}
+          <div className="mt-2 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              {a ? (
+                <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
+              ) : (
+                <span className="text-black/40">—</span>
+              )}
+              <span className="truncate">
+                {a ? `${a.name} (${a.roleType})` : 'Unassigned'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <DuePill date={t.dueDate} status={t.status} />
+              {t.status === 'done' && (
+                <span className="text-slate-500">
+                  Completed: {t.completedDate || '—'}
+                </span>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="mt-1">
+            <select
+              value={t.status}
+              onChange={(e) => onUpdate(t.id, { status: e.target.value })}
+              className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+            >
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <select
+              value={t.milestoneId}
+              onChange={(e) => onUpdate(t.id, { milestoneId: e.target.value })}
+              className="border rounded px-1.5 py-1"
+            >
+              {milestones.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-1">
+              {a ? (
+                <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
+              ) : (
+                <span className="text-black/40">—</span>
+              )}
+              <select
+                value={t.assigneeId || ''}
+                onChange={(e) => onUpdate(t.id, { assigneeId: e.target.value || null })}
+                className="border rounded px-1.5 py-1"
+              >
+                <option value="">Unassigned</option>
+                {team.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.roleType})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>Start</span>
+              {t.status === 'done' ? (
+                <span className="text-slate-500 text-xs">—</span>
+              ) : (
+                <input
+                  type="date"
+                  value={t.startDate || ''}
+                  onChange={(e) => onUpdate(t.id, { startDate: e.target.value })}
+                  disabled={t.status === 'todo'}
+                  className={`border rounded px-1.5 py-1 ${
+                    t.status === 'todo' ? 'bg-slate-50 text-slate-500' : ''
+                  }`}
+                />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <span># of Workdays</span>
+              <input
+                type="number"
+                min={0}
+                value={t.workDays ?? 0}
+                onChange={(e) => onUpdate(t.id, { workDays: Number(e.target.value) })}
+                className="w-20 border rounded px-1.5 py-1"
+              />
+            </div>
+            <div className="basis-full w-full">
+              <DocumentInput onAdd={(url) => onAddLink(t.id, url)} />
+              {t.links && t.links.length > 0 && (
+                <LinkChips
+                  links={t.links}
+                  onRemove={(i) => onRemoveLink(t.id, i)}
+                />
+              )}
+            </div>
+            <div className="basis-full text-xs text-slate-700">
+              <span className="font-medium mr-1">Note:</span>
+              <InlineText
+                value={t.note}
+                onChange={(v) => onUpdate(t.id, { note: v })}
+                placeholder="Add a quick note…"
+                multiline
+              />
+            </div>
+            <DepPicker task={t} tasks={tasks} onUpdate={onUpdate} />
+            <div className="ml-auto flex items-center gap-2">
+              <DuePill date={t.dueDate} status={t.status} />
+              {t.status === 'done' && (
+                <span className="text-slate-500">
+                  Completed: {t.completedDate || '—'}
+                </span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </motion.div>
+  );
+}
+
+function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
+  if (!task) return null;
+  const assignee = team.find((m) => m.id === task.assigneeId);
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-xl p-4 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="font-semibold"><InlineText value={task.title} onChange={(v)=>onUpdate(task.id,{ title:v })} /></div>
+            <div className="text-sm text-black/60"><InlineText value={task.details} onChange={(v)=>onUpdate(task.id,{ details:v })} placeholder="Details…" multiline /></div>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-black">×</button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <select value={task.milestoneId} onChange={(e)=>onUpdate(task.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
+          <div className="flex items-center gap-1">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-black/40">—</span>}<select value={task.assigneeId || ""} onChange={(e)=>onUpdate(task.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{team.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
+          <select value={task.status} onChange={(e)=>onUpdate(task.id,{ status:e.target.value })} className={`border rounded px-1.5 py-1 ${statusBg(task.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>
+          <div className="flex items-center gap-2"><span>Start</span>{task.status === "done" ? (<span className="text-slate-500">—</span>) : (<input type="date" value={task.startDate || ""} onChange={(e)=>onUpdate(task.id,{ startDate:e.target.value })} disabled={task.status === "todo"} className={`border rounded px-1.5 py-1 ${task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
+          <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={task.workDays ?? 0} onChange={(e)=>onUpdate(task.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
+          <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(task.id,url)} />{task.links && task.links.length>0 && (<LinkChips links={task.links} onRemove={(i)=>onRemoveLink(task.id,i)} />)}</div>
+          <div className="basis-full text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={task.note} onChange={(v)=>onUpdate(task.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
+          <DepPicker task={task} tasks={tasks} onUpdate={onUpdate} />
+          <div className="ml-auto flex items-center gap-2"><DuePill date={task.dueDate} status={task.status} />{task.status === "done" && <span className="text-slate-500">Completed: {task.completedDate || "—"}</span>}</div>
+        </div>
+        {onDelete && <div className="mt-4 flex justify-end"><button onClick={()=>{ onDelete(task.id); onClose(); }} className="text-rose-600 hover:text-rose-700 text-sm">Delete</button></div>}
+      </div>
+    </div>
+  );
+}
+
 function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
-  const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
-  const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
-  const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
-  React.useEffect(() => {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
-      tasks.forEach((t) => { if (!next.has(t.id)) next.add(t.id); });
-      return next;
-    });
-  }, [tasks]);
-  const isCollapsed = (id) => collapsedIds.has(id); const toggleCollapse = (id) => setCollapsedIds((prev)=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
-  const statusPillClass = (status) => { if(status==="done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300"; if(status==="inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300"; return "bg-slate-100 text-slate-700 border-slate-300"; };
+  const cols = [
+    { id: 'todo', title: 'To Do' },
+    { id: 'inprogress', title: 'In Progress' },
+    { id: 'done', title: 'Done' }
+  ];
+  const byCol = (id) =>
+    tasks
+      .filter((t) => t.status === id)
+      .sort((a, b) => {
+        const da = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        const db = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        return da - db;
+      });
   return (
     <div>
       <div className="grid md:grid-cols-3 gap-3">
         {cols.map((c) => (
-          <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
-            <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
+          <div
+            key={c.id}
+            className={`rounded-xl border border-black/10 p-3 ${c.id === 'inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
+            onDragOver={onDragOverCol}
+            onDrop={onDropToCol(c.id)}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-black/70">{c.title}</div>
+            </div>
             <div className="space-y-2 min-h-[140px]">
-              {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
-                <motion.div key={t.id} className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`} draggable onDragStart={onDragStart(t.id)}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
-                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete"><Trash2 size={16}/></button></div>
-                  </div>
-                  {collapsed ? (
-                    <>
-                      <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
-                      {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
-                      <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="mt-1"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                        <select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
-                        <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
-                        <div className="flex items-center gap-2"><span>Start</span>{t.status === "done" ? (<span className="text-slate-500 text-xs">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e)=>onUpdate(t.id,{ startDate:e.target.value })} disabled={t.status === "todo"} className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
-                        <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
-                        <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(t.id,url)} />{t.links && t.links.length>0 && (<LinkChips links={t.links} onRemove={(i)=>onRemoveLink(t.id,i)} />)}</div>
-                        <div className="basis-full text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v)=>onUpdate(t.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
-                        <DepPicker task={t} tasks={tasks} onUpdate={onUpdate} />
-                        <div className="ml-auto flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div>
-                      </div>
-                    </>
-                  )}
-                </motion.div>
-              ); })}
+              {byCol(c.id).map((t) => (
+                <TaskCard
+                  key={t.id}
+                  task={t}
+                  team={team}
+                  milestones={milestones}
+                  tasks={tasks}
+                  onUpdate={onUpdate}
+                  onDelete={onDelete}
+                  onDuplicate={onDuplicate}
+                  onAddLink={onAddLink}
+                  onRemoveLink={onRemoveLink}
+                  dragHandlers={{ draggable: true, onDragStart: onDragStart(t.id) }}
+                />
+              ))}
             </div>
           </div>
         ))}
@@ -678,8 +905,107 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
 
   const [taskView, setTaskView] = useState('list');
   const [saveState, setSaveState] = useState('saved');
-  const updateTaskStatus = (courseId, taskId, status) => {
-    setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.map((t) => t.id === taskId ? { ...t, status } : t) } : c));
+
+  const recomputeDue = (t, patch = {}, schedule) => {
+    const start = patch.startDate ?? t.startDate;
+    const work = patch.workDays ?? t.workDays;
+    const due = start ? addBusinessDays(start, work, schedule.workweek || [1,2,3,4,5], schedule.holidays || []) : "";
+    return { ...patch, dueDate: due };
+  };
+
+  const propagateDependentForecasts = (tasks, schedule) => {
+    const map = new Map(tasks.map((x) => [x.id, x]));
+    return tasks.map((t) => {
+      if (!t.depTaskId || t.status === 'done') return t;
+      const src = map.get(t.depTaskId);
+      if (!src) return t;
+      const startForecast = src.dueDate || '';
+      if (t.status !== 'inprogress' && startForecast) {
+        const due = addBusinessDays(startForecast, t.workDays, schedule.workweek || [1,2,3,4,5], schedule.holidays || []);
+        return { ...t, startDate: startForecast, dueDate: due };
+      }
+      return t;
+    });
+  };
+
+  const updateTask = (courseId, taskId, patch) => {
+    setCourses((cs) => cs.map((c) => {
+      if (c.course.id !== courseId) return c;
+      const sched = c.schedule || loadGlobalSchedule();
+      let changedTo = null;
+      const tasks1 = c.tasks.map((t) => {
+        if (t.id !== taskId) return t;
+        let adjusted = { ...patch };
+        if (patch.status && patch.status !== t.status) {
+          changedTo = patch.status;
+          if (patch.status === 'inprogress') { if (!t.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr(); }
+          if (patch.status === 'todo') { adjusted.startDate = ''; adjusted.dueDate = ''; adjusted.completedDate = ''; }
+          if (patch.status === 'done') { adjusted.completedDate = todayStr(); }
+        }
+        if ('startDate' in adjusted || 'workDays' in adjusted) adjusted = recomputeDue({ ...t, ...adjusted }, adjusted, sched);
+        return { ...t, ...adjusted };
+      });
+      let tasks2 = tasks1;
+      if (changedTo === 'inprogress') tasks2 = tasks2.map((d) => (d.depTaskId === taskId && d.status !== 'done' ? { ...d, status: 'inprogress' } : d));
+      if (changedTo === 'done') {
+        const doneDate = todayStr();
+        tasks2 = tasks2.map((x) => (x.id === taskId ? { ...x, completedDate: x.completedDate || doneDate } : x));
+        tasks2 = tasks2.map((d) => {
+          if (d.depTaskId === taskId && d.status !== 'done') {
+            const start = doneDate;
+            const due = addBusinessDays(start, d.workDays, sched.workweek || [1,2,3,4,5], sched.holidays || []);
+            return { ...d, status: 'inprogress', startDate: start, dueDate: due };
+          }
+          return d;
+        });
+      }
+      const tasks3 = propagateDependentForecasts(tasks2, sched);
+      return { ...c, tasks: tasks3 };
+    }));
+    setSaveState('unsaved');
+  };
+
+  const updateTaskStatus = (courseId, taskId, status) => updateTask(courseId, taskId, { status });
+
+  const patchTaskLinks = (courseId, id, op, payload) => {
+    setCourses((cs) => cs.map((c) => {
+      if (c.course.id !== courseId) return c;
+      return {
+        ...c,
+        tasks: c.tasks.map((t) => {
+          if (t.id !== id) return t;
+          const links = Array.isArray(t.links) ? [...t.links] : [];
+          if (op === 'add') links.push(payload);
+          if (op === 'remove') links.splice(payload,1);
+          return { ...t, links };
+        })
+      };
+    }));
+    setSaveState('unsaved');
+  };
+
+  const duplicateTask = (courseId, id) => {
+    setCourses((cs) => cs.map((c) => {
+      if (c.course.id !== courseId) return c;
+      const orig = c.tasks.find((t) => t.id === id);
+      if (!orig) return c;
+      const clone = {
+        ...orig,
+        id: uid(),
+        title: `${orig.title} (copy)`,
+        status: 'todo',
+        startDate: '',
+        dueDate: '',
+        completedDate: '',
+        depTaskId: null,
+      };
+      return { ...c, tasks: [...c.tasks, clone] };
+    }));
+    setSaveState('unsaved');
+  };
+
+  const deleteTask = (courseId, id) => {
+    setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.filter((t) => t.id !== id) } : c));
     setSaveState('unsaved');
   };
   const handleSave = async () => {
@@ -690,6 +1016,7 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
   };
   const cycleStatus = (s) => (s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'done' : 'todo');
   const [calMonth, setCalMonth] = useState(() => new Date());
+  const [editing, setEditing] = useState(null);
 
   const members = useMemo(() => {
     const map = new Map();
@@ -719,18 +1046,39 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
         if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
-return arr.sort((a, b) => {
-  const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-  const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-  return da - db;
-});
-main
+    return arr.sort((a, b) => {
+      const nameCmp = a.courseName.localeCompare(b.courseName);
+      if (nameCmp !== 0) return nameCmp;
+      const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return da - db;
+    });
   }, [courses, userId]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
     return g;
   }, [myTasks]);
+
+  const renderTaskCard = (t, dragHandlers) => {
+    const c = courses.find((x) => x.course.id === t.courseId);
+    if (!c) return null;
+    return (
+      <TaskCard
+        key={t.id}
+        task={t}
+        team={c.team}
+        milestones={c.milestones}
+        tasks={c.tasks}
+        onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+        onDelete={(id) => deleteTask(c.course.id, id)}
+        onDuplicate={(id) => duplicateTask(c.course.id, id)}
+        onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+        onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+        dragHandlers={dragHandlers}
+      />
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
@@ -762,7 +1110,6 @@ main
     <option value="🐱">🐱</option>
   </select>
 )}
-main
             <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
             <span className="text-xs text-black/60">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
@@ -807,83 +1154,44 @@ main
               </div>
               {taskView === 'list' && (
                 <div className="space-y-2">
-                  {myTasks.map((t) => (
-                    <div key={t.id} className="rounded-xl border border-black/10 bg-white p-3 text-sm flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{t.title}</div>
-                        <div className="text-xs text-black/60 truncate">{t.courseName}</div>
+                  {myTasks.map((t) => renderTaskCard(t))}
+                </div>
+              )}
+              {taskView === 'board' && (
+                <div className="grid md:grid-cols-3 gap-3">
+                  {[
+                    { id: 'todo', title: 'To Do' },
+                    { id: 'inprogress', title: 'In Progress' },
+                    { id: 'done', title: 'Done' }
+                  ].map((col) => (
+                    <div
+                      key={col.id}
+                      className={`rounded-xl border border-black/10 p-3 ${col.id === 'inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        const tid = e.dataTransfer.getData('text/task');
+                        const cid = e.dataTransfer.getData('text/course');
+                        if (tid && cid) updateTaskStatus(cid, tid, col.id);
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm font-medium text-black/70">{col.title}</div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <select value={t.status} onChange={(e)=>updateTaskStatus(t.courseId, t.id, e.target.value)} className="text-xs border rounded px-1 py-0.5">
-                          <option value="todo">To do</option>
-                          <option value="inprogress">In progress</option>
-                          <option value="done">Done</option>
-                        </select>
-                        <DuePill date={t.dueDate} status={t.status} />
-                        <button onClick={() => onOpenCourse(t.courseId)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow">Open</button>
+                      <div className="space-y-2 min-h-[140px]">
+                        {groupedTasks[col.id].map((t) =>
+                          renderTaskCard(t, {
+                            draggable: true,
+                            onDragStart: (e) => {
+                              e.dataTransfer.setData('text/task', t.id);
+                              e.dataTransfer.setData('text/course', t.courseId);
+                            },
+                          })
+                        )}
                       </div>
                     </div>
                   ))}
-</div>
-)}
-{taskView === 'board' && (
-  <div className="grid gap-4 sm:grid-cols-3">
-    {['todo', 'inprogress', 'done'].map((s) => (
-      <div
-        key={s}
-        className="rounded-xl border border-black/10 bg-white p-2"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          const tid = e.dataTransfer.getData('text/task');
-          const cid = e.dataTransfer.getData('text/course');
-          if (tid && cid) updateTaskStatus(cid, tid, s);
-        }}
-      >
-        <div className="font-medium text-sm capitalize mb-2">{s}</div>
-        <div className="space-y-2 min-h-[50px]">
-          {groupedTasks[s].map((t) => (
-            <div
-              key={t.id}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('text/task', t.id);
-                e.dataTransfer.setData('text/course', t.courseId);
-              }}
-              className="p-2 rounded border border-black/10 bg-slate-50 text-sm space-y-1 cursor-move"
-            >
-              <div className="font-medium truncate">{t.title}</div>
-              {t.details && (
-                <div className="text-xs text-black/60 truncate">{t.details}</div>
+                </div>
               )}
-              <div className="text-xs text-black/60 truncate">{t.courseName}</div>
-              <div className="flex items-center justify-between mt-1 gap-1">
-                <select
-                  value={t.status}
-                  onChange={(e) =>
-                    updateTaskStatus(t.courseId, t.id, e.target.value)
-                  }
-                  className="text-xs border rounded px-1 py-0.5"
-                >
-                  <option value="todo">To do</option>
-                  <option value="inprogress">In progress</option>
-                  <option value="done">Done</option>
-                </select>
-                <DuePill date={t.dueDate} status={t.status} />
-                <button
-                  onClick={() => onOpenCourse(t.courseId)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
-                >
-                  Open
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-)}
- main
               {taskView === 'calendar' && (
                 <CalendarView
                   monthDate={calMonth}
@@ -894,12 +1202,30 @@ main
                   onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
                   onToday={() => setCalMonth(new Date())}
                   schedule={loadGlobalSchedule()}
-                  onTaskClick={(t) => updateTaskStatus(t.courseId, t.id, cycleStatus(t.status))}
+                  onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
                 />
               )}
             </>
           )}
         </section>
+        {editing && (() => {
+          const c = courses.find((x) => x.course.id === editing.courseId);
+          const task = c?.tasks.find((t) => t.id === editing.taskId);
+          if (!c || !task) return null;
+          return (
+            <TaskModal
+              task={task}
+              tasks={c.tasks}
+              team={c.team}
+              milestones={c.milestones}
+              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+              onDelete={(id) => { deleteTask(c.course.id, id); setEditing(null); }}
+              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+              onClose={() => setEditing(null)}
+            />
+          );
+        })()}
       </main>
     </div>
   );
@@ -1063,10 +1389,15 @@ export default function PMApp() {
   }
   // open selected course
   const courses = loadCourses();
-  const course = courses.find((c)=>c.id===currentCourseId || c.course.id===currentCourseId) || courses[0];
+  const course = courses.find((c)=>c.id===currentCourseId || c.course?.id===currentCourseId) || courses[0];
   const handleCourseChange = (s) => {
-    const next = loadCourses().map((c)=> (c.id===currentCourseId || c.course.id===currentCourseId) ? s : c );
-    saveCourses(next);
+    const all = loadCourses();
+    const idx = all.findIndex(
+      (c) => c.id === currentCourseId || c.course?.id === currentCourseId
+    );
+    if (idx >= 0) all[idx] = s;
+    else all.push(s);
+    saveCourses(all);
   };
   return <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} />;
 }
