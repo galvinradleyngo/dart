@@ -620,21 +620,20 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
   <div className="text-xs"><button onClick={()=>setOpen((v)=>!v)} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"><GitBranch size={12}/> {current ? `Depends on: ${current.title}` : "Add dependency"}</button>{open && (<div className="mt-1"><select value={task.depTaskId || ""} onChange={(e)=>{ const val = e.target.value || null; onUpdate(task.id,{ depTaskId:val }); setOpen(false); }} className="border rounded px-2 py-1"><option value="">— none —</option>{peers.map((p)=>(<option key={p.id} value={p.id}>{p.title}</option>))}</select></div>)}</div>
 ); }
 
-export function TaskCard({ task, tasks = [], team = [], milestones = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink }) {
+export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
-  const assignee = team.find((m) => m.id === task.assigneeId);
-  const taskAssignableMembers = team;
+  const a = team.find((m) => m.id === t.assigneeId);
   const statusPillClass = (status) => {
     if (status === "done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300";
     if (status === "inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300";
     return "bg-slate-100 text-slate-700 border-slate-300";
   };
-  return (
-    <div className="rounded-lg border border-black/10 p-3 shadow-sm bg-white">
+    return (
+      <motion.div {...dragHandlers} className={`rounded-lg border border-black/10 p-3 shadow-sm ${t.status === 'inprogress' ? 'bg-emerald-50' : 'bg-white'} ${dragHandlers.draggable ? 'cursor-move' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="text-[15px] sm:text-base font-semibold leading-tight truncate">
-            <InlineText value={task.title} onChange={(v) => onUpdate?.(task.id, { title: v })} />
+            <div className="text-[15px] sm:text-base font-semibold leading-tight truncate">
+              <InlineText value={t.title} onChange={(v) => onUpdate?.(t.id, { title: v })} />
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -645,143 +644,143 @@ export function TaskCard({ task, tasks = [], team = [], milestones = [], onUpdat
           >
             {collapsed ? <Plus size={16} /> : <Minus size={16} />}
           </button>
-          {onDuplicate && (
-            <button
-              onClick={() => onDuplicate(task.id)}
-              className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
-              title="Duplicate"
-            >
-              <CopyIcon size={16} />
-            </button>
-          )}
-          {onDelete && (
-            <button onClick={() => onDelete(task.id)} className="text-black/40 hover:text-red-500" title="Delete">
-              <Trash2 size={16} />
-            </button>
-          )}
+            {onDuplicate && (
+              <button
+                onClick={() => onDuplicate(t.id)}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                title="Duplicate"
+              >
+                <CopyIcon size={16} />
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={() => onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete">
+                <Trash2 size={16} />
+              </button>
+            )}
         </div>
       </div>
       {collapsed ? (
         <>
           <div className="text-xs text-black/60 mt-1 truncate">
-            <InlineText value={task.details} onChange={(v) => onUpdate?.(task.id, { details: v })} placeholder="Details…" />
-          </div>
-          {task.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {task.note}</div>}
-          <div className="mt-2 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              {assignee ? (
-                <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} />
-              ) : (
-                <span className="text-black/40">—</span>
-              )}
-              <span className="truncate">
-                {assignee ? `${assignee.name} (${assignee.roleType})` : "Unassigned"}
-              </span>
+              <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
             </div>
-            <div className="flex items-center gap-2">
-              <DuePill date={task.dueDate} status={task.status} />
-              {task.status === "done" && (
-                <span className="text-slate-500">Completed: {task.completedDate || "—"}</span>
-              )}
+            {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
+            <div className="mt-2 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                {a ? (
+                  <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
+                ) : (
+                  <span className="text-black/40">—</span>
+                )}
+                <span className="truncate">
+                  {a ? `${a.name} (${a.roleType})` : "Unassigned"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <DuePill date={t.dueDate} status={t.status} />
+                {t.status === "done" && (
+                  <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>
+                )}
+              </div>
             </div>
-          </div>
         </>
       ) : (
         <>
           <div className="mt-1">
-            <select
-              value={task.status}
-              onChange={(e) => onUpdate?.(task.id, { status: e.target.value })}
-              className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(task.status)}`}
-            >
-              <option value="todo">To Do</option>
-              <option value="inprogress">In Progress</option>
-              <option value="done">Done</option>
-            </select>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-            <select
-              value={task.milestoneId}
-              onChange={(e) => onUpdate?.(task.id, { milestoneId: e.target.value })}
-              className="border rounded px-1.5 py-1"
-            >
-              {milestones.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.title}
-                </option>
-              ))}
-            </select>
-            <div className="flex items-center gap-1">
-              {assignee ? (
-                <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} />
-              ) : (
-                <span className="text-black/40">—</span>
-              )}
               <select
-                value={task.assigneeId || ""}
-                onChange={(e) => onUpdate?.(task.id, { assigneeId: e.target.value || null })}
+                value={t.status}
+                onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
+                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+              >
+                <option value="todo">To Do</option>
+                <option value="inprogress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <select
+                value={t.milestoneId}
+                onChange={(e) => onUpdate?.(t.id, { milestoneId: e.target.value })}
                 className="border rounded px-1.5 py-1"
               >
-                <option value="">Unassigned</option>
-                {taskAssignableMembers.map((m) => (
+                {milestones.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name} ({m.roleType})
+                    {m.title}
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>Start</span>
-              {task.status === "done" ? (
-                <span className="text-slate-500 text-xs">—</span>
-              ) : (
+              <div className="flex items-center gap-1">
+                {a ? (
+                  <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
+                ) : (
+                  <span className="text-black/40">—</span>
+                )}
+                <select
+                  value={t.assigneeId || ""}
+                  onChange={(e) => onUpdate?.(t.id, { assigneeId: e.target.value || null })}
+                  className="border rounded px-1.5 py-1"
+                >
+                  <option value="">Unassigned</option>
+                  {team.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.roleType})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Start</span>
+                {t.status === "done" ? (
+                  <span className="text-slate-500 text-xs">—</span>
+                ) : (
+                  <input
+                    type="date"
+                    value={t.startDate || ""}
+                    onChange={(e) => onUpdate?.(t.id, { startDate: e.target.value })}
+                    disabled={t.status === "todo"}
+                    className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`}
+                  />
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <span># of Workdays</span>
                 <input
-                  type="date"
-                  value={task.startDate || ""}
-                  onChange={(e) => onUpdate?.(task.id, { startDate: e.target.value })}
-                  disabled={task.status === "todo"}
-                  className={`border rounded px-1.5 py-1 ${task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`}
+                  type="number"
+                  min={0}
+                  value={t.workDays ?? 0}
+                  onChange={(e) => onUpdate?.(t.id, { workDays: Number(e.target.value) })}
+                  className="w-20 border rounded px-1.5 py-1"
                 />
-              )}
+              </div>
+              <div className="basis-full w-full">
+                <DocumentInput onAdd={(url) => onAddLink?.(t.id, url)} />
+                {t.links && t.links.length > 0 && (
+                  <LinkChips links={t.links} onRemove={(i) => onRemoveLink?.(t.id, i)} />
+                )}
+              </div>
+              <div className="basis-full text-xs text-slate-700">
+                <span className="font-medium mr-1">Note:</span>
+                <InlineText
+                  value={t.note}
+                  onChange={(v) => onUpdate?.(t.id, { note: v })}
+                  placeholder="Add a quick note…"
+                  multiline
+                />
+              </div>
+              <DepPicker task={t} tasks={tasks} onUpdate={onUpdate} />
+              <div className="ml-auto flex items-center gap-2">
+                <DuePill date={t.dueDate} status={t.status} />
+                {t.status === "done" && (
+                  <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span># of Workdays</span>
-              <input
-                type="number"
-                min={0}
-                value={task.workDays ?? 0}
-                onChange={(e) => onUpdate?.(task.id, { workDays: Number(e.target.value) })}
-                className="w-20 border rounded px-1.5 py-1"
-              />
-            </div>
-            <div className="basis-full w-full">
-              <DocumentInput onAdd={(url) => onAddLink?.(task.id, url)} />
-              {task.links && task.links.length > 0 && (
-                <LinkChips links={task.links} onRemove={(i) => onRemoveLink?.(task.id, i)} />
-              )}
-            </div>
-            <div className="basis-full text-xs text-slate-700">
-              <span className="font-medium mr-1">Note:</span>
-              <InlineText
-                value={task.note}
-                onChange={(v) => onUpdate?.(task.id, { note: v })}
-                placeholder="Add a quick note…"
-                multiline
-              />
-            </div>
-            <DepPicker task={task} tasks={tasks} onUpdate={onUpdate} />
-            <div className="ml-auto flex items-center gap-2">
-              <DuePill date={task.dueDate} status={task.status} />
-              {task.status === "done" && (
-                <span className="text-slate-500">Completed: {task.completedDate || "—"}</span>
-              )}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+          </>
+        )}
+      </motion.div>
+    );
+  }
 
 function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
   if (!task) return null;
