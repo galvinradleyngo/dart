@@ -16,3 +16,11 @@ This ZIP is preconfigured for `https://galvinradleyngo.github.io/dart/`.
 npm i
 npm run dev
 ```
+
+## Testing
+
+```bash
+npm test
+```
+
+The test script uses Node's built‑in test runner (`node --test`), which requires Node.js 18 or newer.
