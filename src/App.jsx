@@ -808,6 +808,26 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
     setSaveState('unsaved');
   };
 
+  const duplicateTask = (courseId, id) => {
+    setCourses((cs) => cs.map((c) => {
+      if (c.course.id !== courseId) return c;
+      const orig = c.tasks.find((t) => t.id === id);
+      if (!orig) return c;
+      const clone = {
+        ...orig,
+        id: uid(),
+        title: `${orig.title} (copy)`,
+        status: 'todo',
+        startDate: '',
+        dueDate: '',
+        completedDate: '',
+        depTaskId: null,
+      };
+      return { ...c, tasks: [...c.tasks, clone] };
+    }));
+    setSaveState('unsaved');
+  };
+
   const deleteTask = (courseId, id) => {
     setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.filter((t) => t.id !== id) } : c));
     setSaveState('unsaved');
