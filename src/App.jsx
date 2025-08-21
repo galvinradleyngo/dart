@@ -620,7 +620,7 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
   <div className="text-xs"><button onClick={()=>setOpen((v)=>!v)} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"><GitBranch size={12}/> {current ? `Depends on: ${current.title}` : "Add dependency"}</button>{open && (<div className="mt-1"><select value={task.depTaskId || ""} onChange={(e)=>{ const val = e.target.value || null; onUpdate(task.id,{ depTaskId:val }); setOpen(false); }} className="border rounded px-2 py-1"><option value="">— none —</option>{peers.map((p)=>(<option key={p.id} value={p.id}>{p.title}</option>))}</select></div>)}</div>
 ); }
 
-function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
+export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
   const a = team.find((m) => m.id === t.assigneeId);
   const statusPillClass = (status) => {
