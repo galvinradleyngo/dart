@@ -23,4 +23,4 @@ npm run dev
 npm test
 ```
 
-The test script uses Node's built-in test runner (`node --test`), which requires Node.js 18 or newer.
+The test script uses Node's built-in test runner (`node --test`) and requires Node.js 18 or newer.
