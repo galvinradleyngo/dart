@@ -884,6 +884,27 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
     return g;
   }, [myTasks]);
 
+  const TaskCard = ({ task }) => (
+    <div className="rounded-xl border border-black/10 bg-white p-3 text-sm flex items-center justify-between">
+      <div className="min-w-0">
+        <div className="font-medium truncate">{task.title}</div>
+        <div className="text-xs text-black/60 truncate">{task.courseName}</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <select
+          value={task.status}
+          onChange={(e) => updateTaskStatus(task.courseId, task.id, e.target.value)}
+          className="text-xs border rounded px-1 py-0.5"
+        >
+          <option value="todo">To do</option>
+          <option value="inprogress">In progress</option>
+          <option value="done">Done</option>
+        </select>
+        <DuePill date={task.dueDate} status={task.status} />
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
@@ -959,25 +980,11 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
               {taskView === 'list' && (
                 <div className="space-y-2">
                   {myTasks.map((t) => (
-                    <div key={t.id} className="rounded-xl border border-black/10 bg-white p-3 text-sm flex items-center justify-between">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{t.title}</div>
-                        <div className="text-xs text-black/60 truncate">{t.courseName}</div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <select value={t.status} onChange={(e)=>updateTaskStatus(t.courseId, t.id, e.target.value)} className="text-xs border rounded px-1 py-0.5">
-                          <option value="todo">To do</option>
-                          <option value="inprogress">In progress</option>
-                          <option value="done">Done</option>
-                        </select>
-                        <DuePill date={t.dueDate} status={t.status} />
-                        <button onClick={() => onOpenCourse(t.courseId)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow">Open</button>
-                      </div>
-                    </div>
+                    <TaskCard key={t.id} task={t} />
                   ))}
-</div>
-)}
-{taskView === 'board' && (
+                </div>
+              )}
+              {taskView === 'board' && (
   <div className="grid gap-4 sm:grid-cols-3">
     {['todo', 'inprogress', 'done'].map((s) => (
       <div
