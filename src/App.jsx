@@ -1155,21 +1155,27 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
                 </div>
               )}
               {taskView === 'board' && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {['todo', 'inprogress', 'done'].map((s) => (
+                <div className="grid md:grid-cols-3 gap-3">
+                  {[
+                    { id: 'todo', title: 'To Do' },
+                    { id: 'inprogress', title: 'In Progress' },
+                    { id: 'done', title: 'Done' }
+                  ].map((col) => (
                     <div
-                      key={s}
-                      className="rounded-xl border border-black/10 bg-white p-2"
+                      key={col.id}
+                      className={`rounded-xl border border-black/10 p-3 ${col.id === 'inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         const tid = e.dataTransfer.getData('text/task');
                         const cid = e.dataTransfer.getData('text/course');
-                        if (tid && cid) updateTaskStatus(cid, tid, s);
+                        if (tid && cid) updateTaskStatus(cid, tid, col.id);
                       }}
                     >
-                      <div className="font-medium text-sm capitalize mb-2">{s}</div>
-                      <div className="space-y-2 min-h-[50px]">
-                        {groupedTasks[s].map((t) => {
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm font-medium text-black/70">{col.title}</div>
+                      </div>
+                      <div className="space-y-2 min-h-[140px]">
+                        {groupedTasks[col.id].map((t) => {
                           const c = courses.find((x) => x.course.id === t.courseId);
                           if (!c) return null;
                           return (
