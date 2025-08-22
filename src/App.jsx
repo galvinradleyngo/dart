@@ -628,8 +628,11 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     if (status === "inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300";
     return "bg-slate-100 text-slate-700 border-slate-300";
   };
-    return (
-      <motion.div {...dragHandlers} className={`rounded-lg border border-black/10 p-3 shadow-sm ${t.status === 'inprogress' ? 'bg-emerald-50' : 'bg-white'} ${dragHandlers.draggable ? 'cursor-move' : ''}`}>
+  return (
+    <motion.div
+      {...dragHandlers}
+      className={`rounded-lg border border-black/10 p-3 shadow-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragHandlers.draggable ? "cursor-move" : ""}`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
             <div className="text-[15px] sm:text-base font-semibold leading-tight truncate">
