@@ -1158,62 +1158,50 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
                 </div>
               )}
               {taskView === 'board' && (
-  <div className="grid gap-4 sm:grid-cols-3">
-    {['todo', 'inprogress', 'done'].map((s) => (
-      <div
-        key={s}
-        className="rounded-xl border border-black/10 bg-white p-2"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          const tid = e.dataTransfer.getData('text/task');
-          const cid = e.dataTransfer.getData('text/course');
-          if (tid && cid) updateTaskStatus(cid, tid, s);
-        }}
-      >
-        <div className="font-medium text-sm capitalize mb-2">{s}</div>
-        <div className="space-y-2 min-h-[50px]">
-          {groupedTasks[s].map((t) => (
-            <div
-              key={t.id}
-              draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData('text/task', t.id);
-                e.dataTransfer.setData('text/course', t.courseId);
-              }}
-              className="p-2 rounded border border-black/10 bg-slate-50 text-sm space-y-1 cursor-move"
-            >
-              <div className="font-medium truncate">{t.title}</div>
-              {t.details && (
-                <div className="text-xs text-black/60 truncate">{t.details}</div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {['todo', 'inprogress', 'done'].map((s) => (
+                    <div
+                      key={s}
+                      className="rounded-xl border border-black/10 bg-white p-2"
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        const tid = e.dataTransfer.getData('text/task');
+                        const cid = e.dataTransfer.getData('text/course');
+                        if (tid && cid) updateTaskStatus(cid, tid, s);
+                      }}
+                    >
+                      <div className="font-medium text-sm capitalize mb-2">{s}</div>
+                      <div className="space-y-2 min-h-[50px]">
+                        {groupedTasks[s].map((t) => {
+                          const c = courses.find((x) => x.course.id === t.courseId);
+                          if (!c) return null;
+                          return (
+                            <TaskCard
+                              key={t.id}
+                              task={t}
+                              tasks={c.tasks}
+                              team={c.team}
+                              milestones={c.milestones}
+                              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+                              onDelete={(id) => deleteTask(c.course.id, id)}
+                              onDuplicate={(id) => duplicateTask(c.course.id, id)}
+                              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+                              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                              dragHandlers={{
+                                draggable: true,
+                                onDragStart: (e) => {
+                                  e.dataTransfer.setData('text/task', t.id);
+                                  e.dataTransfer.setData('text/course', t.courseId);
+                                },
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
-              <div className="text-xs text-black/60 truncate">{t.courseName}</div>
-              <div className="flex items-center justify-between mt-1 gap-1">
-                <select
-                  value={t.status}
-                  onChange={(e) =>
-                    updateTaskStatus(t.courseId, t.id, e.target.value)
-                  }
-                  className="text-xs border rounded px-1 py-0.5"
-                >
-                  <option value="todo">To do</option>
-                  <option value="inprogress">In progress</option>
-                  <option value="done">Done</option>
-                </select>
-                <DuePill date={t.dueDate} status={t.status} />
-                <button
-                  onClick={() => onOpenCourse(t.courseId)}
-                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs bg-slate-900 text-white shadow"
-                >
-                  Open
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-  ))}
-  </div>
-)}
               {taskView === 'calendar' && (
                 <CalendarView
                   monthDate={calMonth}
