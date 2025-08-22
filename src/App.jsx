@@ -871,6 +871,11 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
     })();
   }, []);
 
+  // Persist user-specific course changes locally
+  useEffect(() => {
+    saveCourses(courses);
+  }, [courses]);
+
   const [taskView, setTaskView] = useState('list');
   const [saveState, setSaveState] = useState('saved');
 
@@ -1028,7 +1033,7 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
     return g;
   }, [myTasks]);
 
-  const renderTaskCard = (t, dragHandlers) => {
+  const renderTaskCard = (t, dragHandlers = {}) => {
     const c = courses.find((x) => x.course.id === t.courseId);
     if (!c) return null;
     return (
