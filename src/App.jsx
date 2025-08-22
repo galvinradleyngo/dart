@@ -375,8 +375,8 @@ const handleSave = async () => {
   // Calendar
   const [calMonth, setCalMonth] = useState(() => { const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const gotoMonth = (offset) => setCalMonth((m)=>new Date(m.getFullYear(), m.getMonth()+offset, 1));
-  const [editingTaskId, setEditingTaskId] = useState(null);
-  const editingTask = state.tasks.find((t) => t.id === editingTaskId) || null;
+  const [editing, setEditing] = useState(null);
+  const editingTask = state.tasks.find((t) => t.id === editing?.taskId) || null;
 
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
@@ -557,7 +557,17 @@ const handleSave = async () => {
           ) : view === "board" ? (
             <BoardView tasks={filteredBase} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
           ) : (
-            <CalendarView monthDate={calMonth} tasks={filteredBase} milestones={milestones} team={team} onPrev={() => gotoMonth(-1)} onNext={() => gotoMonth(1)} onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} schedule={state.schedule} onTaskClick={(t)=>setEditingTaskId(t.id)} />
+            <CalendarView
+              monthDate={calMonth}
+              tasks={filteredBase}
+              milestones={milestones}
+              team={team}
+              onPrev={() => gotoMonth(-1)}
+              onNext={() => gotoMonth(1)}
+              onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
+              schedule={state.schedule}
+              onTaskClick={(t)=>setEditing({ taskId: t.id })}
+            />
           )}
         </section>
       {editingTask && (
@@ -570,7 +580,7 @@ const handleSave = async () => {
           onDelete={deleteTask}
           onAddLink={(id, url)=>patchTaskLinks(id,'add',url)}
           onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)}
-          onClose={()=>setEditingTaskId(null)}
+          onClose={()=>setEditing(null)}
         />
       )}
       </main>
