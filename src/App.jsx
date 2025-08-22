@@ -300,30 +300,44 @@ const handleSave = async () => {
   const recomputeDue = (t, patch = {}) => { const start = patch.startDate ?? t.startDate; const work = patch.workDays ?? t.workDays; const due = start ? addBusinessDays(start, work, state.schedule.workweek, state.schedule.holidays) : ""; return { ...patch, dueDate: due }; };
   const propagateDependentForecasts = (tasks, schedule) => { const map = new Map(tasks.map((t)=>[t.id,t])); return tasks.map((t)=>{ if(!t.depTaskId || t.status==="done") return t; const src = map.get(t.depTaskId); if(!src) return t; const startForecast = src.dueDate || ""; if (t.status !== "inprogress" && startForecast) { const due = addBusinessDays(startForecast, t.workDays, schedule.workweek, schedule.holidays); return { ...t, startDate: startForecast, dueDate: due }; } return t; }); };
 
-  const updateTask = (id, patch) => setState((s) => {
-    let changedTo = null;
-    const tasks1 = s.tasks.map((t) => {
-      if (t.id !== id) return t;
-      let adjusted = { ...patch };
-      if (patch.status && patch.status !== t.status) {
-        changedTo = patch.status;
-        if (patch.status === "inprogress") { if (!t.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr(); }
-        if (patch.status === "todo") { adjusted.startDate = ""; adjusted.dueDate = ""; adjusted.completedDate = ""; }
-        if (patch.status === "done") { adjusted.completedDate = todayStr(); }
+  const updateTask = (id, patch) => {
+    let nextState = null;
+    setState((s) => {
+      let changedTo = null;
+      const tasks1 = s.tasks.map((t) => {
+        if (t.id !== id) return t;
+        let adjusted = { ...patch };
+        if (patch.status && patch.status !== t.status) {
+          changedTo = patch.status;
+          if (patch.status === "inprogress") { if (!t.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr(); }
+          if (patch.status === "todo") { adjusted.startDate = ""; adjusted.dueDate = ""; adjusted.completedDate = ""; }
+          if (patch.status === "done") { adjusted.completedDate = todayStr(); }
+        }
+        if ("startDate" in adjusted || "workDays" in adjusted) adjusted = recomputeDue({ ...t, ...adjusted }, adjusted);
+        return { ...t, ...adjusted };
+      });
+      let tasks2 = tasks1;
+      if (changedTo === "inprogress") tasks2 = tasks2.map((d) => (d.depTaskId === id && d.status !== "done" ? { ...d, status: "inprogress" } : d));
+      if (changedTo === "done") {
+        const doneDate = todayStr();
+        tasks2 = tasks2.map((x) => (x.id === id ? { ...x, completedDate: x.completedDate || doneDate } : x));
+        tasks2 = tasks2.map((d) => { if (d.depTaskId === id && d.status !== "done") { const start = doneDate; const due = addBusinessDays(start, d.workDays, s.schedule.workweek, s.schedule.holidays); return { ...d, status: "inprogress", startDate: start, dueDate: due }; } return d; });
       }
-      if ("startDate" in adjusted || "workDays" in adjusted) adjusted = recomputeDue({ ...t, ...adjusted }, adjusted);
-      return { ...t, ...adjusted };
+      const tasks3 = propagateDependentForecasts(tasks2, s.schedule);
+      nextState = { ...s, tasks: tasks3 };
+      return nextState;
     });
-    let tasks2 = tasks1;
-    if (changedTo === "inprogress") tasks2 = tasks2.map((d) => (d.depTaskId === id && d.status !== "done" ? { ...d, status: "inprogress" } : d));
-    if (changedTo === "done") {
-      const doneDate = todayStr();
-      tasks2 = tasks2.map((x) => (x.id === id ? { ...x, completedDate: x.completedDate || doneDate } : x));
-      tasks2 = tasks2.map((d) => { if (d.depTaskId === id && d.status !== "done") { const start = doneDate; const due = addBusinessDays(start, d.workDays, s.schedule.workweek, s.schedule.holidays); return { ...d, status: "inprogress", startDate: start, dueDate: due }; } return d; });
+
+    if (nextState) {
+      setSaveState('saving');
+      const all = loadCourses();
+      const idx = all.findIndex((c) => c.id === nextState.course.id || c.course?.id === nextState.course.id);
+      if (idx >= 0) all[idx] = nextState; else all.push(nextState);
+      saveCourses(all);
+      saveCoursesRemote(all).finally(() => setSaveState('saved'));
+      onStateChange?.(nextState);
     }
-    const tasks3 = propagateDependentForecasts(tasks2, s.schedule);
-    return { ...s, tasks: tasks3 };
-  });
+  };
 
   const addTask = (milestoneId) => setState((s) => ({ ...s, tasks: [...s.tasks, { id: uid(), order: s.tasks.length, title: "New Task", details: "", note: "", links: [], depTaskId: null, assigneeId: s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null), milestoneId: milestoneId || s.milestones[0]?.id, status: "todo", startDate: "", workDays: 1, dueDate: "", completedDate: "" }] }));
   const duplicateTask = (id) => setState((s) => { const orig = s.tasks.find((t)=>t.id===id); if(!orig) return s; const clone = { ...orig, id: uid(), order: s.tasks.length, title: `${orig.title} (copy)`, status: "todo", startDate: "", dueDate: "", completedDate: "", depTaskId: null }; return { ...s, tasks: [...s.tasks, clone] }; });
