@@ -1615,24 +1615,17 @@ function CoursesHub({
                       onChange={(v) => renamePerson(m.id, v)}
                       className="font-medium leading-tight"
                     />
-<div className="text-left">
-  <InlineText
-    value={m.name}
-    onChange={(v) => renamePerson(m.id, v)}
-    className="font-medium leading-tight"
-  />
-  <select
-    value={m.roleType}
-    onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
-    className="mt-1 border rounded px-2 py-1 text-xs"
-  >
-    {Object.keys(rolePalette).map((r) => (
-      <option key={r} value={r}>
-        {r}
-      </option>
-    ))}
-  </select>
-</div>
+                    <select
+                      value={m.roleType}
+                      onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
+                      className="mt-1 border rounded px-2 py-1 text-xs"
+                    >
+                      {Object.keys(rolePalette).map((r) => (
+                        <option key={r} value={r}>
+                          {r}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="ml-auto flex gap-2">
                     <button
