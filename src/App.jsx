@@ -606,7 +606,7 @@ const handleSave = async () => {
               onNext={() => gotoMonth(1)}
               onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
               schedule={state.schedule}
-              // clicking an event opens it for editing
+              // open TaskModal when clicking a calendar event
               onTaskClick={(t)=>setEditing({ courseId: state.course.id, taskId: t.id })}
             />
           )}
@@ -1263,7 +1263,7 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
                   onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
                   onToday={() => setCalMonth(new Date())}
                   schedule={loadGlobalSchedule()}
-                  // open task editor when clicking a calendar entry
+                  // open TaskModal when clicking a calendar event
                   onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
                 />
               )}
