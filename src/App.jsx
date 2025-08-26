@@ -605,9 +605,12 @@ const handleSave = async () => {
               onPrev={() => gotoMonth(-1)}
               onNext={() => gotoMonth(1)}
               onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
-              schedule={state.schedule}
-              // open TaskModal when clicking a calendar event
-              onTaskClick={(t)=>setEditing({ courseId: state.course.id, taskId: t.id })}
+            schedule={state.schedule}
+// open TaskModal when clicking a calendar event
+onTaskClick={(t) => setEditing({ courseId: state.course.id, taskId: t.id })}
+/>
+              
+main
             />
           )}
         </section>
@@ -1299,10 +1302,16 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
 function computeTotals(state) {
   const tasks = state.tasks || []; const total = tasks.length; const done = tasks.filter((t)=>t.status==="done").length; const inprog = tasks.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const pct = total ? Math.round((done/total)*100) : 0; const nextDue = tasks.filter((t)=>t.status!=="done" && t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate))[0]?.dueDate || null; return { total, done, inprog, todo, pct, nextDue };
 }
-  function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange }) {
-    const [courses, setCourses] = useState(() => loadCourses());
-    const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
-    useEffect(() => { const onStorage = () => setCourses(loadCourses()); window.addEventListener('storage', onStorage); return () => window.removeEventListener('storage', onStorage); }, []);
+codex/add-ontaskclick-handler-to-calendar-components-hl5hca
+ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange }) {
+  const [courses, setCourses] = useState(() => loadCourses());
+  const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
+  useEffect(() => {
+    const onStorage = () => setCourses(loadCourses());
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+main
   useEffect(() => {
     (async () => {
       const remote = await loadCoursesRemote();
@@ -1312,83 +1321,102 @@ function computeTotals(state) {
       }
     })();
   }, []);
-    useEffect(() => {
-      const onSchedStorage = (e) => {
-        if (e.key === GLOBAL_SCHEDULE_KEY && e.newValue) {
-          try { setSchedule(JSON.parse(e.newValue)); } catch {}
-        }
-      };
-      window.addEventListener('storage', onSchedStorage);
-      return () => window.removeEventListener('storage', onSchedStorage);
-    }, []);
+function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange }) {
+  const [courses, setCourses] = useState(() => loadCourses());
+  const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
 
-    const propagateDependentForecasts = (tasks, sched) => {
-      const map = new Map(tasks.map((t) => [t.id, t]));
-      return tasks.map((t) => {
-        if (!t.depTaskId || t.status === "done") return t;
-        const src = map.get(t.depTaskId);
-        if (!src) return t;
-        const startForecast = src.dueDate || "";
-        if (t.status !== "inprogress" && startForecast) {
-          const due = addBusinessDays(startForecast, t.workDays, sched.workweek, sched.holidays);
-          return { ...t, startDate: startForecast, dueDate: due };
-        }
-        return t;
-      });
+  useEffect(() => {
+    const onSchedStorage = (e) => {
+      if (e.key === GLOBAL_SCHEDULE_KEY && e.newValue) {
+        try { setSchedule(JSON.parse(e.newValue)); } catch {}
+      }
     };
+    window.addEventListener('storage', onSchedStorage);
+    return () => window.removeEventListener('storage', onSchedStorage);
+  }, []);
 
-    const applySchedule = (sched) => {
-      saveGlobalSchedule(sched);
-      const updated = loadCourses().map((c) => {
-        const tasks1 = c.tasks.map((t) =>
-          t.startDate ? { ...t, dueDate: addBusinessDays(t.startDate, t.workDays, sched.workweek, sched.holidays) } : t
-        );
-        const tasks2 = propagateDependentForecasts(tasks1, sched);
-        return { ...c, schedule: sched, tasks: tasks2 };
-      });
-      saveCourses(updated);
-      saveCoursesRemote(updated).catch(() => {});
-      setCourses(updated);
-    };
+  const propagateDependentForecasts = (tasks, sched) => {
+    const map = new Map(tasks.map((t) => [t.id, t]));
+    return tasks.map((t) => {
+      if (!t.depTaskId || t.status === 'done') return t;
+      const src = map.get(t.depTaskId);
+      if (!src) return t;
+      const startForecast = src.dueDate || '';
+      if (t.status !== 'inprogress' && startForecast) {
+        const due = addBusinessDays(startForecast, t.workDays, sched.workweek, sched.holidays);
+        return { ...t, startDate: startForecast, dueDate: due };
+      }
+      return t;
+    });
+  };
 
-    const toggleWorkday = (dow) => {
-      setSchedule((s) => {
-        const set = new Set(s.workweek);
-        set.has(dow) ? set.delete(dow) : set.add(dow);
-        const next = { ...s, workweek: Array.from(set).sort() };
-        applySchedule(next);
-        return next;
-      });
-    };
+  const applySchedule = (sched) => {
+    saveGlobalSchedule(sched);
+    const updated = loadCourses().map((c) => {
+      const tasks1 = c.tasks.map((t) =>
+        t.startDate ? { ...t, dueDate: addBusinessDays(t.startDate, t.workDays, sched.workweek, sched.holidays) } : t
+      );
+      const tasks2 = propagateDependentForecasts(tasks1, sched);
+      return { ...c, schedule: sched, tasks: tasks2 };
+    });
+    saveCourses(updated);
+    saveCoursesRemote(updated).catch(() => {});
+    setCourses(updated);
+  };
 
-    const addHoliday = (dateStr) => {
-      if (!dateStr) return;
-      setSchedule((s) => {
-        const holidays = Array.from(new Set([...s.holidays, dateStr])).sort();
-        const next = { ...s, holidays };
-        applySchedule(next);
-        return next;
-      });
-    };
+  const toggleWorkday = (dow) => {
+    setSchedule((s) => {
+      const set = new Set(s.workweek);
+      set.has(dow) ? set.delete(dow) : set.add(dow);
+      const next = { ...s, workweek: Array.from(set).sort() };
+      applySchedule(next);
+      return next;
+    });
+  };
 
-    const removeHoliday = (dateStr) => {
-      setSchedule((s) => {
-        const next = { ...s, holidays: s.holidays.filter((h) => h !== dateStr) };
-        applySchedule(next);
-        return next;
-      });
-    };
+  const addHoliday = (dateStr) => {
+    if (!dateStr) return;
+    setSchedule((s) => {
+      const holidays = Array.from(new Set([...s.holidays, dateStr])).sort();
+      const next = { ...s, holidays };
+      applySchedule(next);
+      return next;
+    });
+  };
 
-    const removeCourse = (id) => { const next = courses.filter((c)=>c.id!==id); saveCourses(next); setCourses(next); };
-    const duplicateCourse = (id) => { const src = courses.find((c)=>c.id===id); if(!src) return; const copy = JSON.parse(JSON.stringify(src)); copy.id = uid(); copy.course.id = copy.id; copy.course.name = `${src.course.name} (copy)`; const next = [...courses, copy]; saveCourses(next); setCourses(next); };
-    const open = (id) => onOpenCourse(id);
-    const addPerson = () => {
-      const p = { id: uid(), name: "New Member", roleType: "Other", color: roleColor("Other"), avatar: "" };
-      onPeopleChange([...people, p]);
-    };
-    const renamePerson = (id, name) => {
-      onPeopleChange(people.map((p) => (p.id === id ? { ...p, name } : p)));
-    };
+  const removeHoliday = (dateStr) => {
+    setSchedule((s) => {
+      const next = { ...s, holidays: s.holidays.filter((h) => h !== dateStr) };
+      applySchedule(next);
+      return next;
+    });
+  };
+
+  const removeCourse = (id) => {
+    const next = courses.filter((c) => c.id !== id);
+    saveCourses(next);
+    setCourses(next);
+  };
+  const duplicateCourse = (id) => {
+    const src = courses.find((c) => c.id === id);
+    if (!src) return;
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.id = uid();
+    copy.course.id = copy.id;
+    copy.course.name = `${src.course.name} (copy)`;
+    const next = [...courses, copy];
+    saveCourses(next);
+    setCourses(next);
+  };
+  const open = (id) => onOpenCourse(id);
+  const addPerson = () => {
+    const p = { id: uid(), name: 'New Member', roleType: 'Other', color: roleColor('Other'), avatar: '' };
+    onPeopleChange([...people, p]);
+  };
+  const renamePerson = (id, name) => {
+    onPeopleChange(people.map((p) => (p.id === id ? { ...p, name } : p)));
+  };
+main
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
@@ -1412,12 +1440,61 @@ function computeTotals(state) {
         </div>
       </header>
 
-        <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
-                <Calendar size={18}/> Workweek & Holidays <span className="text-[11px] font-normal text-indigo-700">(Global)</span>
-              </h2>
+<main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+  {/* Global schedule controls */}
+  <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
+    <div className="flex items-center justify-between mb-2">
+      <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
+        <Calendar size={18}/> Workweek & Holidays
+        <span className="text-[11px] font-normal text-indigo-700">(Global)</span>
+      </h2>
+    </div>
+    {/* existing workweek/holiday UI */}
+  </section>
+
+  {/* Team member management */}
+  <section>
+    <div className="flex items-center justify-between mb-2">
+      <h2 className="text-lg font-semibold">Team Members</h2>
+      <button
+        onClick={addPerson}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <UserPlus size={16}/> Add Member
+      </button>
+    </div>
+    {people.length === 0 ? (
+      <div className="text-sm text-black/60">No team members</div>
+    ) : (
+      <div className="flex flex-wrap gap-3">
+        {people.map((m) => (
+          <div
+            key={m.id}
+            className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
+            style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
+          >
+            <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
+            <div className="text-left">
+              <InlineText
+                value={m.name}
+                onChange={(v) => renamePerson(m.id, v)}
+                className="font-medium leading-tight"
+              />
+              <div className="text-xs text-black/60">{m.roleType}</div>
+            </div>
+            <button
+              onClick={() => onOpenUser(m.id)}
+              className="ml-auto text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+            >
+              Open
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+  </section>
+</main>
+main
             </div>
             <div className="rounded-xl border border-indigo-200 bg-white p-3 text-xs">
               <div className="flex flex-wrap items-center gap-3">
