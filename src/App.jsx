@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { db } from "./firebase.js";
+import pkg from "../package.json";
 
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
@@ -89,6 +90,36 @@ const saveCoursesRemote = async (arr) => {
   try {
     await setDoc(doc(db, 'app', 'courses'), { courses: arr });
   } catch {}
+};
+
+// =====================================================
+// People Store (global team members)
+// =====================================================
+const PEOPLE_KEY = "healthPM:people:v1";
+const loadPeople = () => {
+  try {
+    const raw = localStorage.getItem(PEOPLE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const savePeople = (arr) => {
+  try {
+    localStorage.setItem(PEOPLE_KEY, JSON.stringify(arr));
+  } catch {}
+};
+const syncPeopleToCourses = (people) => {
+  const courses = loadCourses();
+  const updated = courses.map((c) => ({
+    ...c,
+    team: c.team.map((m) => {
+      const p = people.find((p) => p.id === m.id);
+      return p ? { ...m, ...p } : m;
+    }),
+  }));
+  saveCourses(updated);
+  saveCoursesRemote(updated).catch(() => {});
 };
 
 // =====================================================
@@ -219,7 +250,7 @@ function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onTo
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
-function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
+function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [] }) {
   const [state, setState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
@@ -236,6 +267,16 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange }) {
   const [listTab, setListTab] = useState("active");
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
+
+  useEffect(() => {
+    setState((s) => ({
+      ...s,
+      team: s.team.map((m) => {
+        const p = people.find((p) => p.id === m.id);
+        return p ? { ...m, ...p } : m;
+      }),
+    }));
+  }, [people]);
 
   // Persist
   useEffect(() => { localStorage.setItem("healthPM:state:v8", JSON.stringify(state)); }, [state]);
@@ -358,6 +399,12 @@ const handleSave = async () => {
   // Members
   const updateMember = (id, patch) => setState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
   const addMember    = () => setState((s)=>({ ...s, team: [...s.team, { id: uid(), name:"New Member", roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
+  const addExistingMember = (pid) => setState((s)=>{
+    if (s.team.some((m)=>m.id===pid)) return s;
+    const person = people.find((p)=>p.id===pid);
+    if (!person) return s;
+    return { ...s, team: [...s.team, { ...person }] };
+  });
   const deleteMember = (id) => setState((s)=>({ ...s, team: s.team.filter((m)=>m.id!==id), course: { ...s.course, courseLDIds: s.course.courseLDIds.filter((mId)=>mId!==id), courseSMEIds: s.course.courseSMEIds.filter((mId)=>mId!==id) }, tasks: s.tasks.map((t)=>(t.assigneeId===id?{...t, assigneeId:null}:t)) }));
   const toggleCourseWide = (kind, id) => setState((s)=>{ const key = kind === "LD" ? "courseLDIds" : "courseSMEIds"; const list = new Set(s.course[key]); list.has(id)?list.delete(id):list.add(id); return { ...s, course: { ...s.course, [key]: Array.from(list) } }; });
 
@@ -440,7 +487,19 @@ const handleSave = async () => {
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold flex items-center gap-2"><Users size={18}/> Team Members</h2>
-            <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+            <div className="flex items-center gap-2">
+              <select
+                value=""
+                onChange={(e)=>{ if(e.target.value) { addExistingMember(e.target.value); e.target.value=''; } }}
+                className="text-sm border rounded px-2 py-1"
+              >
+                <option value="">Add existing...</option>
+                {people.filter((p)=>!team.some((m)=>m.id===p.id)).map((p)=>(
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+            </div>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
             {team.map((m) => (
@@ -1257,7 +1316,7 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
 function computeTotals(state) {
   const tasks = state.tasks || []; const total = tasks.length; const done = tasks.filter((t)=>t.status==="done").length; const inprog = tasks.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const pct = total ? Math.round((done/total)*100) : 0; const nextDue = tasks.filter((t)=>t.status!=="done" && t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate))[0]?.dueDate || null; return { total, done, inprog, todo, pct, nextDue };
 }
-function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
+function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => { const onStorage = () => setCourses(loadCourses()); window.addEventListener('storage', onStorage); return () => window.removeEventListener('storage', onStorage); }, []);
   useEffect(() => {
@@ -1272,11 +1331,13 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
   const removeCourse = (id) => { const next = courses.filter((c)=>c.id!==id); saveCourses(next); setCourses(next); };
   const duplicateCourse = (id) => { const src = courses.find((c)=>c.id===id); if(!src) return; const copy = JSON.parse(JSON.stringify(src)); copy.id = uid(); copy.course.id = copy.id; copy.course.name = `${src.course.name} (copy)`; const next = [...courses, copy]; saveCourses(next); setCourses(next); };
   const open = (id) => onOpenCourse(id);
-  const members = useMemo(() => {
-    const map = new Map();
-    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
-    return Array.from(map.values());
-  }, [courses]);
+  const addPerson = () => {
+    const p = { id: uid(), name: "New Member", roleType: "Other", color: roleColor("Other"), avatar: "" };
+    onPeopleChange([...people, p]);
+  };
+  const renamePerson = (id, name) => {
+    onPeopleChange(people.map((p) => (p.id === id ? { ...p, name } : p)));
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
@@ -1302,24 +1363,27 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser }) {
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         <section>
-          <h2 className="text-lg font-semibold mb-2">My View</h2>
-          {members.length === 0 ? (
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold">Team Members</h2>
+            <button onClick={addPerson} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+          </div>
+          {people.length === 0 ? (
             <div className="text-sm text-black/60">No team members</div>
           ) : (
             <div className="flex flex-wrap gap-3">
-              {members.map((m) => (
-                <button
+              {people.map((m) => (
+                <div
                   key={m.id}
-                  onClick={() => onOpenUser(m.id)}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2 hover:opacity-90"
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
                   style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
                 >
                   <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
                   <div className="text-left">
-                    <div className="font-medium leading-tight">{m.name}</div>
+                    <InlineText value={m.name} onChange={(v) => renamePerson(m.id, v)} className="font-medium leading-tight" />
                     <div className="text-xs text-black/60">{m.roleType}</div>
                   </div>
-                </button>
+                  <button onClick={() => onOpenUser(m.id)} className="ml-auto text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Open</button>
+                </div>
               ))}
             </div>
           )}
@@ -1378,6 +1442,22 @@ export default function PMApp() {
   const [prevView, setPrevView] = useState("hub");
   const [currentCourseId, setCurrentCourseId] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [people, setPeople] = useState(() => {
+    const stored = loadPeople();
+    if (stored.length) return stored;
+    const courses = loadCourses();
+    const map = new Map();
+    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
+    const arr = Array.from(map.values());
+    savePeople(arr);
+    return arr;
+  });
+  const handlePeopleChange = (next) => {
+    setPeople(next);
+    savePeople(next);
+    syncPeopleToCourses(next);
+  };
+  const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
   const editTemplate = () => { setPrevView(view); setCurrentCourseId("__TEMPLATE__"); setView("course"); };
@@ -1386,40 +1466,55 @@ export default function PMApp() {
     const base = remapSeed(JSON.parse(JSON.stringify(tpl)));
     base.course = { ...base.course, id: uid(), name: base.course.name || "New Course" };
     const all = loadCourses(); const next = [...all, base]; saveCourses(next);
+    const merged = [...people];
+    base.team.forEach((m) => { if (!merged.some((p) => p.id === m.id)) merged.push({ ...m }); });
+    handlePeopleChange(merged);
     setPrevView(view);
     setCurrentCourseId(base.course.id); setView("course");
   };
   const onBack = () => { setView(prevView); setPrevView("hub"); setCurrentCourseId(null); };
 
+  let content = null;
   if (view === "hub") {
-    return <CoursesHub onOpenCourse={openCourse} onEditTemplate={editTemplate} onAddCourse={addCourse} onOpenUser={openUser} />;
-  }
-
-  if (view === "user") {
-    return <UserDashboard onBack={onBack} onOpenCourse={openCourse} initialUserId={currentUserId} />;
-  }
-
-  // Course mode
-  if (currentCourseId === "__TEMPLATE__") {
+    content = (
+      <CoursesHub
+        onOpenCourse={openCourse}
+        onEditTemplate={editTemplate}
+        onAddCourse={addCourse}
+        onOpenUser={openUser}
+        people={people}
+        onPeopleChange={handlePeopleChange}
+      />
+    );
+  } else if (view === "user") {
+    content = <UserDashboard onBack={onBack} onOpenCourse={openCourse} initialUserId={currentUserId} />;
+  } else if (currentCourseId === "__TEMPLATE__") {
     // open template editor
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
     const handleChange = (s) => { saveTemplate(s); };
-    return <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} />;
+    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} />;
+  } else {
+    // open selected course
+    const courses = loadCourses();
+    const course = courses.find((c)=>c.id===currentCourseId || c.course?.id===currentCourseId) || courses[0];
+    const handleCourseChange = (s) => {
+      const all = loadCourses();
+      const idx = all.findIndex(
+        (c) => c.id === currentCourseId || c.course?.id === currentCourseId
+      );
+      if (idx >= 0) all[idx] = s;
+      else all.push(s);
+      saveCourses(all);
+    };
+    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} />;
   }
-  // open selected course
-  const courses = loadCourses();
-  const course = courses.find((c)=>c.id===currentCourseId || c.course?.id===currentCourseId) || courses[0];
-  const handleCourseChange = (s) => {
-    const all = loadCourses();
-    const idx = all.findIndex(
-      (c) => c.id === currentCourseId || c.course?.id === currentCourseId
-    );
-    if (idx >= 0) all[idx] = s;
-    else all.push(s);
-    saveCourses(all);
-  };
-  return <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} />;
+  return (
+    <>
+      {content}
+      <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-xs">v{version}</div>
+    </>
+  );
 }
 
 // =====================================================
