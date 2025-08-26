@@ -1601,10 +1601,10 @@ function CoursesHub({
                 >
                   <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
                   <div className="text-left">
-                    <input
+                    <InlineText
                       value={m.name}
-                      onChange={(e) => renamePerson(m.id, e.target.value)}
-                      className="font-medium leading-tight border border-black/10 rounded px-2 py-1 text-sm"
+                      onChange={(v) => renamePerson(m.id, v)}
+                      className="font-medium leading-tight"
                     />
                     <select
                       value={m.roleType}
