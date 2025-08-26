@@ -92,6 +92,34 @@ const saveCoursesRemote = async (arr) => {
   } catch {}
 };
 
+const loadScheduleRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'schedule'));
+    return snap.exists() ? snap.data().schedule || defaultSchedule : defaultSchedule;
+  } catch {
+    return defaultSchedule;
+  }
+};
+const saveScheduleRemote = async (sched) => {
+  try {
+    await setDoc(doc(db, 'app', 'schedule'), { schedule: sched });
+  } catch {}
+};
+
+const loadPeopleRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'people'));
+    return snap.exists() ? snap.data().people || [] : [];
+  } catch {
+    return [];
+  }
+};
+const savePeopleRemote = async (arr) => {
+  try {
+    await setDoc(doc(db, 'app', 'people'), { people: arr });
+  } catch {}
+};
+
 // =====================================================
 // People Store (global team members)
 // =====================================================
@@ -648,6 +676,56 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
 }
 function Toggle({ value, onChange, options }) { return (<div className="inline-flex rounded-2xl border border-black/10 bg-white p-1 shadow-sm">{options.map((o)=>(<button key={o.id} onClick={()=>onChange(o.id)} className={`px-3 py-1.5 text-sm rounded-xl ${value===o.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{o.label}</button>))}</div>); }
 function AddHoliday({ onAdd }) { const [d, setD] = useState(""); return (<div className="inline-flex items-center gap-1"><input type="date" value={d} onChange={(e)=>setD(e.target.value)} className="border rounded px-2 py-1" /><button onClick={()=>{ if(d){ onAdd(d); setD(""); } }} className="px-2 py-1 text-xs rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>); }
+
+function GlobalSchedule({ schedule, onToggleWorkday, onAddHoliday, onRemoveHoliday }) {
+  return (
+    <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
+          <Calendar size={18} /> Workweek & Holidays
+          <span className="text-[11px] font-normal text-indigo-700">(Global)</span>
+        </h2>
+      </div>
+      <div className="rounded-xl border border-indigo-200 bg-white p-3 text-xs">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="font-medium">Workweek:</div>
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label, idx) => (
+            <button
+              key={idx}
+              onClick={() => onToggleWorkday(idx)}
+              className={`px-2 py-1 rounded-full border ${
+                schedule.workweek.includes(idx)
+                  ? "bg-slate-900 text-white border-slate-900"
+                  : "bg-white text-slate-700 border-black/10"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <div className="ml-2 font-medium">Holidays:</div>
+          <AddHoliday onAdd={onAddHoliday} />
+          <div className="flex flex-wrap gap-2">
+            {schedule.holidays.map((h) => (
+              <span
+                key={h}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200"
+              >
+                {h}
+                <button
+                  className="text-rose-500 hover:text-rose-700"
+                  onClick={() => onRemoveHoliday(h)}
+                  title="Remove"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onDuplicate }) {
   const taskAssignableMembers = team; // include all roles
@@ -1300,40 +1378,224 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
 // Courses Hub (NEW)
 // =====================================================
 function computeTotals(state) {
-  const tasks = state.tasks || []; const total = tasks.length; const done = tasks.filter((t)=>t.status==="done").length; const inprog = tasks.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const pct = total ? Math.round((done/total)*100) : 0; const nextDue = tasks.filter((t)=>t.status!=="done" && t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate))[0]?.dueDate || null; return { total, done, inprog, todo, pct, nextDue };
+  const tasks = state.tasks || [];
+  const total = tasks.length;
+  const done = tasks.filter((t) => t.status === "done").length;
+  const inprog = tasks.filter((t) => t.status === "inprogress").length;
+  const todo = total - done - inprog;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const nextDue =
+    tasks
+      .filter((t) => t.status !== "done" && t.dueDate)
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0]?.dueDate || null;
+  return { total, done, inprog, todo, pct, nextDue };
 }
-codex/add-ontaskclick-handler-to-calendar-components-hl5hca
- function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange }) {
-  const [courses, setCourses] = useState(() => loadCourses());
-  const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
-  useEffect(() => {
-    const onStorage = () => setCourses(loadCourses());
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-main
-  useEffect(() => {
-    (async () => {
-      const remote = await loadCoursesRemote();
-      if (remote.length) {
-        saveCourses(remote);
-        setCourses(remote);
-      }
-    })();
-  }, []);
-function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange }) {
-  const [courses, setCourses] = useState(() => loadCourses());
-  const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
 
-  useEffect(() => {
-    const onSchedStorage = (e) => {
-      if (e.key === GLOBAL_SCHEDULE_KEY && e.newValue) {
-        try { setSchedule(JSON.parse(e.newValue)); } catch {}
-      }
-    };
-    window.addEventListener('storage', onSchedStorage);
-    return () => window.removeEventListener('storage', onSchedStorage);
-  }, []);
+function CoursesHub({ courses = [], onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange, onRemoveCourse, onDuplicateCourse, children }) {
+  const open = (id) => onOpenCourse(id);
+  const addPerson = () => {
+    const p = { id: uid(), name: 'New Member', roleType: 'Other', color: roleColor('Other'), avatar: '' };
+    onPeopleChange([...people, p]);
+  };
+  const renamePerson = (id, name) => {
+    onPeopleChange(people.map((p) => (p.id === id ? { ...p, name } : p)));
+  };
+  const removePerson = (id) => {
+    onPeopleChange(people.filter((p) => p.id !== id));
+  };
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500" />
+            <div className="min-w-0">
+              <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+              <div className="text-xs text-black/60 truncate">Courses Hub</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16} /> Edit Template</button>
+            <button
+              onClick={onAddCourse}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
+            >
+              <Plus size={16} /> Add Course
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {children}
+
+        <section>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold">Team Members</h2>
+            <button
+              onClick={addPerson}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+            >
+              <UserPlus size={16} /> Add Member
+            </button>
+          </div>
+          {people.length === 0 ? (
+            <div className="text-sm text-black/60">No team members</div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {people.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
+                  style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
+                >
+                  <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
+                  <div className="text-left">
+                    <InlineText
+                      value={m.name}
+                      onChange={(v) => renamePerson(m.id, v)}
+                      className="font-medium leading-tight"
+                    />
+                    <div className="text-xs text-black/60">{m.roleType}</div>
+                  </div>
+                  <div className="ml-auto flex gap-2">
+                    <button
+                      onClick={() => onOpenUser(m.id)}
+                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                    >
+                      Open
+                    </button>
+                    <button
+                      onClick={() => removePerson(m.id)}
+                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold mb-2">All Courses</h2>
+          {courses.length === 0 ? (
+            <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
+              <div className="text-lg font-semibold mb-2">No courses yet</div>
+              <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
+              <button
+                onClick={onAddCourse}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
+              >
+                <Plus size={16} /> Add Course
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((c) => {
+                const t = computeTotals(c);
+                return (
+                  <motion.div
+                    key={c.id}
+                    layout
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open ${c.course.name}`}
+                    onClick={() => open(c.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") open(c.id);
+                    }}
+                    className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{c.course.name}</div>
+                        <div className="text-xs text-black/60 truncate">{c.course.description}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3">
+                      <Ring size={72} stroke={10} progress={t.pct} color="#10b981">
+                        <div className="text-center">
+                          <div className="text-sm font-semibold">{t.pct}%</div>
+                          <div className="text-[10px] text-black/60">{t.done}/{t.total}</div>
+                        </div>
+                      </Ring>
+                      <div className="text-xs space-y-1">
+                        <div>In progress: <b>{t.inprog}</b></div>
+                        <div>To do: <b>{t.todo}</b></div>
+                        <div>Next due: <b>{t.nextDue || "—"}</b></div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          open(c.id);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow"
+                      >
+                        Open
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDuplicateCourse(c.id);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                      >
+                        <CopyIcon size={16} /> Duplicate
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Delete this course?")) onRemoveCourse(c.id);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"
+                      >
+                        <Trash2 size={16} /> Delete
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
+
+// =====================================================
+// Root App – switches between Hub and Course Dashboard
+// =====================================================
+export default function PMApp() {
+  const [view, setView] = useState(() => {
+    const hasCourses = loadCourses().length > 0; return hasCourses ? "hub" : "hub"; // start at hub
+  });
+  const [prevView, setPrevView] = useState("hub");
+  const [currentCourseId, setCurrentCourseId] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [courses, setCourses] = useState(() => loadCourses());
+  const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
+  const [people, setPeople] = useState(() => {
+    const stored = loadPeople();
+    if (stored.length) return stored;
+    const courses = loadCourses();
+    const map = new Map();
+    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
+    const arr = Array.from(map.values());
+    savePeople(arr);
+    return arr;
+  });
+  const handlePeopleChange = (next) => {
+    setPeople(next);
+    savePeople(next);
+    savePeopleRemote(next).catch(() => {});
+    syncPeopleToCourses(next);
+    setCourses(loadCourses());
+  };
 
   const propagateDependentForecasts = (tasks, sched) => {
     const map = new Map(tasks.map((t) => [t.id, t]));
@@ -1350,9 +1612,11 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, peo
     });
   };
 
-  const applySchedule = (sched) => {
+  const applySchedule = (sched, baseCourses = courses) => {
     saveGlobalSchedule(sched);
-    const updated = loadCourses().map((c) => {
+    saveScheduleRemote(sched).catch(() => {});
+    setSchedule(sched);
+    const updated = baseCourses.map((c) => {
       const tasks1 = c.tasks.map((t) =>
         t.startDate ? { ...t, dueDate: addBusinessDays(t.startDate, t.workDays, sched.workweek, sched.holidays) } : t
       );
@@ -1395,6 +1659,7 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, peo
   const removeCourse = (id) => {
     const next = courses.filter((c) => c.id !== id);
     saveCourses(next);
+    saveCoursesRemote(next).catch(() => {});
     setCourses(next);
   };
   const duplicateCourse = (id) => {
@@ -1406,230 +1671,40 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, peo
     copy.course.name = `${src.course.name} (copy)`;
     const next = [...courses, copy];
     saveCourses(next);
+    saveCoursesRemote(next).catch(() => {});
     setCourses(next);
   };
-  const open = (id) => onOpenCourse(id);
-  const addPerson = () => {
-    const p = { id: uid(), name: 'New Member', roleType: 'Other', color: roleColor('Other'), avatar: '' };
-    onPeopleChange([...people, p]);
-  };
-  const renamePerson = (id, name) => {
-    onPeopleChange(people.map((p) => (p.id === id ? { ...p, name } : p)));
-  };
-main
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
-            <div className="min-w-0">
-              <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-xs text-black/60 truncate">Courses Hub</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
-            <button
-              onClick={onAddCourse}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
-            >
-              <Plus size={16}/> Add Course
-            </button>
-          </div>
-        </div>
-      </header>
+  useEffect(() => {
+    (async () => {
+      const remoteCourses = await loadCoursesRemote();
+      if (remoteCourses.length) {
+        saveCourses(remoteCourses);
+        setCourses(remoteCourses);
+      }
+      const remoteSched = await loadScheduleRemote();
+      applySchedule(remoteSched, remoteCourses.length ? remoteCourses : courses);
+      const remotePeople = await loadPeopleRemote();
+      if (remotePeople.length) {
+        setPeople(remotePeople);
+        savePeople(remotePeople);
+        syncPeopleToCourses(remotePeople);
+        setCourses(loadCourses());
+      }
+    })();
+  }, []);
 
-<main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-  {/* Global schedule controls */}
-  <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
-    <div className="flex items-center justify-between mb-2">
-      <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
-        <Calendar size={18}/> Workweek & Holidays
-        <span className="text-[11px] font-normal text-indigo-700">(Global)</span>
-      </h2>
-    </div>
-    {/* existing workweek/holiday UI */}
-  </section>
-
-  {/* Team member management */}
-  <section>
-    <div className="flex items-center justify-between mb-2">
-      <h2 className="text-lg font-semibold">Team Members</h2>
-      <button
-        onClick={addPerson}
-        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-      >
-        <UserPlus size={16}/> Add Member
-      </button>
-    </div>
-    {people.length === 0 ? (
-      <div className="text-sm text-black/60">No team members</div>
-    ) : (
-      <div className="flex flex-wrap gap-3">
-        {people.map((m) => (
-          <div
-            key={m.id}
-            className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
-            style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
-          >
-            <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
-            <div className="text-left">
-              <InlineText
-                value={m.name}
-                onChange={(v) => renamePerson(m.id, v)}
-                className="font-medium leading-tight"
-              />
-              <div className="text-xs text-black/60">{m.roleType}</div>
-            </div>
-            <button
-              onClick={() => onOpenUser(m.id)}
-              className="ml-auto text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
-            >
-              Open
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
-  </section>
-</main>
-main
-            </div>
-            <div className="rounded-xl border border-indigo-200 bg-white p-3 text-xs">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="font-medium">Workweek:</div>
-                {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => toggleWorkday(idx)}
-                    className={`px-2 py-1 rounded-full border ${
-                      schedule.workweek.includes(idx)
-                        ? "bg-slate-900 text-white border-slate-900"
-                        : "bg-white text-slate-700 border-black/10"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-                <div className="ml-2 font-medium">Holidays:</div>
-                <AddHoliday onAdd={addHoliday} />
-                <div className="flex flex-wrap gap-2">
-                  {schedule.holidays.map((h) => (
-                    <span
-                      key={h}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200"
-                    >
-                      {h}
-                      <button
-                        className="text-rose-500 hover:text-rose-700"
-                        onClick={() => removeHoliday(h)}
-                        title="Remove"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold">Team Members</h2>
-              <button onClick={addPerson} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
-            </div>
-            {people.length === 0 ? (
-              <div className="text-sm text-black/60">No team members</div>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {people.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
-                    style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
-                  >
-                    <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
-                    <div className="text-left">
-                      <InlineText value={m.name} onChange={(v) => renamePerson(m.id, v)} className="font-medium leading-tight" />
-                      <div className="text-xs text-black/60">{m.roleType}</div>
-                    </div>
-                    <button onClick={() => onOpenUser(m.id)} className="ml-auto text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Open</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-        <section>
-          <h2 className="text-lg font-semibold mb-2">All Courses</h2>
-          {courses.length === 0 ? (
-            <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
-              <div className="text-lg font-semibold mb-2">No courses yet</div>
-              <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
-              <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {courses.map((c) => { const t = computeTotals(c); return (
-                <motion.div
-                  key={c.id}
-                  layout
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Open ${c.course.name}`}
-                  onClick={() => open(c.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') open(c.id); }}
-                  className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 truncate">{c.course.description}</div></div>
-                  </div>
-                  <div className="flex items-center gap-4 mt-3">
-                    <Ring size={72} stroke={10} progress={t.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{t.pct}%</div><div className="text-[10px] text-black/60">{t.done}/{t.total}</div></div></Ring>
-                    <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
-                    <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
-                    <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
-                  </div>
-                </motion.div>
-              ); })}
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
-  );
-}
-
-// =====================================================
-// Root App – switches between Hub and Course Dashboard
-// =====================================================
-export default function PMApp() {
-  const [view, setView] = useState(() => {
-    const hasCourses = loadCourses().length > 0; return hasCourses ? "hub" : "hub"; // start at hub
-  });
-  const [prevView, setPrevView] = useState("hub");
-  const [currentCourseId, setCurrentCourseId] = useState(null);
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [people, setPeople] = useState(() => {
-    const stored = loadPeople();
-    if (stored.length) return stored;
-    const courses = loadCourses();
-    const map = new Map();
-    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
-    const arr = Array.from(map.values());
-    savePeople(arr);
-    return arr;
-  });
-  const handlePeopleChange = (next) => {
-    setPeople(next);
-    savePeople(next);
-    syncPeopleToCourses(next);
-  };
+  useEffect(() => {
+    const onSchedStorage = (e) => {
+      if (e.key === GLOBAL_SCHEDULE_KEY && e.newValue) {
+        try {
+          const sched = JSON.parse(e.newValue);
+          applySchedule(sched);
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', onSchedStorage);
+    return () => window.removeEventListener('storage', onSchedStorage);
+  }, []);
   const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
@@ -1638,7 +1713,10 @@ export default function PMApp() {
     const tpl = loadTemplate() || remapSeed(seed());
     const base = remapSeed(JSON.parse(JSON.stringify(tpl)));
     base.course = { ...base.course, id: uid(), name: base.course.name || "New Course" };
-    const all = loadCourses(); const next = [...all, base]; saveCourses(next);
+    const next = [...courses, base];
+    saveCourses(next);
+    saveCoursesRemote(next).catch(() => {});
+    setCourses(next);
     const merged = [...people];
     base.team.forEach((m) => { if (!merged.some((p) => p.id === m.id)) merged.push({ ...m }); });
     handlePeopleChange(merged);
@@ -1651,13 +1729,23 @@ export default function PMApp() {
   if (view === "hub") {
     content = (
       <CoursesHub
+        courses={courses}
         onOpenCourse={openCourse}
         onEditTemplate={editTemplate}
         onAddCourse={addCourse}
         onOpenUser={openUser}
         people={people}
         onPeopleChange={handlePeopleChange}
-      />
+        onRemoveCourse={removeCourse}
+        onDuplicateCourse={duplicateCourse}
+      >
+        <GlobalSchedule
+          schedule={schedule}
+          onToggleWorkday={toggleWorkday}
+          onAddHoliday={addHoliday}
+          onRemoveHoliday={removeHoliday}
+        />
+      </CoursesHub>
     );
   } else if (view === "user") {
     content = <UserDashboard onBack={onBack} onOpenCourse={openCourse} initialUserId={currentUserId} />;
@@ -1669,16 +1757,17 @@ export default function PMApp() {
     content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} />;
   } else {
     // open selected course
-    const courses = loadCourses();
     const course = courses.find((c)=>c.id===currentCourseId || c.course?.id===currentCourseId) || courses[0];
     const handleCourseChange = (s) => {
-      const all = loadCourses();
+      const all = [...courses];
       const idx = all.findIndex(
         (c) => c.id === currentCourseId || c.course?.id === currentCourseId
       );
       if (idx >= 0) all[idx] = s;
       else all.push(s);
       saveCourses(all);
+      saveCoursesRemote(all).catch(() => {});
+      setCourses(all);
     };
     content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} />;
   }
