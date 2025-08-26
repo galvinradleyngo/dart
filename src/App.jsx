@@ -1350,8 +1350,8 @@ function CoursesHub({
   onDuplicateCourse,
   onBack,
 }) {
-  const [courses, setCourses] = useState([]);
-  const [schedule, setSchedule] = useState(defaultSchedule);
+  const [courses, setCourses] = useState(() => loadCourses());
+  const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
 
   useEffect(() => {
     const onSchedStorage = (e) => {
