@@ -1359,6 +1359,7 @@ function CoursesHub({
   onPeopleChange,
   onRemoveCourse,
   onDuplicateCourse,
+  onBack,
 }) {
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
@@ -1512,6 +1513,14 @@ function CoursesHub({
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                <ArrowLeft size={16}/> Back
+              </button>
+            )}
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
@@ -1760,6 +1769,7 @@ export default function PMApp() {
         onPeopleChange={handlePeopleChange}
         onRemoveCourse={() => {}}
         onDuplicateCourse={() => {}}
+        onBack={onBack}
       />
     );
   } else if (view === "user") {
