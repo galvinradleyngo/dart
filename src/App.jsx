@@ -78,6 +78,19 @@ const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
 const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
+const loadTemplateRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'template'));
+    return snap.exists() ? snap.data().template || null : null;
+  } catch {
+    return null;
+  }
+};
+const saveTemplateRemote = async (tpl) => {
+  try {
+    await setDoc(doc(db, 'app', 'template'), { template: tpl });
+  } catch {}
+};
 const loadCoursesRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'courses'));
@@ -95,9 +108,9 @@ const saveCoursesRemote = async (arr) => {
 const loadScheduleRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'schedule'));
-    return snap.exists() ? snap.data().schedule || defaultSchedule : defaultSchedule;
+    return snap.exists() ? snap.data().schedule || defaultSchedule : null;
   } catch {
-    return defaultSchedule;
+    return null;
   }
 };
 const saveScheduleRemote = async (sched) => {
@@ -473,8 +486,8 @@ const handleSave = async () => {
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
             <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
-            <button onClick={() => saveTemplate(state)} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
-            <button onClick={() => { const tpl = loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
+            <button onClick={async () => { saveTemplate(state); await saveTemplateRemote(state).catch(()=>{}); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
+            <button onClick={async () => { const tpl = (await loadTemplateRemote()) || loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
             <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
               <Upload size={16}/> Import
               <input type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && ((() => { const reader = new FileReader(); reader.onload = () => { try { const incoming = remapSeed(JSON.parse(reader.result)); setState((s)=>({ ...incoming, schedule: loadGlobalSchedule() })); } catch { alert("Invalid JSON"); } }; reader.readAsText(e.target.files[0]); })())} />
@@ -1356,12 +1369,33 @@ function CoursesHub({
       if (remoteCourses.length) {
         saveCourses(remoteCourses);
         setCourses(remoteCourses);
+      } else {
+        const localCourses = loadCourses();
+        setCourses(localCourses);
+        if (localCourses.length) saveCoursesRemote(localCourses).catch(() => {});
       }
       const remoteSched = await loadScheduleRemote();
-      setSchedule(remoteSched);
-      applySchedule(remoteSched);
+      if (remoteSched) {
+        setSchedule(remoteSched);
+        applySchedule(remoteSched);
+      } else {
+        const localSched = loadGlobalSchedule();
+        setSchedule(localSched);
+        applySchedule(localSched);
+      }
       const remotePeople = await loadPeopleRemote();
-      if (remotePeople.length) onPeopleChange(remotePeople);
+      if (remotePeople.length) {
+        savePeople(remotePeople);
+        onPeopleChange(remotePeople);
+      } else {
+        const localPeople = loadPeople();
+        if (localPeople.length) {
+          onPeopleChange(localPeople);
+          savePeopleRemote(localPeople).catch(() => {});
+        }
+      }
+      const remoteTpl = await loadTemplateRemote();
+      if (remoteTpl) saveTemplate(remoteTpl);
     })();
   }, []);
 
@@ -1448,9 +1482,16 @@ function CoursesHub({
     const p = { id: uid(), name: 'New Member', roleType: 'Other', color: roleColor('Other'), avatar: '' };
     onPeopleChange([...people, p]);
   };
-  const renamePerson = (id, name) => {
-    onPeopleChange(people.map((p) => (p.id === id ? { ...p, name } : p)));
+  const updatePerson = (id, updates) => {
+    onPeopleChange(
+      people.map((p) =>
+        p.id === id
+          ? { ...p, ...updates, ...(updates.roleType ? { color: roleColor(updates.roleType) } : {}) }
+          : p
+      )
+    );
   };
+  const renamePerson = (id, name) => updatePerson(id, { name });
   const removePerson = (id) => {
     onPeopleChange(people.filter((p) => p.id !== id));
   };
@@ -1562,7 +1603,24 @@ function CoursesHub({
                       onChange={(v) => renamePerson(m.id, v)}
                       className="font-medium leading-tight"
                     />
-                    <div className="text-xs text-black/60">{m.roleType}</div>
+<div className="text-left">
+  <InlineText
+    value={m.name}
+    onChange={(v) => renamePerson(m.id, v)}
+    className="font-medium leading-tight"
+  />
+  <select
+    value={m.roleType}
+    onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
+    className="mt-1 border rounded px-2 py-1 text-xs"
+  >
+    {Object.keys(rolePalette).map((r) => (
+      <option key={r} value={r}>
+        {r}
+      </option>
+    ))}
+  </select>
+</div>
                   </div>
                   <div className="ml-auto flex gap-2">
                     <button
@@ -1671,12 +1729,21 @@ export default function PMApp() {
   const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
-  const editTemplate = () => { setPrevView(view); setCurrentCourseId("__TEMPLATE__"); setView("course"); };
-  const addCourse = () => {
-    const tpl = loadTemplate() || remapSeed(seed());
+  const editTemplate = async () => {
+    setPrevView(view);
+    const remoteTpl = await loadTemplateRemote();
+    if (remoteTpl) saveTemplate(remoteTpl);
+    setCurrentCourseId("__TEMPLATE__");
+    setView("course");
+  };
+  const addCourse = async () => {
+    const tpl = (await loadTemplateRemote()) || loadTemplate() || remapSeed(seed());
     const base = remapSeed(JSON.parse(JSON.stringify(tpl)));
     base.course = { ...base.course, id: uid(), name: base.course.name || "New Course" };
-    const all = loadCourses(); const next = [...all, base]; saveCourses(next);
+    const all = loadCourses();
+    const next = [...all, base];
+    saveCourses(next);
+    saveCoursesRemote(next).catch(() => {});
     const merged = [...people];
     base.team.forEach((m) => { if (!merged.some((p) => p.id === m.id)) merged.push({ ...m }); });
     handlePeopleChange(merged);
@@ -1706,7 +1773,7 @@ export default function PMApp() {
     // open template editor
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
-    const handleChange = (s) => { saveTemplate(s); };
+    const handleChange = (s) => { saveTemplate(s); saveTemplateRemote(s).catch(()=>{}); };
     content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} />;
   } else {
     // open selected course
