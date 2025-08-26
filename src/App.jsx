@@ -1391,7 +1391,7 @@ function computeTotals(state) {
   return { total, done, inprog, todo, pct, nextDue };
 }
 
-function CoursesHub({ courses = [], onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange, onRemoveCourse, onDuplicateCourse, children }) {
+function CoursesHub({ courses = [], onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, people = [], onPeopleChange, onRemoveCourse, onDuplicateCourse, onBack }) {
   const open = (id) => onOpenCourse(id);
   const addPerson = () => {
     const p = { id: uid(), name: 'New Member', roleType: 'Other', color: roleColor('Other'), avatar: '' };
@@ -1408,6 +1408,14 @@ function CoursesHub({ courses = [], onOpenCourse, onEditTemplate, onAddCourse, o
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"
+              >
+                <ArrowLeft size={16} /> Home
+              </button>
+            )}
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500" />
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
@@ -1427,8 +1435,6 @@ function CoursesHub({ courses = [], onOpenCourse, onEditTemplate, onAddCourse, o
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {children}
-
         <section>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">Team Members</h2>
@@ -1567,14 +1573,45 @@ function CoursesHub({ courses = [], onOpenCourse, onEditTemplate, onAddCourse, o
   );
 }
 
+function HomePage({ schedule, onToggleWorkday, onAddHoliday, onRemoveHoliday, onOpenHub }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500" />
+            <div className="min-w-0">
+              <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+              <div className="text-xs text-black/60 truncate">Home</div>
+            </div>
+          </div>
+          <button
+            onClick={onOpenHub}
+            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
+          >
+            <ListChecks size={16} /> Open Courses
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <GlobalSchedule
+          schedule={schedule}
+          onToggleWorkday={onToggleWorkday}
+          onAddHoliday={onAddHoliday}
+          onRemoveHoliday={onRemoveHoliday}
+        />
+      </main>
+    </div>
+  );
+}
+
 // =====================================================
 // Root App – switches between Hub and Course Dashboard
 // =====================================================
 export default function PMApp() {
-  const [view, setView] = useState(() => {
-    const hasCourses = loadCourses().length > 0; return hasCourses ? "hub" : "hub"; // start at hub
-  });
-  const [prevView, setPrevView] = useState("hub");
+  const [view, setView] = useState("home");
+  const [prevView, setPrevView] = useState("home");
   const [currentCourseId, setCurrentCourseId] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [courses, setCourses] = useState(() => loadCourses());
@@ -1723,10 +1760,20 @@ export default function PMApp() {
     setPrevView(view);
     setCurrentCourseId(base.course.id); setView("course");
   };
-  const onBack = () => { setView(prevView); setPrevView("hub"); setCurrentCourseId(null); };
+  const onBack = () => { setView(prevView); setPrevView("home"); setCurrentCourseId(null); setCurrentUserId(null); };
 
   let content = null;
-  if (view === "hub") {
+  if (view === "home") {
+    content = (
+      <HomePage
+        schedule={schedule}
+        onToggleWorkday={toggleWorkday}
+        onAddHoliday={addHoliday}
+        onRemoveHoliday={removeHoliday}
+        onOpenHub={() => setView("hub")}
+      />
+    );
+  } else if (view === "hub") {
     content = (
       <CoursesHub
         courses={courses}
@@ -1738,14 +1785,8 @@ export default function PMApp() {
         onPeopleChange={handlePeopleChange}
         onRemoveCourse={removeCourse}
         onDuplicateCourse={duplicateCourse}
-      >
-        <GlobalSchedule
-          schedule={schedule}
-          onToggleWorkday={toggleWorkday}
-          onAddHoliday={addHoliday}
-          onRemoveHoliday={removeHoliday}
-        />
-      </CoursesHub>
+        onBack={() => setView("home")}
+      />
     );
   } else if (view === "user") {
     content = <UserDashboard onBack={onBack} onOpenCourse={openCourse} initialUserId={currentUserId} />;
