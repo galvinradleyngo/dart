@@ -607,7 +607,7 @@ const handleSave = async () => {
               onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
               schedule={state.schedule}
               // clicking an event opens it for editing
-              onTaskClick={(t)=>setEditing({ taskId: t.id })}
+              onTaskClick={(t)=>setEditing({ courseId: state.course.id, taskId: t.id })}
             />
           )}
         </section>
