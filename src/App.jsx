@@ -44,6 +44,17 @@ const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const rolePalette = { LD: "#4f46e5", SME: "#16a34a", MM: "#0891b2", PM: "#ea580c", PA: "#a855f7", Other: "#64748b" };
 const roleColor = (roleType) => rolePalette[roleType] || rolePalette.Other;
 
+const nextMemberName = (list) => {
+  const base = "New Member";
+  const names = new Set(list.map((m) => m.name));
+  let name = base;
+  let i = 2;
+  while (names.has(name)) {
+    name = `${base} ${i++}`;
+  }
+  return name;
+};
+
 const isHoliday = (dateObj, holidaySet) => holidaySet.has(fmt(dateObj));
 const isWorkday = (dateObj, workweekSet) => workweekSet.has(dateObj.getDay());
 const addBusinessDays = (dateStr, workdays, workweek = [1,2,3,4,5], holidays = []) => {
@@ -439,7 +450,7 @@ const handleSave = async () => {
 
   // Members
   const updateMember = (id, patch) => setState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
-  const addMember    = () => setState((s)=>({ ...s, team: [...s.team, { id: uid(), name:"New Member", roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
+  const addMember    = () => setState((s)=>({ ...s, team: [...s.team, { id: uid(), name: nextMemberName(s.team), roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
   const addExistingMember = (pid) => setState((s)=>{
     if (s.team.some((m)=>m.id===pid)) return s;
     const person = people.find((p)=>p.id===pid);
@@ -1479,7 +1490,8 @@ function CoursesHub({
   };
   const open = (id) => onOpenCourse(id);
   const addPerson = () => {
-    const p = { id: uid(), name: 'New Member', roleType: 'Other', color: roleColor('Other'), avatar: '' };
+    const name = nextMemberName(people);
+    const p = { id: uid(), name, roleType: 'Other', color: roleColor('Other'), avatar: '' };
     onPeopleChange([...people, p]);
   };
   const updatePerson = (id, updates) => {
