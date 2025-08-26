@@ -92,6 +92,34 @@ const saveCoursesRemote = async (arr) => {
   } catch {}
 };
 
+const loadScheduleRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'schedule'));
+    return snap.exists() ? snap.data().schedule || defaultSchedule : defaultSchedule;
+  } catch {
+    return defaultSchedule;
+  }
+};
+const saveScheduleRemote = async (sched) => {
+  try {
+    await setDoc(doc(db, 'app', 'schedule'), { schedule: sched });
+  } catch {}
+};
+
+const loadPeopleRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'people'));
+    return snap.exists() ? snap.data().people || [] : [];
+  } catch {
+    return [];
+  }
+};
+const savePeopleRemote = async (arr) => {
+  try {
+    await setDoc(doc(db, 'app', 'people'), { people: arr });
+  } catch {}
+};
+
 // =====================================================
 // People Store (global team members)
 // =====================================================
@@ -1335,6 +1363,21 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, peo
     return () => window.removeEventListener('storage', onSchedStorage);
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const remoteCourses = await loadCoursesRemote();
+      if (remoteCourses.length) {
+        saveCourses(remoteCourses);
+        setCourses(remoteCourses);
+      }
+      const remoteSched = await loadScheduleRemote();
+      setSchedule(remoteSched);
+      applySchedule(remoteSched);
+      const remotePeople = await loadPeopleRemote();
+      if (remotePeople.length) onPeopleChange(remotePeople);
+    })();
+  }, []);
+
   const propagateDependentForecasts = (tasks, sched) => {
     const map = new Map(tasks.map((t) => [t.id, t]));
     return tasks.map((t) => {
@@ -1350,8 +1393,9 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, peo
     });
   };
 
-  const applySchedule = (sched) => {
+  function applySchedule(sched) {
     saveGlobalSchedule(sched);
+    saveScheduleRemote(sched).catch(() => {});
     const updated = loadCourses().map((c) => {
       const tasks1 = c.tasks.map((t) =>
         t.startDate ? { ...t, dueDate: addBusinessDays(t.startDate, t.workDays, sched.workweek, sched.holidays) } : t
@@ -1362,7 +1406,7 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, peo
     saveCourses(updated);
     saveCoursesRemote(updated).catch(() => {});
     setCourses(updated);
-  };
+  }
 
   const toggleWorkday = (dow) => {
     setSchedule((s) => {
@@ -1415,6 +1459,9 @@ function CoursesHub({ onOpenCourse, onEditTemplate, onAddCourse, onOpenUser, peo
   };
   const renamePerson = (id, name) => {
     onPeopleChange(people.map((p) => (p.id === id ? { ...p, name } : p)));
+  };
+  const removePerson = (id) => {
+    onPeopleChange(people.filter((p) => p.id !== id));
   };
 main
   return (
@@ -1482,12 +1529,20 @@ main
               />
               <div className="text-xs text-black/60">{m.roleType}</div>
             </div>
-            <button
-              onClick={() => onOpenUser(m.id)}
-              className="ml-auto text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
-            >
-              Open
-            </button>
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => onOpenUser(m.id)}
+                className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+              >
+                Open
+              </button>
+              <button
+                onClick={() => removePerson(m.id)}
+                className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+              >
+                Remove
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -1555,7 +1610,10 @@ main
                       <InlineText value={m.name} onChange={(v) => renamePerson(m.id, v)} className="font-medium leading-tight" />
                       <div className="text-xs text-black/60">{m.roleType}</div>
                     </div>
-                    <button onClick={() => onOpenUser(m.id)} className="ml-auto text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Open</button>
+                    <div className="ml-auto flex gap-2">
+                      <button onClick={() => onOpenUser(m.id)} className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Open</button>
+                      <button onClick={() => removePerson(m.id)} className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50">Remove</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1628,8 +1686,19 @@ export default function PMApp() {
   const handlePeopleChange = (next) => {
     setPeople(next);
     savePeople(next);
+    savePeopleRemote(next).catch(() => {});
     syncPeopleToCourses(next);
   };
+  useEffect(() => {
+    (async () => {
+      const remote = await loadPeopleRemote();
+      if (remote.length) {
+        setPeople(remote);
+        savePeople(remote);
+        syncPeopleToCourses(remote);
+      }
+    })();
+  }, []);
   const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
