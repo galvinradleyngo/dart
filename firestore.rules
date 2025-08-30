@@ -16,14 +16,16 @@ service cloud.firestore {
       allow update: if isSignedIn() && (request.auth.uid == uid || hasRole(request.auth.uid, 'pc'));
     }
 
+    function hasCorrectPassword() {
+      return (request.resource != null && request.resource.data.password == "passthesalt") ||
+             (resource != null && resource.data.password == "passthesalt");
+    }
+
     match /courses/{courseId} {
-      allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && hasRole(request.auth.uid,'pc');
+      allow read, write: if hasCorrectPassword();
 
       match /tasks/{taskId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn() && hasRole(request.auth.uid,'pc');
-        allow update: if isSignedIn(); // MVP; can tighten later
+        allow read, write: if hasCorrectPassword();
       }
     }
 
