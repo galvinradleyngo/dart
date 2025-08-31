@@ -204,7 +204,13 @@ const seed = () => ({
 const remapSeed = (s) => {
   const msIds = s.milestones.map((m) => m.id);
   s.schedule = s.schedule || { workweek: [1,2,3,4,5], holidays: [] };
-  s.tasks.forEach((t) => (t.milestoneId = msIds[t.milestoneId] ?? msIds[0]));
+  s.tasks.forEach((t) => {
+    if (typeof t.milestoneId === 'number') {
+      t.milestoneId = msIds[t.milestoneId] ?? msIds[0];
+    } else if (!msIds.includes(t.milestoneId)) {
+      t.milestoneId = msIds[0];
+    }
+  });
   s.tasks = s.tasks.map((t) => {
     const workDays = t.workDays ?? t.estimateDays ?? 0;
     let startDate = t.startDate || "";
