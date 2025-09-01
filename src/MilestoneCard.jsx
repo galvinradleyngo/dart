@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { Copy as CopyIcon } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 
 export default function MilestoneCard({
@@ -10,6 +11,7 @@ export default function MilestoneCard({
   onUpdate,
   onDelete,
   onDuplicate,
+  onDuplicateMilestone,
   onAddLink,
   onRemoveLink,
 }) {
@@ -26,11 +28,32 @@ export default function MilestoneCard({
 
   return (
     <details className="rounded-xl border border-black/10 bg-white flex flex-col md:flex-row">
+codex/refactor-milestonecard.jsx-implementation-x9gwp5
+      <summary className="cursor-pointer select-none p-4 flex-1 flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <div className="font-semibold">{milestone.title}</div>
+          <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
+            <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+        {onDuplicateMilestone && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicateMilestone(milestone.id);
+            }}
+            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            title="Duplicate Milestone"
+          >
+            <CopyIcon size={16} />
+          </button>
+        )}
       <summary className="cursor-pointer select-none p-4 flex-1">
         <div className="font-semibold">{milestone.title}</div>
         <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
           <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
         </div>
+main
       </summary>
       <div className="p-4 flex flex-col gap-2 flex-1">
         {milestone.goal && (
