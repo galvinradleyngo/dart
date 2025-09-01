@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Copy as CopyIcon } from 'lucide-react';
+import { Copy as CopyIcon, Trash2 } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 
 export default function MilestoneCard({
@@ -12,6 +12,7 @@ export default function MilestoneCard({
   onDelete,
   onDuplicate,
   onDuplicateMilestone,
+  onDeleteMilestone,
   onAddLink,
   onRemoveLink,
 }) {
@@ -36,18 +37,32 @@ export default function MilestoneCard({
             <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
           </div>
         </div>
-        {onDuplicateMilestone && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicateMilestone(milestone.id);
-            }}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
-            title="Duplicate Milestone"
-          >
-            <CopyIcon size={16} />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {onDuplicateMilestone && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicateMilestone(milestone.id);
+              }}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              title="Duplicate Milestone"
+            >
+              <CopyIcon size={16} />
+            </button>
+          )}
+          {onDeleteMilestone && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDeleteMilestone(milestone.id);
+              }}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              title="Remove Milestone"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
       </summary>
       <div className="p-4 flex flex-col gap-2">
         {milestone.goal && (

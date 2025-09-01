@@ -676,6 +676,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                       onDelete={deleteTask}
                       onDuplicate={duplicateTask}
                       onDuplicateMilestone={duplicateMilestone}
+                      onDeleteMilestone={deleteMilestone}
                       onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                       onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
                     />
@@ -847,6 +848,17 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
       </div>
       {collapsed ? (
         <>
+          <div className="mt-1">
+            <select
+              value={t.status}
+              onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
+              className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+            >
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
           <div className="text-xs text-black/60 mt-1 truncate">
               <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
             </div>
@@ -1014,6 +1026,7 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
                   </div>
                   {collapsed ? (
                     <>
+                      <div className="mt-1"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
                       <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
