@@ -386,15 +386,18 @@ const handleSave = async () => {
   const team = state.team; const milestones = state.milestones; const tasksRaw = state.tasks;
   const dueKey = (t) => (t.dueDate ? new Date(t.dueDate).getTime() : Number.POSITIVE_INFINITY);
 
-  const filteredBase = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
-  const tasksActive = useMemo(() => { const arr = filteredBase.filter((t) => t.status !== "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredBase]);
-  const tasksDone   = useMemo(() => { const arr = filteredBase.filter((t) => t.status === "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredBase]);
+const filteredBase = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
+const tasksByMilestone = useMemo(() => {
+  const idx = (id) => milestones.findIndex((m) => m.id === id);
+  return [...filteredBase].sort((a, b) => idx(a.milestoneId) - idx(b.milestoneId));
+}, [filteredBase, milestones]);
+const tasksActive = useMemo(() => { const arr = filteredBase.filter((t) => t.status !== "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredBase]);
+const tasksDone   = useMemo(() => { const arr = filteredBase.filter((t) => t.status === "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredBase]);
 
   const totals = useMemo(() => {
     const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
   }, [tasksRaw]);
 
-  const milestoneStats = useMemo(() => milestones.map((m) => { const subset = tasksRaw.filter((t)=>t.milestoneId===m.id); const total = subset.length; const done = subset.filter((t)=>t.status==="done").length; return { id:m.id, pct: total ? Math.round((done/total)*100) : 0, total, done }; }), [milestones, tasksRaw]);
 
   const recomputeDue = (t, patch = {}) => { const start = patch.startDate ?? t.startDate; const work = patch.workDays ?? t.workDays; const due = start ? addBusinessDays(start, work, state.schedule.workweek, state.schedule.holidays) : ""; return { ...patch, dueDate: due }; };
   const propagateDependentForecasts = (tasks, schedule) => { const map = new Map(tasks.map((t)=>[t.id,t])); return tasks.map((t)=>{ if(!t.depTaskId || t.status==="done") return t; const src = map.get(t.depTaskId); if(!src) return t; const startForecast = src.dueDate || ""; if (t.status !== "inprogress" && startForecast) { const due = addBusinessDays(startForecast, t.workDays, schedule.workweek, schedule.holidays); return { ...t, startDate: startForecast, dueDate: due }; } return t; }); };
@@ -449,10 +452,6 @@ const handleSave = async () => {
   const duplicateMilestone = (id) => setState((s)=>{ const src = s.milestones.find((m)=>m.id===id); if(!src) return s; const newMs = { id: uid(), title: `${src.title} (copy)`, start: src.start, goal: src.goal }; const related = s.tasks.filter((t)=>t.milestoneId===id); const nextOrder = s.tasks.length; const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null); const clonedTasks = related.map((t,i)=>({ ...t, id: uid(), order: nextOrder+i, milestoneId: newMs.id, status: "todo", startDate: "", dueDate: "", completedDate: "", assigneeId: ld, depTaskId: null })); return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] }; });
 
   // Milestone DnD
-  const dragMsId = useRef(null);
-  const onMsDragStart = (id) => (e) => { dragMsId.current = id; e.dataTransfer.effectAllowed = "move"; };
-  const onMsDragOver = (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; };
-  const onMsDrop = (targetId) => (e) => { e.preventDefault(); const from = dragMsId.current; if(!from || from===targetId) return; setState((s)=>{ const arr=[...s.milestones]; const i1=arr.findIndex((m)=>m.id===from); const i2=arr.findIndex((m)=>m.id===targetId); if(i1<0||i2<0) return s; const [m]=arr.splice(i1,1); arr.splice(i2,0,m); return { ...s, milestones: arr }; }); dragMsId.current=null; };
 
   // Members
   const updateMember = (id, patch) => setState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
@@ -620,20 +619,30 @@ const handleSave = async () => {
               <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
             </div>
           </div>
-          <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(280px,1fr))]">
-            {milestones.map((m) => { const st = milestoneStats.find((s)=>s.id===m.id) || { pct:0,total:0,done:0 }; return (
-              <motion.div key={m.id} className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm" draggable onDragStart={onMsDragStart(m.id)} onDragOver={onMsDragOver} onDrop={onMsDrop(m.id)}>
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold leading-tight text-slate-800"><InlineText value={m.title} onChange={(v)=>updateMilestone(m.id,{ title:v })} /></h3>
-                  <div className="flex items-center gap-1"><button className="text-black/60 hover:text-sky-600" title="Duplicate milestone and tasks" onClick={() => duplicateMilestone(m.id)}><CopyIcon size={16}/></button><button className="text-black/40 hover:text-red-500" title="Delete milestone" onClick={() => deleteMilestone(m.id)}><Trash2 size={16}/></button></div>
-                </div>
-                <p className="text-xs text-black/60 mt-1"><InlineText value={m.goal} onChange={(v)=>updateMilestone(m.id,{ goal:v })} placeholder="Goal…" /></p>
-                <div className="flex items-center gap-4 mt-3">
-                  <Ring size={72} stroke={10} progress={st.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{st.pct}%</div><div className="text-[10px] text-black/60">{st.done}/{st.total}</div></div></Ring>
-                  <div className="text-sm space-y-1"><div className="flex gap-2 items-center"><Calendar size={14} className="text-black/50"/> Start:&nbsp;<input type="date" value={m.start || ""} onChange={(e)=>updateMilestone(m.id,{ start:e.target.value })} className="border rounded px-1 py-0.5 text-xs"/></div></div>
-                </div>
-              </motion.div>
-            ); })}
+          <div className="space-y-2">
+            {tasksByMilestone.map((t, idx) => {
+              const prev = tasksByMilestone[idx - 1];
+              const showHeading = !prev || prev.milestoneId !== t.milestoneId;
+              const ms = milestones.find((m) => m.id === t.milestoneId);
+              return (
+                <React.Fragment key={t.id}>
+                  {showHeading && (
+                    <div className="font-semibold text-sm mt-2">{ms?.title || "Unassigned"}</div>
+                  )}
+                  <TaskCard
+                    task={t}
+                    tasks={tasksRaw}
+                    team={team}
+                    milestones={milestones}
+                    onUpdate={updateTask}
+                    onDelete={deleteTask}
+                    onDuplicate={duplicateTask}
+                    onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                    onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                  />
+                </React.Fragment>
+              );
+            })}
           </div>
         </section>
 
@@ -753,12 +762,23 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   return (
     <motion.div
       {...dragHandlers}
-      className={`rounded-lg border border-black/10 p-3 shadow-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragHandlers.draggable ? "cursor-move" : ""}`}
+      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragHandlers.draggable ? "cursor-move" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-            <div className="text-[15px] sm:text-base font-semibold leading-tight truncate">
-              <InlineText value={t.title} onChange={(v) => onUpdate?.(t.id, { title: v })} />
+          <select
+            value={t.milestoneId}
+            onChange={(e) => onUpdate?.(t.id, { milestoneId: e.target.value })}
+            className="mb-1 text-xs border rounded px-1 py-0.5"
+          >
+            {milestones.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.title}
+              </option>
+            ))}
+          </select>
+          <div className="text-sm sm:text-base font-semibold leading-tight truncate">
+            <InlineText value={t.title} onChange={(v) => onUpdate?.(t.id, { title: v })} />
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -791,7 +811,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
               <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
             </div>
             {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
-            <div className="mt-2 flex items-center justify-between text-xs">
+            <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
               <div className="flex items-center gap-2 min-w-0">
                 {a ? (
                   <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
@@ -824,17 +844,6 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
               </select>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <select
-                value={t.milestoneId}
-                onChange={(e) => onUpdate?.(t.id, { milestoneId: e.target.value })}
-                className="border rounded px-1.5 py-1"
-              >
-                {milestones.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.title}
-                  </option>
-                ))}
-              </select>
               <div className="flex items-center gap-1">
                 {a ? (
                   <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
