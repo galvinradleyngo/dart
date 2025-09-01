@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Plus,
   Calendar,
@@ -616,39 +616,51 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setMilestonesCollapsed((v) => !v)}
-                title={milestonesCollapsed ? "Expand" : "Collapse"}
+                title={milestonesCollapsed ? "Expand Milestones" : "Collapse Milestones"}
                 className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
               >
                 {milestonesCollapsed ? <Plus size={16} /> : <Minus size={16} />}
               </button>
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-                <Filter size={16} className="text-black/50"/>
-                <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
-                  <option value="all">All milestones</option>
-                  {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
-                </select>
-              </div>
-              <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
+              {!milestonesCollapsed && (
+                <>
+                  <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
+                    <Filter size={16} className="text-black/50"/>
+                    <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
+                      <option value="all">All milestones</option>
+                      {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
+                    </select>
+                  </div>
+                  <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
+                </>
+              )}
             </div>
           </div>
           {!milestonesCollapsed && (
             <div className="space-y-2">
-              {filteredMilestones.map((m) => (
-                <MilestoneCard
-                  key={m.id}
-                  milestone={m}
-                  tasks={groupedTasks[m.id] || []}
-                  tasksAll={tasksRaw}
-                  team={team}
-                  milestones={milestones}
-                  onUpdate={updateTask}
-                  onDelete={deleteTask}
-                  onDuplicate={duplicateTask}
-                  onDuplicateMilestone={duplicateMilestone}
-                  onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
-                  onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
-                />
-              ))}
+              <AnimatePresence>
+                {filteredMilestones.map((m) => (
+                  <motion.div
+                    key={m.id}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                  >
+                    <MilestoneCard
+                      milestone={m}
+                      tasks={groupedTasks[m.id] || []}
+                      tasksAll={tasksRaw}
+                      team={team}
+                      milestones={milestones}
+                      onUpdate={updateTask}
+                      onDelete={deleteTask}
+                      onDuplicate={duplicateTask}
+                      onDuplicateMilestone={duplicateMilestone}
+                      onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                      onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </section>
