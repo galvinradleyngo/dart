@@ -325,6 +325,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(true);
+  const [membersEditing, setMembersEditing] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
 
@@ -582,102 +583,109 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 ))}
               </select>
               <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+              <button
+                onClick={() => setMembersEditing(v => !v)}
+                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                {membersEditing ? 'Done' : 'Edit Members'}
+              </button>
             </div>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
             {team.map((m) => (
               <div key={m.id} className="rounded-xl border border-black/10 p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0"><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /><InlineText value={m.name} onChange={(v) => updateMember(m.id, { name: v })} className="font-medium truncate" /></div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={m.roleType}
-                    onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    {Object.keys(rolePalette).map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={m.avatar || ''}
-                    onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    <option value="">🙂</option>
-                    <option value="😀">😀</option>
-                    <option value="😎">😎</option>
-                    <option value="🚀">🚀</option>
-                    <option value="🎨">🎨</option>
-                    <option value="🐱">🐱</option>
-                  </select>
-                  {(m.roleType === "LD" || m.roleType === "SME") && (
-                    <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
-                        onChange={() => toggleCourseWide(m.roleType, m.id)}
-                      />
-                      course-wide
-                    </label>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} />
+                  {membersEditing ? (
+                    <InlineText
+                      value={m.name}
+                      onChange={(v) => updateMember(m.id, { name: v })}
+                      className="font-medium truncate"
+                    />
+                  ) : (
+                    <span className="font-medium truncate">{m.name}</span>
                   )}
-                  <button
-                    className="text-black/40 hover:text-red-500"
-                    title="Remove member"
-                    onClick={() => deleteMember(m.id)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {membersEditing ? (
+                    <>
+                      <select
+                        value={m.roleType}
+                        onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        {Object.keys(rolePalette).map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={m.avatar || ''}
+                        onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        <option value="">🙂</option>
+                        <option value="😀">😀</option>
+                        <option value="😎">😎</option>
+                        <option value="🚀">🚀</option>
+                        <option value="🎨">🎨</option>
+                        <option value="🐱">🐱</option>
+                      </select>
+                      {(m.roleType === "LD" || m.roleType === "SME") && (
+                        <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
+                            onChange={() => toggleCourseWide(m.roleType, m.id)}
+                          />
+                          course-wide
+                        </label>
+                      )}
+                      <button
+                        className="text-black/40 hover:text-red-500"
+                        title="Remove member"
+                        onClick={() => deleteMember(m.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-sm">{m.roleType}</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </section>
-      {/* Milestones */}
-<section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-  <div className="flex items-center justify-between mb-2 px-1">
-    <h2 className="font-semibold flex items-center gap-2"><Calendar size={18}/> Milestones</h2>
-    <div className="flex items-center gap-2">
-      {!milestonesCollapsed && (
-        <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-          <Filter size={16} className="text-black/50"/>
-          <select
-            value={milestoneFilter}
-            onChange={e => setMilestoneFilter(e.target.value)}
-            className="text-sm outline-none bg-transparent"
-          >
-            <option value="all">All milestones</option>
-            {milestones.map(m => (
-              <option key={m.id} value={m.id}>
-                {m.title}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      {!milestonesCollapsed && (
-        <button
-          onClick={() => addMilestone()}
-          className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-        >
-          <Plus size={16}/> Add Milestone
-        </button>
-      )}
-      <button
-        onClick={() => setMilestonesCollapsed(v => !v)}
-        title={milestonesCollapsed ? "Expand Milestones" : "Collapse Milestones"}
-        className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
-      >
-        {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
-      </button>
-    </div>
-    <p className="text-xs text-slate-500 mt-1">
-      Click a milestone title to expand or collapse.
-    </p>
-  </div>
-  {/* Milestone list follows here */}
-</section>
+        {/* Milestones */}
+        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="font-semibold flex items-center gap-2"><Calendar size={18}/> Milestones</h2>
+            <div className="flex items-center gap-2">
+              {!milestonesCollapsed && (
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
+                  <Filter size={16} className="text-black/50"/>
+                  <select value={milestoneFilter} onChange={e => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
+                    <option value="all">All milestones</option>
+                    {milestones.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                  </select>
+                </div>
+              )}
+              {!milestonesCollapsed && (
+                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">
+                  <Plus size={16}/> Add Milestone
+                </button>
+              )}
+              <button
+                onClick={() => setMilestonesCollapsed(v => !v)}
+                title={milestonesCollapsed ? "Expand Milestones" : "Collapse Milestones"}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+              >
+                {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Click a milestone title to expand or collapse.</p>
           </div>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
@@ -1458,6 +1466,7 @@ function CoursesHub({
 }) {
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
+  const [membersEditing, setMembersEditing] = useState(false);
 
   useEffect(() => {
     const onSchedStorage = (e) => {
@@ -1678,12 +1687,20 @@ function CoursesHub({
         <section>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">Team Members</h2>
-            <button
-              onClick={addPerson}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-            >
-              <UserPlus size={16}/> Add Member
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={addPerson}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                <UserPlus size={16}/> Add Member
+              </button>
+              <button
+                onClick={() => setMembersEditing(v => !v)}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                {membersEditing ? 'Done' : 'Edit Members'}
+              </button>
+            </div>
           </div>
           {people.length === 0 ? (
             <div className="text-sm text-black/60">No team members</div>
@@ -1697,37 +1714,48 @@ function CoursesHub({
                 >
                   <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
                   <div className="text-left">
-                    <InlineText
-                      value={m.name}
-                      onChange={(v) => renamePerson(m.id, v)}
-                      className="font-medium leading-tight"
-                    />
-                    <select
-                      value={m.roleType}
-                      onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
-                      className="mt-1 border rounded px-2 py-1 text-xs"
-                    >
-                      {Object.keys(rolePalette).map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
+                    {membersEditing ? (
+                      <>
+                        <InlineText
+                          value={m.name}
+                          onChange={(v) => renamePerson(m.id, v)}
+                          className="font-medium leading-tight"
+                        />
+                        <select
+                          value={m.roleType}
+                          onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
+                          className="mt-1 border rounded px-2 py-1 text-xs"
+                        >
+                          {Object.keys(rolePalette).map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-medium leading-tight">{m.name}</div>
+                        <div className="text-xs text-black/60">{m.roleType}</div>
+                      </>
+                    )}
                   </div>
-                  <div className="ml-auto flex gap-2">
-                    <button
-                      onClick={() => onOpenUser(m.id)}
-                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
-                    >
-                      Open
-                    </button>
-                    <button
-                      onClick={() => removePerson(m.id)}
-                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  {membersEditing && (
+                    <div className="ml-auto flex gap-2">
+                      <button
+                        onClick={() => onOpenUser(m.id)}
+                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                      >
+                        Open
+                      </button>
+                      <button
+                        onClick={() => removePerson(m.id)}
+                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
