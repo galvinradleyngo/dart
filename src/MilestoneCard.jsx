@@ -15,21 +15,21 @@ export default function MilestoneCard({
   onAddLink,
   onRemoveLink,
 }) {
-  const order = { todo: 0, inprogress: 1, done: 2 };
+  const statusOrder = { todo: 0, inprogress: 1, done: 2 };
 
   const { done, pct, tasksSorted } = useMemo(() => {
     const done = tasks.filter((t) => t.status === 'done').length;
     const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
     const tasksSorted = [...tasks].sort(
-      (a, b) => order[a.status] - order[b.status] || a.order - b.order,
+      (a, b) =>
+        statusOrder[a.status] - statusOrder[b.status] || a.order - b.order,
     );
     return { done, pct, tasksSorted };
   }, [tasks]);
 
   return (
-    <details className="rounded-xl border border-black/10 bg-white flex flex-col md:flex-row">
-codex/refactor-milestonecard.jsx-implementation-x9gwp5
-      <summary className="cursor-pointer select-none p-4 flex-1 flex items-start justify-between gap-2">
+    <details className="rounded-xl border border-black/10 bg-white">
+      <summary className="cursor-pointer select-none p-4 flex items-start justify-between gap-2">
         <div className="flex-1">
           <div className="font-semibold">{milestone.title}</div>
           <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
@@ -48,14 +48,8 @@ codex/refactor-milestonecard.jsx-implementation-x9gwp5
             <CopyIcon size={16} />
           </button>
         )}
-      <summary className="cursor-pointer select-none p-4 flex-1">
-        <div className="font-semibold">{milestone.title}</div>
-        <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
-          <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
-        </div>
-main
       </summary>
-      <div className="p-4 flex flex-col gap-2 flex-1">
+      <div className="p-4 flex flex-col gap-2">
         {milestone.goal && (
           <p className="text-sm text-black/60 mb-2">{milestone.goal}</p>
         )}
@@ -79,3 +73,4 @@ main
     </details>
   );
 }
+
