@@ -18,13 +18,14 @@ export default function MilestoneCard({
   onRemoveLink,
 }) {
   // Maintain consistent sort order for task statuses
-  const order = { todo: 0, inprogress: 1, done: 2 };
+  const statusOrder = { todo: 0, inprogress: 1, done: 2 };
 
   const { done, pct, tasksSorted } = useMemo(() => {
     const done = tasks.filter((t) => t.status === 'done').length;
     const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
     const tasksSorted = [...tasks].sort(
-      (a, b) => order[a.status] - order[b.status] || a.order - b.order,
+      (a, b) =>
+        statusOrder[a.status] - statusOrder[b.status] || a.order - b.order,
     );
     return { done, pct, tasksSorted };
   }, [tasks]);
