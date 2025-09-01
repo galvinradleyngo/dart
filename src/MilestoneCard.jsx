@@ -15,6 +15,7 @@ export default function MilestoneCard({
   onAddLink,
   onRemoveLink,
 }) {
+  // Maintain consistent sort order for task statuses
   const statusOrder = { todo: 0, inprogress: 1, done: 2 };
 
   const { done, pct, tasksSorted } = useMemo(() => {
