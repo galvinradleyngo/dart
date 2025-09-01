@@ -324,7 +324,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [view, setView] = useState("board");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
-  const [milestonesCollapsed, setMilestonesCollapsed] = useState(false);
+  const [milestonesCollapsed, setMilestonesCollapsed] = useState(true);
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
 
@@ -636,21 +636,23 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
 
         {/* Milestones */}
-        <section>
-          <div className="flex items-center justify-between mb-2 px-1">
+        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold flex items-center gap-2"><Calendar size={18}/> Milestones</h2>
             <div className="flex items-center gap-2">
               {!milestonesCollapsed && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
                   <Filter size={16} className="text-black/50"/>
-                  <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
+                  <select value={milestoneFilter} onChange={e => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
                     <option value="all">All milestones</option>
-                    {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
+                    {milestones.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
                   </select>
                 </div>
               )}
               {!milestonesCollapsed && (
-                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
+                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">
+                  Add Milestone <Plus size={16}/>
+                </button>
               )}
               <button
                 onClick={() => setMilestonesCollapsed(v => !v)}
@@ -660,12 +662,24 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
               </button>
             </div>
+            <p className="text-xs text-slate-500 mt-1">Click a milestone title to expand or collapse.</p>
           </div>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
               <AnimatePresence initial={false}>
                 {filteredMilestones.map(m => (
-                  <motion.div key={m.id} layout initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} transition={{duration:0.2}} draggable onDragStart={onMilestoneDragStart(m.id)} onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(m.id)}>
+                  <motion.div
+                    key={m.id}
+                    layout
+                    initial={{opacity:0, y:-20}}
+                    animate={{opacity:1, y:0}}
+                    exit={{opacity:0, y:-20}}
+                    transition={{duration:0.2}}
+                    draggable
+                    onDragStart={onMilestoneDragStart(m.id)}
+                    onDragOver={onMilestoneDragOver}
+                    onDrop={onMilestoneDrop(m.id)}
+                  >
                     <MilestoneCard
                       milestone={m}
                       tasks={groupedTasks[m.id] || []}
@@ -1059,7 +1073,7 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
 // =====================================================
 // User Dashboard (NEW)
 // =====================================================
-function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
+function UserDashboard({ onOpenCourse, initialUserId }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
     const onStorage = () => setCourses(loadCourses());
@@ -1238,7 +1252,6 @@ function UserDashboard({ onBack, onOpenCourse, initialUserId }) {
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><ArrowLeft size={16}/> Back</button>
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
               {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
@@ -1427,7 +1440,6 @@ function CoursesHub({
   onPeopleChange,
   onRemoveCourse,
   onDuplicateCourse,
-  onBack,
 }) {
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
@@ -1581,14 +1593,6 @@ function CoursesHub({
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-              >
-                <ArrowLeft size={16}/> Back
-              </button>
-            )}
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
@@ -1837,11 +1841,10 @@ export default function PMApp() {
         onPeopleChange={handlePeopleChange}
         onRemoveCourse={() => {}}
         onDuplicateCourse={() => {}}
-        onBack={onBack}
       />
     );
   } else if (view === "user") {
-    content = <UserDashboard onBack={onBack} onOpenCourse={openCourse} initialUserId={currentUserId} />;
+    content = <UserDashboard onOpenCourse={openCourse} initialUserId={currentUserId} />;
   } else if (currentCourseId === "__TEMPLATE__") {
     // open template editor
     const tpl = loadTemplate() || remapSeed(seed());
