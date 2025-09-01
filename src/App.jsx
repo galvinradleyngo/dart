@@ -43,6 +43,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmt = (d) => new Date(d).toISOString().slice(0, 10);
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const rolePalette = { LD: "#4f46e5", SME: "#16a34a", MM: "#0891b2", PM: "#ea580c", PA: "#a855f7", Other: "#64748b" };
+const roleOrder = Object.keys(rolePalette);
 const roleColor = (roleType) => rolePalette[roleType] || rolePalette.Other;
 
 const nextMemberName = (list) => {
@@ -281,6 +282,20 @@ function DocumentInput({ onAdd }) {
 }
 function LinkChips({ links = [], onRemove }) { return (<div className="mt-1 flex flex-wrap gap-1">{links.map((l, i) => (<a key={i} href={l} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text:[11px] border border-black/10 bg-white hover:bg-slate-50"><Link2 size={12}/> {(()=>{try{return new URL(l).hostname;}catch{return l;}})()}<button type="button" className="ml-1 text-slate-400 hover:text-rose-600" onClick={(e)=>{e.preventDefault(); onRemove?.(i);}}>×</button></a>))}</div>); }
 
+function DartLogo({ onClick, className = "" }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center justify-center ${className}`}
+      title="Go to Dashboard"
+    >
+      <svg viewBox="0 0 24 24" className="w-full h-full fill-current">
+        <path d="M12 2l2.5 2.5L12 7l-2.5-2.5L12 2zm8 8l2 2-8 8-2-2 8-8zM4 12l6 6-2 2-6-6 2-2z" />
+      </svg>
+    </button>
+  );
+}
+
 // =====================================================
 // Calendar View
 // =====================================================
@@ -309,7 +324,7 @@ function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onTo
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
-function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [] }) {
+function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], onGoHome }) {
   const [state, setState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
@@ -325,6 +340,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(true);
+  const [membersEditing, setMembersEditing] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
 
@@ -515,6 +531,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+          <DartLogo onClick={onGoHome} className="w-8 h-8" />
           {onBack && (
             <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"><ArrowLeft size={16}/> Back to Courses</button>
           )}
@@ -582,103 +599,110 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 ))}
               </select>
               <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+              <button
+                onClick={() => setMembersEditing(v => !v)}
+                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                {membersEditing ? 'Done' : 'Edit Members'}
+              </button>
             </div>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
             {team.map((m) => (
               <div key={m.id} className="rounded-xl border border-black/10 p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0"><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /><InlineText value={m.name} onChange={(v) => updateMember(m.id, { name: v })} className="font-medium truncate" /></div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={m.roleType}
-                    onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    {Object.keys(rolePalette).map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={m.avatar || ''}
-                    onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    <option value="">🙂</option>
-                    <option value="😀">😀</option>
-                    <option value="😎">😎</option>
-                    <option value="🚀">🚀</option>
-                    <option value="🎨">🎨</option>
-                    <option value="🐱">🐱</option>
-                  </select>
-                  {(m.roleType === "LD" || m.roleType === "SME") && (
-                    <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
-                        onChange={() => toggleCourseWide(m.roleType, m.id)}
-                      />
-                      course-wide
-                    </label>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} />
+                  {membersEditing ? (
+                    <InlineText
+                      value={m.name}
+                      onChange={(v) => updateMember(m.id, { name: v })}
+                      className="font-medium truncate"
+                    />
+                  ) : (
+                    <span className="font-medium truncate">{m.name}</span>
                   )}
-                  <button
-                    className="text-black/40 hover:text-red-500"
-                    title="Remove member"
-                    onClick={() => deleteMember(m.id)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {membersEditing ? (
+                    <>
+                      <select
+                        value={m.roleType}
+                        onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        {Object.keys(rolePalette).map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={m.avatar || ''}
+                        onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        <option value="">🙂</option>
+                        <option value="😀">😀</option>
+                        <option value="😎">😎</option>
+                        <option value="🚀">🚀</option>
+                        <option value="🎨">🎨</option>
+                        <option value="🐱">🐱</option>
+                      </select>
+                      {(m.roleType === "LD" || m.roleType === "SME") && (
+                        <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
+                            onChange={() => toggleCourseWide(m.roleType, m.id)}
+                          />
+                          course-wide
+                        </label>
+                      )}
+                      <button
+                        className="text-black/40 hover:text-red-500"
+                        title="Remove member"
+                        onClick={() => deleteMember(m.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-sm">{m.roleType}</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </section>
-      {/* Milestones */}
-<section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-  <div className="flex items-center justify-between mb-2 px-1">
-    <h2 className="font-semibold flex items-center gap-2"><Calendar size={18}/> Milestones</h2>
-    <div className="flex items-center gap-2">
-      {!milestonesCollapsed && (
-        <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-          <Filter size={16} className="text-black/50"/>
-          <select
-            value={milestoneFilter}
-            onChange={e => setMilestoneFilter(e.target.value)}
-            className="text-sm outline-none bg-transparent"
-          >
-            <option value="all">All milestones</option>
-            {milestones.map(m => (
-              <option key={m.id} value={m.id}>
-                {m.title}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      {!milestonesCollapsed && (
-        <button
-          onClick={() => addMilestone()}
-          className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-        >
-          <Plus size={16}/> Add Milestone
-        </button>
-      )}
-      <button
-        onClick={() => setMilestonesCollapsed(v => !v)}
-        title={milestonesCollapsed ? "Expand Milestones" : "Collapse Milestones"}
-        className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
-      >
-        {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
-      </button>
-    </div>
-    <p className="text-xs text-slate-500 mt-1">
-      Click a milestone title to expand or collapse.
-    </p>
-  </div>
-  {/* Milestone list follows here */}
-</section>
+        {/* Milestones */}
+        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="font-semibold flex items-center gap-2"><Calendar size={18}/> Milestones</h2>
+            <div className="flex items-center gap-2">
+              {!milestonesCollapsed && (
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
+                  <Filter size={16} className="text-black/50"/>
+                  <select value={milestoneFilter} onChange={e => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
+                    <option value="all">All milestones</option>
+                    {milestones.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                  </select>
+                </div>
+              )}
+              {!milestonesCollapsed && (
+                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">
+                  <Plus size={16}/> Add Milestone
+                </button>
+              )}
+              <button
+                onClick={() => setMilestonesCollapsed(v => !v)}
+                title={milestonesCollapsed ? "Expand Milestones" : "Collapse Milestones"}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+              >
+                {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
+              </button>
+            </div>
           </div>
+          <p className="text-xs text-slate-500 mt-1 px-1">Click a milestone title to expand or collapse.</p>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
               <AnimatePresence initial={false}>
@@ -1088,7 +1112,7 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
 // =====================================================
 // User Dashboard (NEW)
 // =====================================================
-function UserDashboard({ onOpenCourse, initialUserId }) {
+function UserDashboard({ onOpenCourse, initialUserId, onGoHome }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
     const onStorage = () => setCourses(loadCourses());
@@ -1267,6 +1291,7 @@ function UserDashboard({ onOpenCourse, initialUserId }) {
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
+            <DartLogo onClick={onGoHome} className="w-8 h-8" />
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
               {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
@@ -1455,9 +1480,11 @@ function CoursesHub({
   onPeopleChange,
   onRemoveCourse,
   onDuplicateCourse,
+  onGoHome,
 }) {
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
+  const [membersEditing, setMembersEditing] = useState(false);
 
   useEffect(() => {
     const onSchedStorage = (e) => {
@@ -1608,7 +1635,7 @@ function CoursesHub({
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
+            <DartLogo onClick={onGoHome} className="w-8 h-8" />
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
               <div className="text-xs text-black/60 truncate">Courses Hub</div>
@@ -1678,18 +1705,29 @@ function CoursesHub({
         <section>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">Team Members</h2>
-            <button
-              onClick={addPerson}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-            >
-              <UserPlus size={16}/> Add Member
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={addPerson}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                <UserPlus size={16}/> Add Member
+              </button>
+              <button
+                onClick={() => setMembersEditing(v => !v)}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                {membersEditing ? 'Done' : 'Edit Members'}
+              </button>
+            </div>
           </div>
           {people.length === 0 ? (
             <div className="text-sm text-black/60">No team members</div>
           ) : (
             <div className="flex flex-wrap gap-3">
-              {people.map((m) => (
+              {people
+                .slice()
+                .sort((a, b) => roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType) || a.name.localeCompare(b.name))
+                .map((m) => (
                 <div
                   key={m.id}
                   className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
@@ -1697,37 +1735,53 @@ function CoursesHub({
                 >
                   <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
                   <div className="text-left">
-                    <InlineText
-                      value={m.name}
-                      onChange={(v) => renamePerson(m.id, v)}
-                      className="font-medium leading-tight"
-                    />
-                    <select
-                      value={m.roleType}
-                      onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
-                      className="mt-1 border rounded px-2 py-1 text-xs"
-                    >
-                      {Object.keys(rolePalette).map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
+                    {membersEditing ? (
+                      <>
+                        <InlineText
+                          value={m.name}
+                          onChange={(v) => renamePerson(m.id, v)}
+                          className="font-medium leading-tight"
+                        />
+                        <select
+                          value={m.roleType}
+                          onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
+                          className="mt-1 border rounded px-2 py-1 text-xs"
+                        >
+                          {Object.keys(rolePalette).map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => onOpenUser(m.id)}
+                          className="font-medium leading-tight text-left hover:underline"
+                        >
+                          {m.name}
+                        </button>
+                        <div className="text-xs text-black/60">{m.roleType}</div>
+                      </>
+                    )}
                   </div>
-                  <div className="ml-auto flex gap-2">
-                    <button
-                      onClick={() => onOpenUser(m.id)}
-                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
-                    >
-                      Open
-                    </button>
-                    <button
-                      onClick={() => removePerson(m.id)}
-                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  {membersEditing && (
+                    <div className="ml-auto flex gap-2">
+                      <button
+                        onClick={() => onOpenUser(m.id)}
+                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                      >
+                        Open
+                      </button>
+                      <button
+                        onClick={() => removePerson(m.id)}
+                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1843,6 +1897,7 @@ export default function PMApp() {
     setCurrentCourseId(base.course.id); setView("course");
   };
   const onBack = () => { setView(prevView); setPrevView("hub"); setCurrentCourseId(null); };
+  const goHome = () => { setPrevView("hub"); setView("hub"); setCurrentCourseId(null); setCurrentUserId(null); };
 
   let content = null;
   if (view === "hub") {
@@ -1856,16 +1911,17 @@ export default function PMApp() {
         onPeopleChange={handlePeopleChange}
         onRemoveCourse={() => {}}
         onDuplicateCourse={() => {}}
+        onGoHome={goHome}
       />
     );
   } else if (view === "user") {
-    content = <UserDashboard onOpenCourse={openCourse} initialUserId={currentUserId} />;
+    content = <UserDashboard onOpenCourse={openCourse} initialUserId={currentUserId} onGoHome={goHome} />;
   } else if (currentCourseId === "__TEMPLATE__") {
     // open template editor
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
     const handleChange = (s) => { saveTemplate(s); saveTemplateRemote(s).catch(()=>{}); };
-    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} />;
+    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} onGoHome={goHome} />;
   } else {
     // open selected course
     const courses = loadCourses();
@@ -1879,7 +1935,7 @@ export default function PMApp() {
       else all.push(s);
       saveCourses(all);
     };
-    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} />;
+    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} onGoHome={goHome} />;
   }
   return (
     <>
