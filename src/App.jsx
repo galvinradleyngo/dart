@@ -325,6 +325,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(true);
+  const [membersEditing, setMembersEditing] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
 
@@ -582,53 +583,76 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 ))}
               </select>
               <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+              <button
+                onClick={() => setMembersEditing(v => !v)}
+                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                {membersEditing ? 'Done' : 'Edit Members'}
+              </button>
             </div>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
             {team.map((m) => (
               <div key={m.id} className="rounded-xl border border-black/10 p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0"><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /><InlineText value={m.name} onChange={(v) => updateMember(m.id, { name: v })} className="font-medium truncate" /></div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={m.roleType}
-                    onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    {Object.keys(rolePalette).map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={m.avatar || ''}
-                    onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    <option value="">🙂</option>
-                    <option value="😀">😀</option>
-                    <option value="😎">😎</option>
-                    <option value="🚀">🚀</option>
-                    <option value="🎨">🎨</option>
-                    <option value="🐱">🐱</option>
-                  </select>
-                  {(m.roleType === "LD" || m.roleType === "SME") && (
-                    <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
-                        onChange={() => toggleCourseWide(m.roleType, m.id)}
-                      />
-                      course-wide
-                    </label>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} />
+                  {membersEditing ? (
+                    <InlineText
+                      value={m.name}
+                      onChange={(v) => updateMember(m.id, { name: v })}
+                      className="font-medium truncate"
+                    />
+                  ) : (
+                    <span className="font-medium truncate">{m.name}</span>
                   )}
-                  <button
-                    className="text-black/40 hover:text-red-500"
-                    title="Remove member"
-                    onClick={() => deleteMember(m.id)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {membersEditing ? (
+                    <>
+                      <select
+                        value={m.roleType}
+                        onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        {Object.keys(rolePalette).map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={m.avatar || ''}
+                        onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
+                        className="border rounded px-2 py-1 text-sm"
+                      >
+                        <option value="">🙂</option>
+                        <option value="😀">😀</option>
+                        <option value="😎">😎</option>
+                        <option value="🚀">🚀</option>
+                        <option value="🎨">🎨</option>
+                        <option value="🐱">🐱</option>
+                      </select>
+                      {(m.roleType === "LD" || m.roleType === "SME") && (
+                        <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
+                            onChange={() => toggleCourseWide(m.roleType, m.id)}
+                          />
+                          course-wide
+                        </label>
+                      )}
+                      <button
+                        className="text-black/40 hover:text-red-500"
+                        title="Remove member"
+                        onClick={() => deleteMember(m.id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-sm">{m.roleType}</span>
+                  )}
                 </div>
               </div>
             ))}
