@@ -490,6 +490,31 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   });
 
   // Milestone DnD
+  const dragMilestoneId = useRef(null);
+  const onMilestoneDragStart = (id) => (e) => {
+    dragMilestoneId.current = id;
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onMilestoneDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const onMilestoneDrop = (id) => (e) => {
+    e.preventDefault();
+    const src = dragMilestoneId.current;
+    dragMilestoneId.current = null;
+    if (!src || src === id) return;
+    setState((s) => {
+      const milestones = [...s.milestones];
+      const fromIdx = milestones.findIndex((m) => m.id === src);
+      let toIdx = id === null ? milestones.length : milestones.findIndex((m) => m.id === id);
+      if (fromIdx === -1 || toIdx === -1) return s;
+      const [item] = milestones.splice(fromIdx, 1);
+      if (id !== null && fromIdx < toIdx) toIdx--;
+      milestones.splice(toIdx, 0, item);
+      return { ...s, milestones };
+    });
+  };
 
   // Members
   const updateMember = (id, patch) => setState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
@@ -669,34 +694,42 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
             </div>
           </div>
           {!milestonesCollapsed && (
-            <div className="space-y-2">
+            <div
+              className="space-y-2"
+              onDragOver={onMilestoneDragOver}
+              onDrop={onMilestoneDrop(null)}
+            >
               <AnimatePresence initial={false}>
-              {filteredMilestones.map((m) => (
-                <motion.div
-                  key={m.id}
-                  layout
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <MilestoneCard
-                    milestone={m}
-                    tasks={groupedTasks[m.id] || []}
-                    tasksAll={tasksRaw}
-                    team={team}
-                    milestones={milestones}
-                    onUpdate={updateTask}
-                    onDelete={deleteTask}
-                    onDuplicate={duplicateTask}
-                    onDuplicateMilestone={duplicateMilestone}
-                    onRemoveMilestone={removeMilestone}
-                    onMoveMilestone={moveMilestone}
-                    onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
-                    onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
-                  />
-                </motion.div>
-              ))}
+                {filteredMilestones.map((m) => (
+                  <motion.div
+                    key={m.id}
+                    layout
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.2 }}
+                    draggable
+                    onDragStart={onMilestoneDragStart(m.id)}
+                    onDragOver={onMilestoneDragOver}
+                    onDrop={onMilestoneDrop(m.id)}
+                  >
+                    <MilestoneCard
+                      milestone={m}
+                      tasks={groupedTasks[m.id] || []}
+                      tasksAll={tasksRaw}
+                      team={team}
+                      milestones={milestones}
+                      onUpdate={updateTask}
+                      onDelete={deleteTask}
+                      onDuplicate={duplicateTask}
+                      onDuplicateMilestone={duplicateMilestone}
+                      onRemoveMilestone={removeMilestone}
+                      onMoveMilestone={moveMilestone}
+                      onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                      onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                    />
+                  </motion.div>
+                ))}
               </AnimatePresence>
             </div>
           )}
