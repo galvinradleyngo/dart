@@ -1466,6 +1466,7 @@ function CoursesHub({
 }) {
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
+  const [membersEditing, setMembersEditing] = useState(false);
 
   useEffect(() => {
     const onSchedStorage = (e) => {
@@ -1686,12 +1687,20 @@ function CoursesHub({
         <section>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">Team Members</h2>
-            <button
-              onClick={addPerson}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-            >
-              <UserPlus size={16}/> Add Member
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={addPerson}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                <UserPlus size={16}/> Add Member
+              </button>
+              <button
+                onClick={() => setMembersEditing(v => !v)}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              >
+                {membersEditing ? 'Done' : 'Edit Members'}
+              </button>
+            </div>
           </div>
           {people.length === 0 ? (
             <div className="text-sm text-black/60">No team members</div>
@@ -1705,37 +1714,48 @@ function CoursesHub({
                 >
                   <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
                   <div className="text-left">
-                    <InlineText
-                      value={m.name}
-                      onChange={(v) => renamePerson(m.id, v)}
-                      className="font-medium leading-tight"
-                    />
-                    <select
-                      value={m.roleType}
-                      onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
-                      className="mt-1 border rounded px-2 py-1 text-xs"
-                    >
-                      {Object.keys(rolePalette).map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
+                    {membersEditing ? (
+                      <>
+                        <InlineText
+                          value={m.name}
+                          onChange={(v) => renamePerson(m.id, v)}
+                          className="font-medium leading-tight"
+                        />
+                        <select
+                          value={m.roleType}
+                          onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
+                          className="mt-1 border rounded px-2 py-1 text-xs"
+                        >
+                          {Object.keys(rolePalette).map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      </>
+                    ) : (
+                      <>
+                        <div className="font-medium leading-tight">{m.name}</div>
+                        <div className="text-xs text-black/60">{m.roleType}</div>
+                      </>
+                    )}
                   </div>
-                  <div className="ml-auto flex gap-2">
-                    <button
-                      onClick={() => onOpenUser(m.id)}
-                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
-                    >
-                      Open
-                    </button>
-                    <button
-                      onClick={() => removePerson(m.id)}
-                      className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  {membersEditing && (
+                    <div className="ml-auto flex gap-2">
+                      <button
+                        onClick={() => onOpenUser(m.id)}
+                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                      >
+                        Open
+                      </button>
+                      <button
+                        onClick={() => removePerson(m.id)}
+                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
