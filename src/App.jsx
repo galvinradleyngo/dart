@@ -643,14 +643,16 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
               {!milestonesCollapsed && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
                   <Filter size={16} className="text-black/50"/>
-                  <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
+                  <select value={milestoneFilter} onChange={e => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
                     <option value="all">All milestones</option>
-                    {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
+                    {milestones.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
                   </select>
                 </div>
               )}
               {!milestonesCollapsed && (
-                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
+                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">
+                  <Plus size={16}/> Add Milestone
+                </button>
               )}
               <button
                 onClick={() => setMilestonesCollapsed(v => !v)}
@@ -660,12 +662,24 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
               </button>
             </div>
+            <p className="text-xs text-slate-500 mt-1">Click a milestone title to expand or collapse.</p>
           </div>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
               <AnimatePresence initial={false}>
                 {filteredMilestones.map(m => (
-                  <motion.div key={m.id} layout initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} transition={{duration:0.2}} draggable onDragStart={onMilestoneDragStart(m.id)} onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(m.id)}>
+                  <motion.div
+                    key={m.id}
+                    layout
+                    initial={{opacity:0, y:-20}}
+                    animate={{opacity:1, y:0}}
+                    exit={{opacity:0, y:-20}}
+                    transition={{duration:0.2}}
+                    draggable
+                    onDragStart={onMilestoneDragStart(m.id)}
+                    onDragOver={onMilestoneDragOver}
+                    onDrop={onMilestoneDrop(m.id)}
+                  >
                     <MilestoneCard
                       milestone={m}
                       tasks={groupedTasks[m.id] || []}
