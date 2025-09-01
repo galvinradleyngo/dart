@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Copy as CopyIcon } from 'lucide-react';
+import { Copy as CopyIcon, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 
 export default function MilestoneCard({
@@ -12,6 +12,8 @@ export default function MilestoneCard({
   onDelete,
   onDuplicate,
   onDuplicateMilestone,
+  onRemoveMilestone,
+  onMoveMilestone,
   onAddLink,
   onRemoveLink,
 }) {
@@ -36,18 +38,56 @@ export default function MilestoneCard({
             <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
           </div>
         </div>
-        {onDuplicateMilestone && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicateMilestone(milestone.id);
-            }}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
-            title="Duplicate Milestone"
-          >
-            <CopyIcon size={16} />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {onMoveMilestone && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveMilestone(milestone.id, -1);
+                }}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                title="Move Up"
+              >
+                <ChevronUp size={16} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveMilestone(milestone.id, 1);
+                }}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                title="Move Down"
+              >
+                <ChevronDown size={16} />
+              </button>
+            </>
+          )}
+          {onDuplicateMilestone && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicateMilestone(milestone.id);
+              }}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              title="Duplicate Milestone"
+            >
+              <CopyIcon size={16} />
+            </button>
+          )}
+          {onRemoveMilestone && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveMilestone(milestone.id);
+              }}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              title="Remove Milestone"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
       </summary>
       <div className="p-4 flex flex-col gap-2 flex-1">
         {milestone.goal && (

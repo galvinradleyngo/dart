@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus,
   Calendar,
@@ -453,8 +453,41 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
 
   const updateMilestone  = (id, patch) => setState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
   const addMilestone     = () => setState((s)=>({ ...s, milestones: [...s.milestones, { id: uid(), title: "New Milestone", start: todayStr(), goal: "" }] }));
-  const deleteMilestone  = (id) => setState((s)=>({ ...s, milestones: s.milestones.filter((m)=>m.id!==id), tasks: s.tasks.map((t)=>(t.milestoneId===id?{...t, milestoneId: s.milestones[0]?.id}:t)) }));
-  const duplicateMilestone = (id) => setState((s)=>{ const src = s.milestones.find((m)=>m.id===id); if(!src) return s; const newMs = { id: uid(), title: `${src.title} (copy)`, start: src.start, goal: src.goal }; const related = s.tasks.filter((t)=>t.milestoneId===id); const nextOrder = s.tasks.length; const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null); const clonedTasks = related.map((t,i)=>({ ...t, id: uid(), order: nextOrder+i, milestoneId: newMs.id, status: "todo", startDate: "", dueDate: "", completedDate: "", assigneeId: ld, depTaskId: null })); return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] }; });
+  const removeMilestone  = (id) => setState((s)=>({ ...s, milestones: s.milestones.filter((m)=>m.id!==id), tasks: s.tasks.filter((t)=>t.milestoneId!==id) }));
+  const duplicateMilestone = (id) => setState((s)=>{
+    const idx = s.milestones.findIndex((m)=>m.id===id);
+    if(idx===-1) return s;
+    const src = s.milestones[idx];
+    const newMs = { id: uid(), title: `${src.title} (copy)`, start: src.start, goal: src.goal };
+    const related = s.tasks.filter((t)=>t.milestoneId===id);
+    const nextOrder = s.tasks.length;
+    const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null);
+    const clonedTasks = related.map((t,i)=>({
+      ...t,
+      id: uid(),
+      order: nextOrder + i,
+      milestoneId: newMs.id,
+      status: "todo",
+      startDate: "",
+      dueDate: "",
+      completedDate: "",
+      assigneeId: ld,
+      depTaskId: null,
+    }));
+    const milestones = [...s.milestones];
+    milestones.splice(idx + 1, 0, newMs);
+    return { ...s, milestones, tasks: [...s.tasks, ...clonedTasks] };
+  });
+  const moveMilestone = (id, delta) => setState((s)=>{
+    const idx = s.milestones.findIndex((m)=>m.id===id);
+    if(idx===-1) return s;
+    const newIdx = clamp(idx + delta, 0, s.milestones.length - 1);
+    if(newIdx===idx) return s;
+    const milestones = [...s.milestones];
+    const [item] = milestones.splice(idx,1);
+    milestones.splice(newIdx,0,item);
+    return { ...s, milestones };
+  });
 
   // Milestone DnD
 
@@ -637,22 +670,34 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           </div>
           {!milestonesCollapsed && (
             <div className="space-y-2">
+              <AnimatePresence initial={false}>
               {filteredMilestones.map((m) => (
-                <MilestoneCard
+                <motion.div
                   key={m.id}
-                  milestone={m}
-                  tasks={groupedTasks[m.id] || []}
-                  tasksAll={tasksRaw}
-                  team={team}
-                  milestones={milestones}
-                  onUpdate={updateTask}
-                  onDelete={deleteTask}
-                  onDuplicate={duplicateTask}
-                  onDuplicateMilestone={duplicateMilestone}
-                  onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
-                  onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
-                />
+                  layout
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <MilestoneCard
+                    milestone={m}
+                    tasks={groupedTasks[m.id] || []}
+                    tasksAll={tasksRaw}
+                    team={team}
+                    milestones={milestones}
+                    onUpdate={updateTask}
+                    onDelete={deleteTask}
+                    onDuplicate={duplicateTask}
+                    onDuplicateMilestone={duplicateMilestone}
+                    onRemoveMilestone={removeMilestone}
+                    onMoveMilestone={moveMilestone}
+                    onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                    onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                  />
+                </motion.div>
               ))}
+              </AnimatePresence>
             </div>
           )}
         </section>
