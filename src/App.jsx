@@ -323,6 +323,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   });
   const [view, setView] = useState("board");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
+  const [milestonesCollapsed, setMilestonesCollapsed] = useState(false);
   const [listTab, setListTab] = useState("active");
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
@@ -613,34 +614,47 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           <div className="flex items-center justify-between mb-2 px-1">
             <h2 className="font-semibold flex items-center gap-2"><Calendar size={18}/> Milestones</h2>
             <div className="flex items-center gap-2">
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-                <Filter size={16} className="text-black/50"/>
-                <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
-                  <option value="all">All milestones</option>
-                  {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
-                </select>
-              </div>
-              <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
+              {!milestonesCollapsed && (
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
+                  <Filter size={16} className="text-black/50"/>
+                  <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
+                    <option value="all">All milestones</option>
+                    {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
+                  </select>
+                </div>
+              )}
+              {!milestonesCollapsed && (
+                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
+              )}
+              <button
+                onClick={() => setMilestonesCollapsed((v) => !v)}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
+              >
+                {milestonesCollapsed ? <Plus size={16} /> : <Minus size={16} />}
+              </button>
             </div>
           </div>
-          <div className="space-y-2">
-            {filteredMilestones.map((m) => (
-              <MilestoneCard
-                key={m.id}
-                milestone={m}
-                tasks={groupedTasks[m.id] || []}
-                tasksAll={tasksRaw}
-                team={team}
-                milestones={milestones}
-                onUpdate={updateTask}
-                onDelete={deleteTask}
-                onDuplicate={duplicateTask}
-                onDuplicateMilestone={duplicateMilestone}
-                onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
-                onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
-              />
-            ))}
-          </div>
+          {!milestonesCollapsed && (
+            <div className="space-y-2">
+              {filteredMilestones.map((m) => (
+                <MilestoneCard
+                  key={m.id}
+                  milestone={m}
+                  tasks={groupedTasks[m.id] || []}
+                  tasksAll={tasksRaw}
+                  team={team}
+                  milestones={milestones}
+                  onUpdate={updateTask}
+                  onDelete={deleteTask}
+                  onDuplicate={duplicateTask}
+                  onDuplicateMilestone={duplicateMilestone}
+                  onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                  onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Tasks */}
