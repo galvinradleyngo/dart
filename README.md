@@ -1,4 +1,4 @@
-# DART — GitHub Pages Starter
+# DART — GitHub Pages Starter 
 
 This ZIP is preconfigured for `https://galvinradleyngo.github.io/dart/`.
 
