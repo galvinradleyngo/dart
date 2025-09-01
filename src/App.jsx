@@ -635,6 +635,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 onUpdate={updateTask}
                 onDelete={deleteTask}
                 onDuplicate={duplicateTask}
+                onDuplicateMilestone={duplicateMilestone}
                 onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                 onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
               />
