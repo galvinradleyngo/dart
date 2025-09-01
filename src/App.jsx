@@ -323,7 +323,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   });
   const [view, setView] = useState("board");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
-  const [milestonesCollapsed, setMilestonesCollapsed] = useState(false);
+  const [milestonesCollapsed, setMilestonesCollapsed] = useState(true);
   const [listTab, setListTab] = useState("active");
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
