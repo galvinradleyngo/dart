@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { db } from "./firebase.js";
+import MilestoneCard from "./MilestoneCard.jsx";
 import pkg from "../package.json";
 
 /**
@@ -386,13 +387,16 @@ const handleSave = async () => {
   const team = state.team; const milestones = state.milestones; const tasksRaw = state.tasks;
   const dueKey = (t) => (t.dueDate ? new Date(t.dueDate).getTime() : Number.POSITIVE_INFINITY);
 
-const filteredBase = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
-const tasksByMilestone = useMemo(() => {
-  const idx = (id) => milestones.findIndex((m) => m.id === id);
-  return [...filteredBase].sort((a, b) => idx(a.milestoneId) - idx(b.milestoneId));
-}, [filteredBase, milestones]);
-const tasksActive = useMemo(() => { const arr = filteredBase.filter((t) => t.status !== "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredBase]);
-const tasksDone   = useMemo(() => { const arr = filteredBase.filter((t) => t.status === "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredBase]);
+const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
+const groupedTasks = useMemo(() => {
+  return filteredTasks.reduce((acc, t) => {
+    (acc[t.milestoneId] ||= []).push(t);
+    return acc;
+  }, {});
+}, [filteredTasks]);
+const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones : milestones.filter((m) => m.id === milestoneFilter)), [milestones, milestoneFilter]);
+const tasksActive = useMemo(() => { const arr = filteredTasks.filter((t) => t.status !== "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredTasks]);
+const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.status === "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredTasks]);
 
   const totals = useMemo(() => {
     const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
@@ -620,29 +624,21 @@ const tasksDone   = useMemo(() => { const arr = filteredBase.filter((t) => t.sta
             </div>
           </div>
           <div className="space-y-2">
-            {tasksByMilestone.map((t, idx) => {
-              const prev = tasksByMilestone[idx - 1];
-              const showHeading = !prev || prev.milestoneId !== t.milestoneId;
-              const ms = milestones.find((m) => m.id === t.milestoneId);
-              return (
-                <React.Fragment key={t.id}>
-                  {showHeading && (
-                    <div className="font-semibold text-sm mt-2">{ms?.title || "Unassigned"}</div>
-                  )}
-                  <TaskCard
-                    task={t}
-                    tasks={tasksRaw}
-                    team={team}
-                    milestones={milestones}
-                    onUpdate={updateTask}
-                    onDelete={deleteTask}
-                    onDuplicate={duplicateTask}
-                    onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
-                    onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
-                  />
-                </React.Fragment>
-              );
-            })}
+            {filteredMilestones.map((m) => (
+              <MilestoneCard
+                key={m.id}
+                milestone={m}
+                tasks={groupedTasks[m.id] || []}
+                tasksAll={tasksRaw}
+                team={team}
+                milestones={milestones}
+                onUpdate={updateTask}
+                onDelete={deleteTask}
+                onDuplicate={duplicateTask}
+                onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+              />
+            ))}
           </div>
         </section>
 
@@ -656,17 +652,17 @@ const tasksDone   = useMemo(() => { const arr = filteredBase.filter((t) => t.sta
             <div>
               <div className="mb-2 inline-flex rounded-xl border border-black/10 bg-white p-1 shadow-sm text-sm">{[{id:"active",label:"Active"},{id:"done",label:"Done"}].map(t => (<button key={t.id} onClick={()=>setListTab(t.id)} className={`px-3 py-1.5 rounded-lg ${listTab===t.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{t.label}</button>))}</div>
               {listTab === "active" ? (
-                <TaskTable tasks={tasksActive} allTasks={filteredBase} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
+                <TaskTable tasks={tasksActive} allTasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
               ) : (
-                <TaskTable tasks={tasksDone} allTasks={filteredBase} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
+                <TaskTable tasks={tasksDone} allTasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
               )}
             </div>
           ) : view === "board" ? (
-            <BoardView tasks={filteredBase} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
+            <BoardView tasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
           ) : (
             <CalendarView
               monthDate={calMonth}
-              tasks={filteredBase}
+              tasks={filteredTasks}
               milestones={milestones}
               team={team}
               onPrev={() => gotoMonth(-1)}
