@@ -458,6 +458,32 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
 
   // Milestone DnD
 
+  const dragMilestoneId = useRef(null);
+  const onMilestoneDragStart = (id) => (e) => {
+    dragMilestoneId.current = id;
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onMilestoneDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const onMilestoneDrop = (targetId) => (e) => {
+    e.preventDefault();
+    const srcId = dragMilestoneId.current;
+    dragMilestoneId.current = null;
+    if (!srcId || srcId === targetId) return;
+    setState((s) => {
+      const ms = [...s.milestones];
+      const from = ms.findIndex((m) => m.id === srcId);
+      if (from === -1) return s;
+      const [moved] = ms.splice(from, 1);
+      let to = targetId ? ms.findIndex((m) => m.id === targetId) : ms.length;
+      if (to === -1) to = ms.length;
+      ms.splice(to, 0, moved);
+      return { ...s, milestones: ms };
+    });
+  };
+
   // Members
   const updateMember = (id, patch) => setState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
   const addMember    = () => setState((s)=>({ ...s, team: [...s.team, { id: uid(), name: nextMemberName(s.team), roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
@@ -614,37 +640,32 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           <div className="flex items-center justify-between mb-2 px-1">
             <h2 className="font-semibold flex items-center gap-2"><Calendar size={18}/> Milestones</h2>
             <div className="flex items-center gap-2">
+              {!milestonesCollapsed && (
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
+                  <Filter size={16} className="text-black/50"/>
+                  <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
+                    <option value="all">All milestones</option>
+                    {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
+                  </select>
+                </div>
+              )}
+              {!milestonesCollapsed && (
+                <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
+              )}
               <button
-                onClick={() => setMilestonesCollapsed((v) => !v)}
+                onClick={() => setMilestonesCollapsed(v => !v)}
                 title={milestonesCollapsed ? "Expand Milestones" : "Collapse Milestones"}
                 className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
               >
-                {milestonesCollapsed ? <Plus size={16} /> : <Minus size={16} />}
+                {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
               </button>
-              {!milestonesCollapsed && (
-                <>
-                  <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-                    <Filter size={16} className="text-black/50"/>
-                    <select value={milestoneFilter} onChange={(e) => setMilestoneFilter(e.target.value)} className="text-sm outline-none bg-transparent">
-                      <option value="all">All milestones</option>
-                      {milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}
-                    </select>
-                  </div>
-                  <button onClick={() => addMilestone()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> Add Milestone</button>
-                </>
-              )}
             </div>
           </div>
           {!milestonesCollapsed && (
-            <div className="space-y-2">
-              <AnimatePresence>
-                {filteredMilestones.map((m) => (
-                  <motion.div
-                    key={m.id}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                  >
+            <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
+              <AnimatePresence initial={false}>
+                {filteredMilestones.map(m => (
+                  <motion.div key={m.id} layout initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-20}} transition={{duration:0.2}} draggable onDragStart={onMilestoneDragStart(m.id)} onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(m.id)}>
                     <MilestoneCard
                       milestone={m}
                       tasks={groupedTasks[m.id] || []}
@@ -655,6 +676,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                       onDelete={deleteTask}
                       onDuplicate={duplicateTask}
                       onDuplicateMilestone={duplicateMilestone}
+                      onDeleteMilestone={deleteMilestone}
                       onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                       onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
                     />
@@ -826,6 +848,17 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
       </div>
       {collapsed ? (
         <>
+          <div className="mt-1">
+            <select
+              value={t.status}
+              onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
+              className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+            >
+              <option value="todo">To Do</option>
+              <option value="inprogress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
           <div className="text-xs text-black/60 mt-1 truncate">
               <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
             </div>
@@ -993,6 +1026,7 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
                   </div>
                   {collapsed ? (
                     <>
+                      <div className="mt-1"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
                       <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
