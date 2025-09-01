@@ -29,13 +29,16 @@ describe('TaskCard', () => {
       />
     );
 
-    const toggleBtn = screen.getByTitle(/expand/i);
-    fireEvent.click(toggleBtn);
-    // When expanded milestone select should be visible
+    // milestone select is visible by default
     expect(screen.getByRole('combobox')).toBeInTheDocument();
 
+    const toggleBtn = screen.getByTitle(/expand/i);
+    fireEvent.click(toggleBtn);
+    // expanded content reveals start label
+    expect(screen.getByText(/start/i)).toBeInTheDocument();
+
     fireEvent.click(screen.getByTitle(/collapse/i));
-    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.queryByText(/start/i)).toBeNull();
   });
 
   it('triggers duplicate and delete callbacks', () => {
@@ -70,8 +73,6 @@ describe('TaskCard', () => {
       />
     );
 
-    const toggleBtn = screen.getByTitle(/expand/i);
-    fireEvent.click(toggleBtn);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'm2' } });
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { milestoneId: 'm2' });
   });
