@@ -603,7 +603,12 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                       className="font-medium truncate"
                     />
                   ) : (
-                    <span className="font-medium truncate">{m.name}</span>
+                    <button
+                      onClick={() => openUser(m.id)}
+                      className="font-medium truncate text-left hover:underline"
+                    >
+                      {m.name}
+                    </button>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
