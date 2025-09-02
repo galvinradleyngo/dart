@@ -619,7 +619,12 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                       className="font-medium truncate"
                     />
                   ) : (
-                    <span className="font-medium truncate">{m.name}</span>
+                    <button
+                      onClick={() => openUser(m.id)}
+                      className="font-medium truncate text-left hover:underline"
+                    >
+                      {m.name}
+                    </button>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -701,8 +706,8 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 {milestonesCollapsed ? <Plus size={16}/> : <Minus size={16}/>}
               </button>
             </div>
+            <p className="text-xs text-slate-500 mt-1">Click a milestone title to expand or collapse.</p>
           </div>
-          <p className="text-xs text-slate-500 mt-1 px-1">Click a milestone title to expand or collapse.</p>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
               <AnimatePresence initial={false}>
