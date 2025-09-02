@@ -672,7 +672,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
             <div className="flex items-center gap-2">
               {!milestonesCollapsed && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-                  <Filter size={16} className="text-black/50" />
+                  <Filter size={16} className="text-black/50"/>
                   <select
                     value={milestoneFilter}
                     onChange={e => setMilestoneFilter(e.target.value)}
@@ -692,7 +692,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                   onClick={() => addMilestone()}
                   className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
                 >
-                  <Plus size={16} /> Add Milestone
+                  <Plus size={16}/> Add Milestone
                 </button>
               )}
               <button
