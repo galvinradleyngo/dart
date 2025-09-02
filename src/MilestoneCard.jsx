@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Copy as CopyIcon, Trash2 } from 'lucide-react';
+import { Copy as CopyIcon, Trash2, ChevronDown } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 
 export default function MilestoneCard({
@@ -29,12 +29,15 @@ export default function MilestoneCard({
   }, [tasks]);
 
   return (
-    <details className="rounded-xl border border-black/10 bg-white">
-      <summary className="cursor-pointer select-none p-4 flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <div className="font-semibold">{milestone.title}</div>
-          <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
-            <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
+    <details className="group rounded-xl border border-black/10 bg-white">
+      <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+        <div className="flex items-center gap-2 flex-1">
+          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+          <div className="flex-1">
+            <div className="font-semibold">{milestone.title}</div>
+            <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
