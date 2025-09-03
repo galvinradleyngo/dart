@@ -725,7 +725,17 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           <p className="text-xs text-slate-500 mt-1">
             Tap the Milestones bar to expand or collapse.
           </p>
-          {!milestonesCollapsed && (
+          <motion.div
+            initial={false}
+            animate={milestonesCollapsed ? "collapsed" : "open"}
+            variants={{
+              open: { height: "auto", opacity: 1 },
+              collapsed: { height: 0, opacity: 0 },
+            }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+            aria-hidden={milestonesCollapsed}
+          >
             <div
               className="space-y-2"
               onDragOver={onMilestoneDragOver(null)}
@@ -769,7 +779,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
               )}
             </div>
-          )}
+          </motion.div>
         </section>
 
         {/* Tasks */}
