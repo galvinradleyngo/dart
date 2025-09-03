@@ -18,6 +18,8 @@ import {
   Link2,
   GitBranch,
   Minus,
+  ChevronDown,
+  ChevronUp,
   ArrowLeft,
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
@@ -463,6 +465,9 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   const onMilestoneDragStart = (id) => (e) => {
     dragMilestoneId.current = id;
     e.dataTransfer.effectAllowed = "move";
+    const img = new Image();
+    img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    e.dataTransfer.setDragImage(img, 0, 0);
   };
   const onMilestoneDragOver = (e) => {
     e.preventDefault();
@@ -698,15 +703,17 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
               <button
                 onClick={() => setMilestonesCollapsed(v => !v)}
                 title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
+                aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
+                aria-expanded={!milestonesCollapsed}
                 className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
               >
-                {milestonesCollapsed ? <Plus size={16} /> : <Minus size={16} />}
+                {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Click a milestone title to expand or collapse.
-            </p>
           </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Click a milestone title to expand or collapse.
+          </p>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
               <AnimatePresence initial={false}>
