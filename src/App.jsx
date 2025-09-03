@@ -635,18 +635,6 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                           </option>
                         ))}
                       </select>
-                      <select
-                        value={m.avatar || ''}
-                        onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
-                        className="border rounded px-2 py-1 text-sm"
-                      >
-                        <option value="">🙂</option>
-                        <option value="😀">😀</option>
-                        <option value="😎">😎</option>
-                        <option value="🚀">🚀</option>
-                        <option value="🎨">🎨</option>
-                        <option value="🐱">🐱</option>
-                      </select>
                       {(m.roleType === "LD" || m.roleType === "SME") && (
                         <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
                           <input
@@ -1301,10 +1289,6 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, [initialUserId]);
   const user = members.find((m) => m.id === userId);
 
-  const updateAvatar = (memberId, avatar) => {
-    setCourses((cs) => cs.map((c) => ({ ...c, team: c.team.map((m) => m.id === memberId ? { ...m, avatar } : m) })));
-    setSaveState('unsaved');
-  };
 
   const myCourses = useMemo(() => courses.filter((c) => c.team.some((m) => m.id === userId)), [courses, userId]);
   const myTasks = useMemo(() => {
@@ -1351,20 +1335,6 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
-{user && (
-  <select
-    value={user.avatar || ''}
-    onChange={(e) => updateAvatar(userId, e.target.value)}
-    className="text-sm border rounded px-2 py-1"
-  >
-    <option value="">🙂</option>
-    <option value="😀">😀</option>
-    <option value="😎">😎</option>
-    <option value="🚀">🚀</option>
-    <option value="🎨">🎨</option>
-    <option value="🐱">🐱</option>
-  </select>
-)}
             <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600">Save</button>
             <span className="text-xs text-black/60 dark:text-white/70">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
