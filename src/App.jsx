@@ -522,9 +522,9 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 dark:text-slate-100">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5 dark:supports-[backdrop-filter]:bg-slate-900/60 dark:bg-slate-900/80 dark:border-white/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           {onBack && (
             <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"><ArrowLeft size={16}/> Back to Courses</button>
@@ -540,17 +540,17 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
             >
               Save
             </button>
-            <span className="text-xs text-black/60">
+            <span className="text-xs text-black/60 dark:text-white/70">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
-            <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
-            <button onClick={async () => { saveTemplate(state); await saveTemplateRemote(state).catch(()=>{}); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
-            <button onClick={async () => { const tpl = (await loadTemplateRemote()) || loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
-            <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
+            <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><RefreshCcw size={16}/> Reset</button>
+            <button onClick={async () => { saveTemplate(state); await saveTemplateRemote(state).catch(()=>{}); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><CopyIcon size={16}/> Save as Template</button>
+            <button onClick={async () => { const tpl = (await loadTemplateRemote()) || loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><RefreshCcw size={16}/> Reset to Template</button>
+            <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600 cursor-pointer">
               <Upload size={16}/> Import
               <input type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && ((() => { const reader = new FileReader(); reader.onload = () => { try { const incoming = remapSeed(JSON.parse(reader.result)); setState((s)=>({ ...incoming, schedule: loadGlobalSchedule() })); } catch { alert("Invalid JSON"); } }; reader.readAsText(e.target.files[0]); })())} />
             </label>
-            <button onClick={() => { const { schedule, ...rest } = state; const toSave = { ...rest, schedule: { workweek: [1,2,3,4,5], holidays: [] } }; const blob = new Blob([JSON.stringify(toSave, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `course-pm-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Download size={16}/> Export</button>
+            <button onClick={() => { const { schedule, ...rest } = state; const toSave = { ...rest, schedule: { workweek: [1,2,3,4,5], holidays: [] } }; const blob = new Blob([JSON.stringify(toSave, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `course-pm-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><Download size={16}/> Export</button>
           </div>
         </div>
         {/* Secondary row: course title and template pill */}
@@ -559,7 +559,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
             <h1 className="text-base sm:text-lg font-semibold leading-tight"><InlineText value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
             {isTemplateLabel && <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200">Course Template</span>}
           </div>
-          <p className="text-sm text-black/60"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
+          <p className="text-sm text-black/60 dark:text-white/70"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
           {/* Course-wide LDs & SMEs */}
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
             {state.course.courseLDIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> LD</span>; })}
@@ -578,7 +578,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
 
         {/* Team Members FIRST */}
-        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-800">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold flex items-center gap-2"><Users size={18}/> Team Members</h2>
             <div className="flex items-center gap-2">
@@ -592,10 +592,10 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+              <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><UserPlus size={16}/> Add Member</button>
               <button
                 onClick={() => setMembersEditing(v => !v)}
-                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"
               >
                 {membersEditing ? 'Done' : 'Edit Members'}
               </button>
@@ -674,7 +674,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           </div>
         </section>
         {/* Milestones */}
-          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-800">
             <div
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
               onClick={() => setMilestonesCollapsed(v => !v)}
@@ -706,7 +706,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
               {!milestonesCollapsed && (
                 <button
                   onClick={() => addMilestone()}
-                  className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                  className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"
                 >
                   <Plus size={16}/> Add Milestone
                 </button>
@@ -783,7 +783,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
 
         {/* Tasks */}
-        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-800">
           <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
             <h2 className="font-semibold flex items-center gap-2"><ListChecks size={18}/> Tasks</h2>
             <div className="flex items-center gap-2"><Toggle value={view} onChange={setView} options={[{ id: "list", label: "List" }, { id: "board", label: "Board" }, { id: "calendar", label: "Calendar" }]} /><button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90"><Plus size={16}/> Add Task</button></div>
@@ -839,9 +839,9 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
 function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }) {
   const display = mode === "percent" ? `${value}%` : value; const pct = mode === "percent" ? value : undefined;
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm flex items-center gap-4">
-      <Ring size={82} stroke={10} progress={pct ?? 100} color={color}><div className="text-center"><div className="text-base font-semibold leading-none">{display}</div><div className="text-[10px] text-black/60">{mode === "percent" ? "Progress" : "Count"}</div></div></Ring>
-      <div className="flex-1 min-w-0"><div className="text-xs text-black/60 flex items-center gap-1">{icon} <span>{title}</span></div><div className="text-sm font-medium truncate">{subtitle}</div></div>
+    <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-800 flex items-center gap-4">
+      <Ring size={82} stroke={10} progress={pct ?? 100} color={color}><div className="text-center"><div className="text-base font-semibold leading-none">{display}</div><div className="text-[10px] text-black/60 dark:text-white/70">{mode === "percent" ? "Progress" : "Count"}</div></div></Ring>
+      <div className="flex-1 min-w-0"><div className="text-xs text-black/60 dark:text-white/70 flex items-center gap-1">{icon} <span>{title}</span></div><div className="text-sm font-medium truncate">{subtitle}</div></div>
     </div>
   );
 }
@@ -854,14 +854,14 @@ function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAd
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-black/60 border-b border-black/10"><th className="py-2 pr-4">Title & Details</th><th className="py-2 pr-4">Milestone</th><th className="py-2 pr-4">Assignee</th><th className="py-2 pr-4">Status</th><th className="py-2 pr-4">Start</th><th className="py-2 pr-4"># of Workdays</th><th className="py-2 pr-4">Due</th><th className="py-2 pr-4">Completed</th><th className="py-2 pr-4">Dependency</th><th className="py-2">Actions</th></tr>
+          <tr className="text-left text-black/60 dark:text-white/70 border-b border-black/10"><th className="py-2 pr-4">Title & Details</th><th className="py-2 pr-4">Milestone</th><th className="py-2 pr-4">Assignee</th><th className="py-2 pr-4">Status</th><th className="py-2 pr-4">Start</th><th className="py-2 pr-4"># of Workdays</th><th className="py-2 pr-4">Due</th><th className="py-2 pr-4">Completed</th><th className="py-2 pr-4">Dependency</th><th className="py-2">Actions</th></tr>
         </thead>
         <tbody>
           {tasks.map((t) => { const assignee = team.find((m)=>m.id===t.assigneeId); return (
             <tr key={t.id} className="border-b border-black/5 hover:bg-slate-50 align-top">
               <td className="py-2 pr-4 min-w-[320px]">
                 <div className="font-medium"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div>
-                <div className="text-xs text-black/60"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" multiline /></div>
+                <div className="text-xs text-black/60 dark:text-white/70"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" multiline /></div>
                 <div className="mt-1 text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v)=>onUpdate(t.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
                 <LinksEditor links={t.links} onAdd={(url)=>onAddLink(t.id,url)} onRemove={(i)=>onRemoveLink(t.id,i)} />
               </td>
@@ -873,7 +873,7 @@ function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAd
               <td className="py-2 pr-4"><DuePill date={t.dueDate} status={t.status} /></td>
               <td className="py-2 pr-4">{t.status === "done" ? (t.completedDate || "—") : "—"}</td>
               <td className="py-2 pr-4"><DepPicker task={t} tasks={allTasks} onUpdate={onUpdate} /></td>
-              <td className="py-2"><button onClick={() => onDuplicate(t.id)} className="text-black/60 hover:text-sky-600 mr-2" title="Duplicate"><CopyIcon size={16}/></button><button onClick={() => onDelete(t.id)} className="text-red-500/80 hover:text-red-600"><Trash2 size={16}/></button></td>
+              <td className="py-2"><button onClick={() => onDuplicate(t.id)} className="text-black/60 dark:text-white/70 hover:text-sky-600 mr-2" title="Duplicate"><CopyIcon size={16}/></button><button onClick={() => onDelete(t.id)} className="text-red-500/80 hover:text-red-600"><Trash2 size={16}/></button></td>
             </tr>
           ); })}
         </tbody>
@@ -954,7 +954,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
               <option value="done">Done</option>
             </select>
           </div>
-          <div className="text-xs text-black/60 mt-1 truncate">
+          <div className="text-xs text-black/60 dark:text-white/70 mt-1 truncate">
               <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
             </div>
             {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
@@ -1072,7 +1072,7 @@ function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLin
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="font-semibold"><InlineText value={task.title} onChange={(v)=>onUpdate(task.id,{ title:v })} /></div>
-            <div className="text-sm text-black/60"><InlineText value={task.details} onChange={(v)=>onUpdate(task.id,{ details:v })} placeholder="Details…" multiline /></div>
+            <div className="text-sm text-black/60 dark:text-white/70"><InlineText value={task.details} onChange={(v)=>onUpdate(task.id,{ details:v })} placeholder="Details…" multiline /></div>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-black">×</button>
         </div>
@@ -1122,7 +1122,7 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
                   {collapsed ? (
                     <>
                       <div className="mt-1"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
-                      <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
+                      <div className="text-xs text-black/60 dark:text-white/70 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
@@ -1343,7 +1343,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             )}
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
-              {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
+              {user && <div className="text-xs text-black/60 dark:text-white/70 truncate">{user.name}</div>}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1365,8 +1365,8 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     <option value="🐱">🐱</option>
   </select>
 )}
-            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
-            <span className="text-xs text-black/60">
+            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600">Save</button>
+            <span className="text-xs text-black/60 dark:text-white/70">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
           </div>
@@ -1377,7 +1377,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         <section>
           <h2 className="text-lg font-semibold mb-2">My Courses</h2>
           {myCourses.length === 0 ? (
-            <div className="text-sm text-black/60">No courses</div>
+            <div className="text-sm text-black/60 dark:text-white/70">No courses</div>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {myCourses.map((c) => {
@@ -1386,7 +1386,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                   <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between">
                     <div className="min-w-0">
                       <div className="font-medium truncate">{c.course.name}</div>
-                      <div className="text-xs text-black/60 truncate">{tCount} task{tCount!==1?'s':''}</div>
+                      <div className="text-xs text-black/60 dark:text-white/70 truncate">{tCount} task{tCount!==1?'s':''}</div>
                     </div>
                     <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
                   </li>
@@ -1399,7 +1399,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         <section>
           <h2 className="text-lg font-semibold mb-2">My Tasks</h2>
           {myTasks.length === 0 ? (
-            <div className="text-sm text-black/60">No tasks assigned.</div>
+            <div className="text-sm text-black/60 dark:text-white/70">No tasks assigned.</div>
           ) : (
             <>
               <div className="flex items-center gap-2 mb-2">
@@ -1686,11 +1686,11 @@ function CoursesHub({
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-xs text-black/60 truncate">Courses Hub</div>
+              <div className="text-xs text-black/60 dark:text-white/70 truncate">Courses Hub</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
+            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><CopyIcon size={16}/> Edit Template</button>
             <button
               onClick={onAddCourse}
               className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
@@ -1756,20 +1756,20 @@ function CoursesHub({
             <div className="flex items-center gap-2">
               <button
                 onClick={addPerson}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"
               >
                 <UserPlus size={16}/> Add Member
               </button>
               <button
                 onClick={() => setMembersEditing(v => !v)}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"
               >
                 {membersEditing ? 'Done' : 'Edit Members'}
               </button>
             </div>
           </div>
           {people.length === 0 ? (
-            <div className="text-sm text-black/60">No team members</div>
+            <div className="text-sm text-black/60 dark:text-white/70">No team members</div>
           ) : (
             <div className="flex flex-wrap gap-3">
               {[...people].sort((a, b) => {
@@ -1811,7 +1811,7 @@ function CoursesHub({
                         >
                           {m.name}
                         </button>
-                        <div className="text-xs text-black/60">{m.roleType}</div>
+                        <div className="text-xs text-black/60 dark:text-white/70">{m.roleType}</div>
                       </>
                     )}
                   </div>
@@ -1842,7 +1842,7 @@ function CoursesHub({
           {courses.length === 0 ? (
             <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
-              <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
+              <p className="text-sm text-black/60 dark:text-white/70 mb-4">Use your Course Template to spin up your first course.</p>
               <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
             </div>
           ) : (
@@ -1860,18 +1860,18 @@ function CoursesHub({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') open(c.id);
                     }}
-                    className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-800 cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 truncate">{c.course.description}</div></div>
+                      <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 dark:text-white/70 truncate">{c.course.description}</div></div>
                     </div>
                     <div className="flex items-center gap-4 mt-3">
-                      <Ring size={72} stroke={10} progress={t.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{t.pct}%</div><div className="text-[10px] text-black/60">{t.done}/{t.total}</div></div></Ring>
+                      <Ring size={72} stroke={10} progress={t.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{t.pct}%</div><div className="text-[10px] text-black/60 dark:text-white/70">{t.done}/{t.total}</div></div></Ring>
                       <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
-                      <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><CopyIcon size={16}/> Duplicate</button>
                       <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
                     </div>
                   </motion.div>
@@ -1921,6 +1921,10 @@ export default function PMApp() {
       }
     })();
   }, []);
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
   const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
@@ -1993,7 +1997,13 @@ export default function PMApp() {
   return (
     <>
       {content}
-      <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-xs">v{version}</div>
+      <button
+        onClick={() => setDark((d) => !d)}
+        className="fixed top-2 right-2 z-50 px-2 py-1 rounded border border-black/10 bg-white shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"
+      >
+        {dark ? 'Light' : 'Dark'}
+      </button>
+      <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-xs dark:bg-white/70 dark:text-black">v{version}</div>
     </>
   );
 }
