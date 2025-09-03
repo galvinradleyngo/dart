@@ -18,6 +18,8 @@ import {
   Link2,
   GitBranch,
   Minus,
+  ChevronDown,
+  ChevronUp,
   ArrowLeft,
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
@@ -43,6 +45,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmt = (d) => new Date(d).toISOString().slice(0, 10);
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const rolePalette = { LD: "#4f46e5", SME: "#16a34a", MM: "#0891b2", PM: "#ea580c", PA: "#a855f7", Other: "#64748b" };
+const roleOrder = Object.keys(rolePalette);
 const roleColor = (roleType) => rolePalette[roleType] || rolePalette.Other;
 
 const nextMemberName = (list) => {
@@ -463,6 +466,9 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   const onMilestoneDragStart = (id) => (e) => {
     dragMilestoneId.current = id;
     e.dataTransfer.effectAllowed = "move";
+    const img = new Image();
+    img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+    e.dataTransfer.setDragImage(img, 0, 0);
   };
   const onMilestoneDragOver = (e) => {
     e.preventDefault();
@@ -665,14 +671,14 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
         {/* Milestones */}
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1">
             <h2 className="font-semibold flex items-center gap-2">
               <Calendar size={18} /> Milestones
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {!milestonesCollapsed && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-                  <Filter size={16} className="text-black/50" />
+                  <Filter size={16} className="text-black/50"/>
                   <select
                     value={milestoneFilter}
                     onChange={e => setMilestoneFilter(e.target.value)}
@@ -692,21 +698,23 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                   onClick={() => addMilestone()}
                   className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
                 >
-                  <Plus size={16} /> Add Milestone
+                  <Plus size={16}/> Add Milestone
                 </button>
               )}
               <button
                 onClick={() => setMilestonesCollapsed(v => !v)}
                 title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
+                aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
+                aria-expanded={!milestonesCollapsed}
                 className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
               >
-                {milestonesCollapsed ? <Plus size={16} /> : <Minus size={16} />}
+                {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
               </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Click a milestone title to expand or collapse.
-            </p>
           </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Click a milestone title to expand or collapse.
+          </p>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
               <AnimatePresence initial={false}>
@@ -1726,7 +1734,10 @@ function CoursesHub({
             <div className="text-sm text-black/60">No team members</div>
           ) : (
             <div className="flex flex-wrap gap-3">
-              {people.map((m) => (
+              {[...people].sort((a, b) => {
+                const roleCmp = roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType);
+                return roleCmp !== 0 ? roleCmp : a.name.localeCompare(b.name);
+              }).map((m) => (
                 <div
                   key={m.id}
                   className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
@@ -1755,7 +1766,13 @@ function CoursesHub({
                       </>
                     ) : (
                       <>
-                        <div className="font-medium leading-tight">{m.name}</div>
+                        <button
+                          type="button"
+                          onClick={() => onOpenUser(m.id)}
+                          className="font-medium leading-tight text-left hover:underline"
+                        >
+                          {m.name}
+                        </button>
                         <div className="text-xs text-black/60">{m.roleType}</div>
                       </>
                     )}
