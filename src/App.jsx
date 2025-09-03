@@ -674,12 +674,18 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           </div>
         </section>
         {/* Milestones */}
-        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1">
-            <h2 className="font-semibold flex items-center gap-2">
-              <Calendar size={18} /> Milestones
-            </h2>
-            <div className="flex flex-wrap items-center gap-2">
+          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+            <div
+              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
+              onClick={() => setMilestonesCollapsed(v => !v)}
+            >
+              <h2 className="font-semibold flex items-center gap-2">
+                <Calendar size={18} /> Milestones
+              </h2>
+              <div
+                className="flex flex-wrap items-center gap-2"
+                onClick={e => e.stopPropagation()}
+              >
               {!milestonesCollapsed && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
                   <Filter size={16} className="text-black/50"/>
@@ -705,19 +711,19 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                   <Plus size={16}/> Add Milestone
                 </button>
               )}
-              <button
-                onClick={() => setMilestonesCollapsed(v => !v)}
-                title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
-                aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
-                aria-expanded={!milestonesCollapsed}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
-              >
-                {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-              </button>
+                <button
+                  onClick={() => setMilestonesCollapsed(v => !v)}
+                  title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
+                  aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
+                  aria-expanded={!milestonesCollapsed}
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+                >
+                  {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                </button>
             </div>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Click a milestone title to expand or collapse.
+            Tap the Milestones bar to expand or collapse.
           </p>
           {!milestonesCollapsed && (
             <div
