@@ -2,8 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
-body { @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100; }
+html, body, #root {
+  height: 100%;
+}
+body {
+  @apply bg-slate-50 text-slate-900;
+}
 
 @media (max-width: 640px) {
   html { font-size: 18px; }
