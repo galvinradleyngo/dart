@@ -29,14 +29,14 @@ export default function MilestoneCard({
   }, [tasks]);
 
     return (
-      <details className="group rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-slate-800">
+      <details className="group rounded-xl border border-black/10 bg-white">
         <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-2 flex-1">
           <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
           <div className="flex-1">
             <div className="font-semibold">{milestone.title}</div>
-              <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden dark:bg-white/10">
-                <div className="h-full bg-black/40 dark:bg-white/40" style={{ width: `${pct}%` }} />
+              <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
+                <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
               </div>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function MilestoneCard({
                 e.stopPropagation();
                 onDuplicateMilestone(milestone.id);
               }}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-white/10 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 title="Duplicate Milestone"
               >
                 <CopyIcon size={16} />
@@ -59,7 +59,7 @@ export default function MilestoneCard({
                 e.stopPropagation();
                 onDeleteMilestone(milestone.id);
               }}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200 dark:border-white/10 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 title="Remove Milestone"
               >
                 <Trash2 size={16} />
@@ -69,7 +69,7 @@ export default function MilestoneCard({
         </summary>
         <div className="p-4 flex flex-col gap-2">
           {milestone.goal && (
-            <p className="text-sm text-black/60 mb-2 dark:text-white/70">{milestone.goal}</p>
+            <p className="text-sm text-black/60 mb-2">{milestone.goal}</p>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {tasksSorted.map((t) => (
