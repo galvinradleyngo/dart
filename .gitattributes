@@ -1,0 +1,2 @@
+# Use custom merge driver for resolving Milestones section conflicts
+src/App.jsx merge=fix-milestones
