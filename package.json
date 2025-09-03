@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "fix-milestones": "node scripts/fixMilestonesConflict.js"
   },
   "dependencies": {
     "framer-motion": "^11.0.0",
