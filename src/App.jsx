@@ -670,52 +670,50 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
         {/* Milestones */}
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <div className="mb-2 px-1">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold flex items-center gap-2">
-                <Calendar size={18} /> Milestones
-              </h2>
-              <div className="flex items-center gap-2">
-                {!milestonesCollapsed && (
-                  <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
-                    <Filter size={16} className="text-black/50"/>
-                    <select
-                      value={milestoneFilter}
-                      onChange={e => setMilestoneFilter(e.target.value)}
-                      className="text-sm outline-none bg-transparent"
-                    >
-                      <option value="all">All milestones</option>
-                      {milestones.map(m => (
-                        <option key={m.id} value={m.id}>
-                          {m.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {!milestonesCollapsed && (
-                  <button
-                    onClick={() => addMilestone()}
-                    className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+          <div className="flex items-center justify-between mb-2 px-1">
+            <h2 className="font-semibold flex items-center gap-2">
+              <Calendar size={18} /> Milestones
+            </h2>
+            <div className="flex items-center gap-2">
+              {!milestonesCollapsed && (
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
+                  <Filter size={16} className="text-black/50"/>
+                  <select
+                    value={milestoneFilter}
+                    onChange={e => setMilestoneFilter(e.target.value)}
+                    className="text-sm outline-none bg-transparent"
                   >
-                    <Plus size={16}/> Add Milestone
-                  </button>
-                )}
+                    <option value="all">All milestones</option>
+                    {milestones.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {!milestonesCollapsed && (
                 <button
-                  onClick={() => setMilestonesCollapsed(v => !v)}
-                  title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
-                  aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
-                  aria-expanded={!milestonesCollapsed}
-                  className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+                  onClick={() => addMilestone()}
+                  className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
                 >
-                  {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                  <Plus size={16}/> Add Milestone
                 </button>
-              </div>
+              )}
+              <button
+                onClick={() => setMilestonesCollapsed(v => !v)}
+                title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
+                aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
+                aria-expanded={!milestonesCollapsed}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+              >
+                {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+              </button>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Click a milestone title to expand or collapse.
-            </p>
           </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Click a milestone title to expand or collapse.
+          </p>
           {!milestonesCollapsed && (
             <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
               <AnimatePresence initial={false}>
