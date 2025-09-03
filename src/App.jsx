@@ -1312,6 +1312,20 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return g;
   }, [myTasks]);
 
+  const week = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - start.getDay());
+    start.setHours(0, 0, 0, 0);
+    return [...Array(7)].map((_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const ds = fmt(d);
+      const tasks = myTasks.filter((t) => t.dueDate === ds);
+      return { date: d, tasks };
+    });
+  }, [myTasks]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
@@ -1349,6 +1363,36 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <section>
+          <h2 className="text-lg font-semibold mb-2">My Week at a Glance</h2>
+          {week.every((d) => d.tasks.length === 0) ? (
+            <div className="text-sm text-black/60">No tasks due this week.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="flex gap-2 min-w-max sm:min-w-0 sm:grid sm:grid-cols-7">
+                {week.map(({ date, tasks }) => (
+                  <div key={fmt(date)} className="min-w-[10rem] sm:min-w-0 rounded-xl border border-black/10 bg-white p-3 flex flex-col">
+                    <div className="text-xs font-medium mb-1">
+                      {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
+                    </div>
+                    <ul className="space-y-1 flex-1">
+                      {tasks.length === 0 ? (
+                        <li className="text-xs text-black/40">No tasks</li>
+                      ) : (
+                        tasks.map((t) => (
+                          <li key={t.id} className="text-xs truncate bg-slate-100 rounded px-2 py-1" title={`${t.title} – ${t.courseName}`}>
+                            {t.title}
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section>
           <h2 className="text-lg font-semibold mb-2">My Courses</h2>
           {myCourses.length === 0 ? (
