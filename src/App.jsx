@@ -670,11 +670,11 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
         {/* Milestones */}
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2 px-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1">
             <h2 className="font-semibold flex items-center gap-2">
               <Calendar size={18} /> Milestones
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {!milestonesCollapsed && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
                   <Filter size={16} className="text-black/50"/>
