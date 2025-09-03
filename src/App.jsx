@@ -45,6 +45,7 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmt = (d) => new Date(d).toISOString().slice(0, 10);
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const rolePalette = { LD: "#4f46e5", SME: "#16a34a", MM: "#0891b2", PM: "#ea580c", PA: "#a855f7", Other: "#64748b" };
+const roleOrder = Object.keys(rolePalette);
 const roleColor = (roleType) => rolePalette[roleType] || rolePalette.Other;
 
 const nextMemberName = (list) => {
@@ -1733,7 +1734,10 @@ function CoursesHub({
             <div className="text-sm text-black/60">No team members</div>
           ) : (
             <div className="flex flex-wrap gap-3">
-              {people.map((m) => (
+              {[...people].sort((a, b) => {
+                const roleCmp = roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType);
+                return roleCmp !== 0 ? roleCmp : a.name.localeCompare(b.name);
+              }).map((m) => (
                 <div
                   key={m.id}
                   className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
@@ -1762,7 +1766,13 @@ function CoursesHub({
                       </>
                     ) : (
                       <>
-                        <div className="font-medium leading-tight">{m.name}</div>
+                        <button
+                          type="button"
+                          onClick={() => onOpenUser(m.id)}
+                          className="font-medium leading-tight text-left hover:underline"
+                        >
+                          {m.name}
+                        </button>
                         <div className="text-xs text-black/60">{m.roleType}</div>
                       </>
                     )}
