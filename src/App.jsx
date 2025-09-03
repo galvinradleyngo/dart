@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef, Fragment } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Plus,
@@ -623,7 +623,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 </div>
                 <div className="flex items-center gap-2">
                   {membersEditing ? (
-                    <>
+                    <Fragment>
                       <select
                         value={m.roleType}
                         onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
@@ -664,7 +664,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                       >
                         <Trash2 size={16} />
                       </button>
-                    </>
+                    </Fragment>
                   ) : (
                     <span className="text-sm">{m.roleType}</span>
                   )}
