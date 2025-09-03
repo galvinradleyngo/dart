@@ -6,7 +6,9 @@ html, body, #root { height: 100%; }
 
 @layer base {
   body {
-    @apply text-base bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100;
+    @apply text-base bg-white text-slate-900;
   }
-  button, input, select, textarea { @apply text-base; }
+  button, input, select, textarea {
+    @apply text-base;
+  }
 }
