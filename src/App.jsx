@@ -522,9 +522,9 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 dark:text-slate-100">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5 dark:bg-slate-900/80 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           {onBack && (
             <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"><ArrowLeft size={16}/> Back to Courses</button>
@@ -536,17 +536,17 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           <div className="flex items-center gap-2">
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white shadow-sm hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white shadow-sm hover:bg-slate-800 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
             >
               Save
             </button>
-            <span className="text-sm text-black/60">
+            <span className="text-sm text-black/60 dark:text-white/70">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
-            <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
-            <button onClick={async () => { saveTemplate(state); await saveTemplateRemote(state).catch(()=>{}); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
-            <button onClick={async () => { const tpl = (await loadTemplateRemote()) || loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
-            <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
+            <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><RefreshCcw size={16}/> Reset</button>
+            <button onClick={async () => { saveTemplate(state); await saveTemplateRemote(state).catch(()=>{}); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><CopyIcon size={16}/> Save as Template</button>
+            <button onClick={async () => { const tpl = (await loadTemplateRemote()) || loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><RefreshCcw size={16}/> Reset to Template</button>
+            <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600 cursor-pointer">
               <Upload size={16}/> Import
               <input type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && ((() => { const reader = new FileReader(); reader.onload = () => { try { const incoming = remapSeed(JSON.parse(reader.result)); setState((s)=>({ ...incoming, schedule: loadGlobalSchedule() })); } catch { alert("Invalid JSON"); } }; reader.readAsText(e.target.files[0]); })())} />
             </label>
@@ -1312,8 +1312,8 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, [myTasks]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 dark:text-slate-100">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5 dark:bg-slate-900/80 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {onBack && (
@@ -1326,18 +1326,18 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             )}
             <div className="min-w-0">
               <div className="text-base sm:text-lg font-semibold truncate">User Dashboard</div>
-              {user && <div className="text-sm text-black/60 truncate">{user.name}</div>}
+              {user && <div className="text-sm text-black/60 dark:text-white/70 truncate">{user.name}</div>}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {user && <Avatar name={user.name} roleType={user.roleType} avatar={user.avatar} className="w-8 h-8 text-base" />}
-            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
-          {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
-        </select>
-              <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
-              <span className="text-sm text-black/60">
-                {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
-              </span>
+            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1 dark:bg-slate-800 dark:border-white/10 dark:text-slate-200">
+              {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
+            </select>
+            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600">Save</button>
+            <span className="text-sm text-black/60 dark:text-white/70">
+              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
+            </span>
           </div>
         </div>
       </header>
@@ -1346,16 +1346,16 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         <section>
           <h2 className="text-lg font-semibold mb-2">My Courses</h2>
           {myCourses.length === 0 ? (
-            <div className="text-sm text-black/60">No courses</div>
+            <div className="text-sm text-black/60 dark:text-white/70">No courses</div>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {myCourses.map((c) => {
                 const tCount = c.tasks.filter((t) => t.assigneeId === userId).length;
                 return (
-                  <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between">
+                  <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between dark:bg-slate-800 dark:border-white/10">
                     <div className="min-w-0">
                       <div className="font-medium truncate">{c.course.name}</div>
-                      <div className="text-xs text-black/60 truncate">{tCount} task{tCount!==1?'s':''}</div>
+                      <div className="text-xs text-black/60 dark:text-white/70 truncate">{tCount} task{tCount!==1?'s':''}</div>
                     </div>
                     <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
                   </li>
@@ -1368,13 +1368,13 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         <section>
           <h2 className="text-lg font-semibold mb-2">My Tasks</h2>
           {myTasks.length === 0 ? (
-            <div className="text-sm text-black/60">No tasks assigned.</div>
+            <div className="text-sm text-black/60 dark:text-white/70">No tasks assigned.</div>
           ) : (
             <>
               <div className="flex items-center gap-2 mb-2">
-                <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-xs rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>List</button>
-                <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-xs rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Board</button>
-                <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-xs rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Calendar</button>
+                <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-xs rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200'}`}>List</button>
+                <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-xs rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200'}`}>Board</button>
+                <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-xs rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200'}`}>Calendar</button>
               </div>
               {taskView === 'list' && (
                 <div className="space-y-2">
@@ -1403,7 +1403,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                   {['todo', 'inprogress', 'done'].map((s) => (
                     <div
                       key={s}
-                      className="rounded-xl border border-black/10 bg-white p-2"
+                      className="rounded-xl border border-black/10 bg-white p-2 dark:bg-slate-800 dark:border-white/10"
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         const tid = e.dataTransfer.getData('text/task');
@@ -1648,21 +1648,21 @@ function CoursesHub({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700 dark:text-slate-100">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5 dark:bg-slate-900/80 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
               <div className="text-base sm:text-lg font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-sm text-black/60 truncate">Courses Hub</div>
+              <div className="text-sm text-black/60 dark:text-white/70 truncate">Courses Hub</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
+            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"><CopyIcon size={16}/> Edit Template</button>
             <button
               onClick={onAddCourse}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow dark:bg-slate-100 dark:text-slate-900"
             >
               <Plus size={16}/> Add Course
             </button>
@@ -1890,6 +1890,10 @@ export default function PMApp() {
       }
     })();
   }, []);
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
   const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
@@ -1962,6 +1966,14 @@ export default function PMApp() {
   return (
     <>
       {content}
+      <div className="fixed top-2 right-2 z-50">
+        <button
+          onClick={() => setDark((d) => !d)}
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 dark:bg-slate-700 dark:border-white/10 dark:text-slate-200 dark:hover:bg-slate-600"
+        >
+          {dark ? 'Light' : 'Dark'}
+        </button>
+      </div>
       <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-xs">v{version}</div>
     </>
   );
