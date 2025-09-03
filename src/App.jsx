@@ -1171,7 +1171,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     })();
   }, []);
 
-  const [taskView, setTaskView] = useState('list');
+  const [taskView, setTaskView] = useState('board');
   const [saveState, setSaveState] = useState('saved');
 
   const recomputeDue = (t, patch = {}, schedule) => {
@@ -1397,6 +1397,43 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         </section>
 
         <section>
+          <h2 className="text-lg font-semibold mb-2">My Milestones</h2>
+          {myCourses.length === 0 ? (
+            <div className="text-sm text-black/60">No milestones</div>
+          ) : (
+            <div className="space-y-4">
+              {myCourses.map((c) => (
+                <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
+                  <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                      <div className="font-medium">{c.course.name}</div>
+                    </div>
+                  </summary>
+                  <div className="p-4 space-y-2">
+                    {c.milestones.map((m) => (
+                      <MilestoneCard
+                        key={m.id}
+                        milestone={m}
+                        tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
+                        tasksAll={c.tasks}
+                        team={c.team}
+                        milestones={c.milestones}
+                        onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+                        onDelete={(id) => deleteTask(c.course.id, id)}
+                        onDuplicate={(id) => duplicateTask(c.course.id, id)}
+                        onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+                        onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                      />
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
           <h2 className="text-lg font-semibold mb-2">My Tasks</h2>
           {myTasks.length === 0 ? (
             <div className="text-sm text-black/60">No tasks assigned.</div>
@@ -1431,20 +1468,26 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               )}
               {taskView === 'board' && (
                 <div className="grid gap-4 sm:grid-cols-3">
-                  {['todo', 'inprogress', 'done'].map((s) => (
+                  {[
+                    { id: 'todo', label: 'To Do' },
+                    { id: 'inprogress', label: 'In Progress' },
+                    { id: 'done', label: 'Done' },
+                  ].map(({ id, label }) => (
                     <div
-                      key={s}
-                      className="rounded-xl border border-black/10 bg-white p-2"
+                      key={id}
+                      className={`rounded-xl border border-black/10 p-3 ${id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         const tid = e.dataTransfer.getData('text/task');
                         const cid = e.dataTransfer.getData('text/course');
-                        if (tid && cid) updateTaskStatus(cid, tid, s);
+                        if (tid && cid) updateTaskStatus(cid, tid, id);
                       }}
                     >
-                      <div className="font-medium text-sm capitalize mb-2">{s}</div>
-                      <div className="space-y-2 min-h-[50px]">
-                        {groupedTasks[s].map((t) => {
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm font-medium text-black/70">{label}</div>
+                      </div>
+                      <div className="space-y-2 min-h-[140px]">
+                        {groupedTasks[id].map((t) => {
                           const c = courses.find((x) => x.course.id === t.courseId);
                           if (!c) return null;
                           return (
@@ -1454,11 +1497,11 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                               tasks={c.tasks}
                               team={c.team}
                               milestones={c.milestones}
-                              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-                              onDelete={(id) => deleteTask(c.course.id, id)}
-                              onDuplicate={(id) => duplicateTask(c.course.id, id)}
-                              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-                              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                              onUpdate={(tid, patch) => updateTask(c.course.id, tid, patch)}
+                              onDelete={(tid) => deleteTask(c.course.id, tid)}
+                              onDuplicate={(tid) => duplicateTask(c.course.id, tid)}
+                              onAddLink={(tid, url) => patchTaskLinks(c.course.id, tid, 'add', url)}
+                              onRemoveLink={(tid, idx) => patchTaskLinks(c.course.id, tid, 'remove', idx)}
                               dragHandlers={{
                                 draggable: true,
                                 onDragStart: (e) => {
