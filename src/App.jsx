@@ -522,21 +522,21 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base">
       {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           {onBack && (
-            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"><ArrowLeft size={16}/> Back to Courses</button>
+            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-base sm:text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"><ArrowLeft size={16}/> Back to Courses</button>
           )}
           <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${state.course.accent} shadow-sm`} />
           {/* DART banner title */}
-          <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+          <div className="hidden sm:block text-base sm:text-lg font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white shadow-sm hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-base sm:text-sm bg-slate-900 text-white shadow-sm hover:bg-slate-800"
             >
               Save
             </button>
@@ -585,17 +585,17 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
               <select
                 value=""
                 onChange={(e)=>{ if(e.target.value) { addExistingMember(e.target.value); e.target.value=''; } }}
-                className="text-sm border rounded px-2 py-1"
+                className="text-base sm:text-sm border rounded px-2 py-1"
               >
                 <option value="">Add existing...</option>
                 {people.filter((p)=>!team.some((m)=>m.id===p.id)).map((p)=>(
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
-              <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
+              <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-base sm:text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
               <button
                 onClick={() => setMembersEditing(v => !v)}
-                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-base sm:text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
               >
                 {membersEditing ? 'Done' : 'Edit Members'}
               </button>
@@ -627,25 +627,13 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                       <select
                         value={m.roleType}
                         onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
-                        className="border rounded px-2 py-1 text-sm"
+                        className="border rounded px-2 py-1 text-base sm:text-sm"
                       >
                         {Object.keys(rolePalette).map((r) => (
                           <option key={r} value={r}>
                             {r}
                           </option>
                         ))}
-                      </select>
-                      <select
-                        value={m.avatar || ''}
-                        onChange={(e) => updateMember(m.id, { avatar: e.target.value })}
-                        className="border rounded px-2 py-1 text-sm"
-                      >
-                        <option value="">🙂</option>
-                        <option value="😀">😀</option>
-                        <option value="😎">😎</option>
-                        <option value="🚀">🚀</option>
-                        <option value="🎨">🎨</option>
-                        <option value="🐱">🐱</option>
                       </select>
                       {(m.roleType === "LD" || m.roleType === "SME") && (
                         <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
@@ -1171,7 +1159,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     })();
   }, []);
 
-  const [taskView, setTaskView] = useState('list');
+  const [taskView, setTaskView] = useState('board');
   const [saveState, setSaveState] = useState('saved');
 
   const recomputeDue = (t, patch = {}, schedule) => {
@@ -1301,10 +1289,6 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, [initialUserId]);
   const user = members.find((m) => m.id === userId);
 
-  const updateAvatar = (memberId, avatar) => {
-    setCourses((cs) => cs.map((c) => ({ ...c, team: c.team.map((m) => m.id === memberId ? { ...m, avatar } : m) })));
-    setSaveState('unsaved');
-  };
 
   const myCourses = useMemo(() => courses.filter((c) => c.team.some((m) => m.id === userId)), [courses, userId]);
   const myTasks = useMemo(() => {
@@ -1329,7 +1313,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, [myTasks]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -1342,31 +1326,17 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               </button>
             )}
             <div className="min-w-0">
-              <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
+              <div className="text-base sm:text-lg font-semibold truncate">User Dashboard</div>
               {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {user && <Avatar name={user.name} roleType={user.roleType} avatar={user.avatar} className="w-8 h-8 text-base" />}
-            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
+            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-base sm:text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
-{user && (
-  <select
-    value={user.avatar || ''}
-    onChange={(e) => updateAvatar(userId, e.target.value)}
-    className="text-sm border rounded px-2 py-1"
-  >
-    <option value="">🙂</option>
-    <option value="😀">😀</option>
-    <option value="😎">😎</option>
-    <option value="🚀">🚀</option>
-    <option value="🎨">🎨</option>
-    <option value="🐱">🐱</option>
-  </select>
-)}
-            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
-            <span className="text-xs text-black/60">
+            <button onClick={handleSave} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-base sm:text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Save</button>
+            <span className="text-sm text-black/60">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
           </div>
@@ -1377,7 +1347,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         <section>
           <h2 className="text-lg font-semibold mb-2">My Courses</h2>
           {myCourses.length === 0 ? (
-            <div className="text-sm text-black/60">No courses</div>
+            <div className="text-base text-black/60">No courses</div>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
               {myCourses.map((c) => {
@@ -1388,7 +1358,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       <div className="font-medium truncate">{c.course.name}</div>
                       <div className="text-xs text-black/60 truncate">{tCount} task{tCount!==1?'s':''}</div>
                     </div>
-                    <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                    <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-base sm:text-sm bg-slate-900 text-white shadow">Open</button>
                   </li>
                 );
               })}
@@ -1397,9 +1367,46 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         </section>
 
         <section>
+          <h2 className="text-lg font-semibold mb-2">My Milestones</h2>
+          {myCourses.length === 0 ? (
+            <div className="text-base text-black/60">No milestones</div>
+          ) : (
+            <div className="space-y-4">
+              {myCourses.map((c) => (
+                <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
+                  <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                      <div className="font-medium">{c.course.name}</div>
+                    </div>
+                  </summary>
+                  <div className="p-4 space-y-2">
+                    {c.milestones.map((m) => (
+                      <MilestoneCard
+                        key={m.id}
+                        milestone={m}
+                        tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
+                        tasksAll={c.tasks}
+                        team={c.team}
+                        milestones={c.milestones}
+                        onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+                        onDelete={(id) => deleteTask(c.course.id, id)}
+                        onDuplicate={(id) => duplicateTask(c.course.id, id)}
+                        onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+                        onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                      />
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
           <h2 className="text-lg font-semibold mb-2">My Tasks</h2>
           {myTasks.length === 0 ? (
-            <div className="text-sm text-black/60">No tasks assigned.</div>
+            <div className="text-base text-black/60">No tasks assigned.</div>
           ) : (
             <>
               <div className="flex items-center gap-2 mb-2">
@@ -1431,20 +1438,26 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               )}
               {taskView === 'board' && (
                 <div className="grid gap-4 sm:grid-cols-3">
-                  {['todo', 'inprogress', 'done'].map((s) => (
+                  {[
+                    { id: 'todo', label: 'To Do' },
+                    { id: 'inprogress', label: 'In Progress' },
+                    { id: 'done', label: 'Done' },
+                  ].map(({ id, label }) => (
                     <div
-                      key={s}
-                      className="rounded-xl border border-black/10 bg-white p-2"
+                      key={id}
+                      className={`rounded-xl border border-black/10 p-3 ${id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => {
                         const tid = e.dataTransfer.getData('text/task');
                         const cid = e.dataTransfer.getData('text/course');
-                        if (tid && cid) updateTaskStatus(cid, tid, s);
+                        if (tid && cid) updateTaskStatus(cid, tid, id);
                       }}
                     >
-                      <div className="font-medium text-sm capitalize mb-2">{s}</div>
-                      <div className="space-y-2 min-h-[50px]">
-                        {groupedTasks[s].map((t) => {
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="text-sm font-medium text-black/70">{label}</div>
+                      </div>
+                      <div className="space-y-2 min-h-[140px]">
+                        {groupedTasks[id].map((t) => {
                           const c = courses.find((x) => x.course.id === t.courseId);
                           if (!c) return null;
                           return (
@@ -1454,11 +1467,11 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                               tasks={c.tasks}
                               team={c.team}
                               milestones={c.milestones}
-                              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-                              onDelete={(id) => deleteTask(c.course.id, id)}
-                              onDuplicate={(id) => duplicateTask(c.course.id, id)}
-                              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-                              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                              onUpdate={(tid, patch) => updateTask(c.course.id, tid, patch)}
+                              onDelete={(tid) => deleteTask(c.course.id, tid)}
+                              onDuplicate={(tid) => duplicateTask(c.course.id, tid)}
+                              onAddLink={(tid, url) => patchTaskLinks(c.course.id, tid, 'add', url)}
+                              onRemoveLink={(tid, idx) => patchTaskLinks(c.course.id, tid, 'remove', idx)}
                               dragHandlers={{
                                 draggable: true,
                                 onDragStart: (e) => {
@@ -1679,13 +1692,13 @@ function CoursesHub({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
-              <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+              <div className="text-base sm:text-lg font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
               <div className="text-xs text-black/60 truncate">Courses Hub</div>
             </div>
           </div>
@@ -1870,7 +1883,7 @@ function CoursesHub({
                       <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
                     </div>
                     <div className="mt-3 flex items-center gap-2">
-                      <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-base sm:text-sm bg-slate-900 text-white shadow">Open</button>
                       <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
                       <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
                     </div>

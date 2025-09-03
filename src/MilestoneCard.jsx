@@ -69,7 +69,7 @@ export default function MilestoneCard({
       </summary>
       <div className="p-4 flex flex-col gap-2">
         {milestone.goal && (
-          <p className="text-sm text-black/60 mb-2">{milestone.goal}</p>
+          <p className="text-base text-black/60 mb-2">{milestone.goal}</p>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {tasksSorted.map((t) => (
