@@ -1397,6 +1397,43 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         </section>
 
         <section>
+          <h2 className="text-lg font-semibold mb-2">My Milestones</h2>
+          {myCourses.length === 0 ? (
+            <div className="text-sm text-black/60">No milestones</div>
+          ) : (
+            <div className="space-y-4">
+              {myCourses.map((c) => (
+                <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
+                  <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                    <div className="flex items-center gap-2">
+                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                      <div className="font-medium">{c.course.name}</div>
+                    </div>
+                  </summary>
+                  <div className="p-4 space-y-2">
+                    {c.milestones.map((m) => (
+                      <MilestoneCard
+                        key={m.id}
+                        milestone={m}
+                        tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
+                        tasksAll={c.tasks}
+                        team={c.team}
+                        milestones={c.milestones}
+                        onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+                        onDelete={(id) => deleteTask(c.course.id, id)}
+                        onDuplicate={(id) => duplicateTask(c.course.id, id)}
+                        onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+                        onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                      />
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
           <h2 className="text-lg font-semibold mb-2">My Tasks</h2>
           {myTasks.length === 0 ? (
             <div className="text-sm text-black/60 dark:text-white/70">No tasks assigned.</div>
