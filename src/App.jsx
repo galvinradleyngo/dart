@@ -1124,7 +1124,7 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
 // =====================================================
 // User Dashboard (NEW)
 // =====================================================
-function UserDashboard({ onOpenCourse, initialUserId }) {
+function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
     const onStorage = () => setCourses(loadCourses());
@@ -1303,6 +1303,14 @@ function UserDashboard({ onOpenCourse, initialUserId }) {
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"
+              >
+                <ArrowLeft size={16} /> Back to Courses
+              </button>
+            )}
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
               {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
@@ -1924,7 +1932,13 @@ export default function PMApp() {
       />
     );
   } else if (view === "user") {
-    content = <UserDashboard onOpenCourse={openCourse} initialUserId={currentUserId} />;
+    content = (
+      <UserDashboard
+        onOpenCourse={openCourse}
+        initialUserId={currentUserId}
+        onBack={() => { setView("hub"); setPrevView("hub"); setCurrentUserId(null); }}
+      />
+    );
   } else if (currentCourseId === "__TEMPLATE__") {
     // open template editor
     const tpl = loadTemplate() || remapSeed(seed());
