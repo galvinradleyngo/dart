@@ -522,9 +522,9 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base dark:from-slate-900 dark:via-slate-800 dark:to-slate-800 dark:text-slate-100">
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5 dark:supports-[backdrop-filter]:bg-slate-900/60 dark:bg-slate-900/80 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
           {onBack && (
             <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-base sm:text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"><ArrowLeft size={16}/> Back to Courses</button>
@@ -578,7 +578,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
 
         {/* Team Members FIRST */}
-        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+        <section className="rounded-2xl border border-black/10 bg-white dark:bg-slate-800 dark:border-white/10 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold flex items-center gap-2"><Users size={18}/> Team Members</h2>
             <div className="flex items-center gap-2">
@@ -662,7 +662,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
           </div>
         </section>
         {/* Milestones */}
-          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-black/10 bg-white dark:bg-slate-800 dark:border-white/10 p-4 shadow-sm">
             <div
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
               onClick={() => setMilestonesCollapsed(v => !v)}
@@ -675,7 +675,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                 onClick={e => e.stopPropagation()}
               >
               {!milestonesCollapsed && (
-                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm">
+                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white dark:bg-slate-700 dark:border-white/10 px-3 py-2 shadow-sm">
                   <Filter size={16} className="text-black/50"/>
                   <select
                     value={milestoneFilter}
@@ -771,7 +771,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
         </section>
 
         {/* Tasks */}
-        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+        <section className="rounded-2xl border border-black/10 bg-white dark:bg-slate-800 dark:border-white/10 p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
             <h2 className="font-semibold flex items-center gap-2"><ListChecks size={18}/> Tasks</h2>
             <div className="flex items-center gap-2"><Toggle value={view} onChange={setView} options={[{ id: "list", label: "List" }, { id: "board", label: "Board" }, { id: "calendar", label: "Calendar" }]} /><button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90"><Plus size={16}/> Add Task</button></div>
@@ -827,13 +827,13 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
 function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }) {
   const display = mode === "percent" ? `${value}%` : value; const pct = mode === "percent" ? value : undefined;
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm flex items-center gap-4">
+    <div className="rounded-2xl border border-black/10 bg-white dark:bg-slate-800 dark:border-white/10 p-4 shadow-sm flex items-center gap-4">
       <Ring size={82} stroke={10} progress={pct ?? 100} color={color}><div className="text-center"><div className="text-base font-semibold leading-none">{display}</div><div className="text-[10px] text-black/60">{mode === "percent" ? "Progress" : "Count"}</div></div></Ring>
       <div className="flex-1 min-w-0"><div className="text-xs text-black/60 flex items-center gap-1">{icon} <span>{title}</span></div><div className="text-sm font-medium truncate">{subtitle}</div></div>
     </div>
   );
 }
-function Toggle({ value, onChange, options }) { return (<div className="inline-flex rounded-2xl border border-black/10 bg-white p-1 shadow-sm">{options.map((o)=>(<button key={o.id} onClick={()=>onChange(o.id)} className={`px-3 py-1.5 text-sm rounded-xl ${value===o.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{o.label}</button>))}</div>); }
+function Toggle({ value, onChange, options }) { return (<div className="inline-flex rounded-2xl border border-black/10 bg-white dark:bg-slate-700 dark:border-white/10 p-1 shadow-sm">{options.map((o)=>(<button key={o.id} onClick={()=>onChange(o.id)} className={`px-3 py-1.5 text-sm rounded-xl ${value===o.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{o.label}</button>))}</div>); }
 function AddHoliday({ onAdd }) { const [d, setD] = useState(""); return (<div className="inline-flex items-center gap-1"><input type="date" value={d} onChange={(e)=>setD(e.target.value)} className="border rounded px-2 py-1" /><button onClick={()=>{ if(d){ onAdd(d); setD(""); } }} className="px-2 py-1 text-xs rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>); }
 
 function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onDuplicate }) {
@@ -1313,8 +1313,8 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, [myTasks]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base dark:from-slate-900 dark:via-slate-800 dark:to-slate-800 dark:text-slate-100">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5 dark:supports-[backdrop-filter]:bg-slate-900/60 dark:bg-slate-900/80 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {onBack && (
@@ -1692,8 +1692,8 @@ function CoursesHub({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900 text-base dark:from-slate-900 dark:via-slate-800 dark:to-slate-800 dark:text-slate-100">
+      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5 dark:supports-[backdrop-filter]:bg-slate-900/60 dark:bg-slate-900/80 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
@@ -1853,7 +1853,7 @@ function CoursesHub({
         <section>
           <h2 className="text-lg font-semibold mb-2">All Courses</h2>
           {courses.length === 0 ? (
-            <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
+            <div className="rounded-2xl border border-black/10 bg-white dark:bg-slate-800 dark:border-white/10 p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
               <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
               <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
@@ -1873,7 +1873,7 @@ function CoursesHub({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') open(c.id);
                     }}
-                    className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    className="group rounded-2xl border border-black/10 bg-white dark:bg-slate-800 dark:border-white/10 p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 truncate">{c.course.description}</div></div>
@@ -1918,6 +1918,10 @@ export default function PMApp() {
     savePeople(arr);
     return arr;
   });
+  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode);
+  }, [darkMode]);
   const handlePeopleChange = (next) => {
     setPeople(next);
     savePeople(next);
@@ -2006,6 +2010,13 @@ export default function PMApp() {
   return (
     <>
       {content}
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        className="fixed top-2 right-2 z-50 p-2 rounded border border-black/10 bg-white shadow-sm dark:bg-slate-700 dark:border-white/10 dark:text-white"
+        title="Toggle dark mode"
+      >
+        {darkMode ? '🌙' : '☀️'}
+      </button>
       <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-xs">v{version}</div>
     </>
   );
