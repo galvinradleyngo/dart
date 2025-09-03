@@ -463,6 +463,7 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
   // Milestone DnD
 
   const dragMilestoneId = useRef(null);
+  const [dragMilestoneOverId, setDragMilestoneOverId] = useState(null);
   const onMilestoneDragStart = (id) => (e) => {
     dragMilestoneId.current = id;
     e.dataTransfer.effectAllowed = "move";
@@ -470,14 +471,17 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
     img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
     e.dataTransfer.setDragImage(img, 0, 0);
   };
-  const onMilestoneDragOver = (e) => {
+  const onMilestoneDragOver = (id) => (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+    setDragMilestoneOverId(id);
   };
+  const onMilestoneDragLeave = () => setDragMilestoneOverId(null);
   const onMilestoneDrop = (targetId) => (e) => {
     e.preventDefault();
     const srcId = dragMilestoneId.current;
     dragMilestoneId.current = null;
+    setDragMilestoneOverId(null);
     if (!srcId || srcId === targetId) return;
     setState((s) => {
       const ms = [...s.milestones];
@@ -716,7 +720,12 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
             Click a milestone title to expand or collapse.
           </p>
           {!milestonesCollapsed && (
-            <div className="space-y-2" onDragOver={onMilestoneDragOver} onDrop={onMilestoneDrop(null)}>
+            <div
+              className="space-y-2"
+              onDragOver={onMilestoneDragOver(null)}
+              onDragLeave={onMilestoneDragLeave}
+              onDrop={onMilestoneDrop(null)}
+            >
               <AnimatePresence initial={false}>
                 {filteredMilestones.map(m => (
                   <motion.div
@@ -728,8 +737,10 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                     transition={{ duration: 0.2 }}
                     draggable
                     onDragStart={onMilestoneDragStart(m.id)}
-                    onDragOver={onMilestoneDragOver}
+                    onDragOver={onMilestoneDragOver(m.id)}
+                    onDragLeave={onMilestoneDragLeave}
                     onDrop={onMilestoneDrop(m.id)}
+                    className={dragMilestoneOverId === m.id ? 'ring-2 ring-indigo-400 rounded-lg' : ''}
                   >
                     <MilestoneCard
                       milestone={m}
@@ -748,6 +759,9 @@ const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.st
                   </motion.div>
                 ))}
               </AnimatePresence>
+              {dragMilestoneOverId === null && dragMilestoneId.current && (
+                <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
+              )}
             </div>
           )}
         </section>
