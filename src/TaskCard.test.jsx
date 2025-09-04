@@ -90,7 +90,7 @@ describe('TaskCard', () => {
       }));
     });
 
-    const renderWithStatus = (status, onUpdate) =>
+    const renderWithStatus = (status, onUpdate) => {
       render(
         <TaskCard
           task={{ ...sampleTask, status }}
@@ -100,6 +100,8 @@ describe('TaskCard', () => {
           onDuplicate={() => {}}
         />
       );
+      return screen.getByTestId('task-card');
+    };
 
     const swipe = (element, dx) => {
       fireEvent.touchStart(element, { touches: [{ clientX: 0 }] });
@@ -108,43 +110,49 @@ describe('TaskCard', () => {
 
     it('swipe right from todo moves to inprogress', () => {
       const onUpdate = vi.fn();
-      const { container } = renderWithStatus('todo', onUpdate);
-      swipe(container.firstChild, 100);
+      const card = renderWithStatus('todo', onUpdate);
+      expect(card.hasAttribute('draggable')).toBe(false);
+      swipe(card, 100);
       expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
     });
 
     it('swipe left from todo stays at todo', () => {
       const onUpdate = vi.fn();
-      const { container } = renderWithStatus('todo', onUpdate);
-      swipe(container.firstChild, -100);
+      const card = renderWithStatus('todo', onUpdate);
+      expect(card.hasAttribute('draggable')).toBe(false);
+      swipe(card, -100);
       expect(onUpdate).not.toHaveBeenCalled();
     });
 
     it('swipe right from inprogress moves to done', () => {
       const onUpdate = vi.fn();
-      const { container } = renderWithStatus('inprogress', onUpdate);
-      swipe(container.firstChild, 100);
+      const card = renderWithStatus('inprogress', onUpdate);
+      expect(card.hasAttribute('draggable')).toBe(false);
+      swipe(card, 100);
       expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'done' });
     });
 
     it('swipe left from inprogress moves to todo', () => {
       const onUpdate = vi.fn();
-      const { container } = renderWithStatus('inprogress', onUpdate);
-      swipe(container.firstChild, -100);
+      const card = renderWithStatus('inprogress', onUpdate);
+      expect(card.hasAttribute('draggable')).toBe(false);
+      swipe(card, -100);
       expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'todo' });
     });
 
     it('swipe left from done moves to inprogress', () => {
       const onUpdate = vi.fn();
-      const { container } = renderWithStatus('done', onUpdate);
-      swipe(container.firstChild, -100);
+      const card = renderWithStatus('done', onUpdate);
+      expect(card.hasAttribute('draggable')).toBe(false);
+      swipe(card, -100);
       expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
     });
 
     it('swipe right from done stays at done', () => {
       const onUpdate = vi.fn();
-      const { container } = renderWithStatus('done', onUpdate);
-      swipe(container.firstChild, 100);
+      const card = renderWithStatus('done', onUpdate);
+      expect(card.hasAttribute('draggable')).toBe(false);
+      swipe(card, 100);
       expect(onUpdate).not.toHaveBeenCalled();
     });
   });
@@ -174,13 +182,48 @@ describe('TaskCard', () => {
           />
         );
       };
-      const { container } = render(<Wrapper />);
-      expect(container.querySelectorAll('select').length).toBe(1);
+      render(<Wrapper />);
+      expect(screen.getAllByRole('combobox').length).toBe(1);
       expect(screen.getByText('To Do')).toBeInTheDocument();
-      const card = container.firstChild;
+      const card = screen.getByTestId('task-card');
+      expect(card.hasAttribute('draggable')).toBe(false);
       fireEvent.touchStart(card, { touches: [{ clientX: 0 }] });
       fireEvent.touchEnd(card, { changedTouches: [{ clientX: 100 }] });
       await screen.findByText('In Progress');
+    });
+  });
+
+  describe('mobile detection fallback', () => {
+    beforeAll(() => {
+      window.matchMedia = () => ({
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      });
+      Object.defineProperty(navigator, 'maxTouchPoints', {
+        value: 1,
+        configurable: true,
+      });
+    });
+
+    it('uses maxTouchPoints when matchMedia is false', () => {
+      const onUpdate = vi.fn();
+      render(
+        <TaskCard
+          task={sampleTask}
+          milestones={milestones}
+          onUpdate={onUpdate}
+          onDelete={() => {}}
+          onDuplicate={() => {}}
+        />
+      );
+      const card = screen.getByTestId('task-card');
+      fireEvent.touchStart(card, { touches: [{ clientX: 0 }] });
+      fireEvent.touchEnd(card, { changedTouches: [{ clientX: 100 }] });
+      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
     });
   });
 });

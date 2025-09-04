@@ -911,7 +911,14 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
 export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
   const [touchStartX, setTouchStartX] = useState(null);
-  const isMobile = useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
+  const isMobile = useMemo(
+    () =>
+      window.matchMedia('(pointer: coarse)').matches ||
+      (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+      'ontouchstart' in window,
+    []
+  );
+  const dragProps = isMobile ? {} : dragHandlers;
   const statusList = ['todo', 'inprogress', 'done'];
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
@@ -939,8 +946,9 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   };
   return (
     <motion.div
-      {...dragHandlers}
-      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragHandlers.draggable ? "cursor-move" : ""}`}
+      data-testid="task-card"
+      {...dragProps}
+      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragProps.draggable ? "cursor-move" : ""}`}
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
@@ -1157,7 +1165,13 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
-  const isMobile = React.useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
+  const isMobile = React.useMemo(
+    () =>
+      window.matchMedia('(pointer: coarse)').matches ||
+      (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+      'ontouchstart' in window,
+    []
+  );
   const touchStartRef = React.useRef({});
   const statusList = ['todo', 'inprogress', 'done'];
   const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
@@ -1200,9 +1214,10 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
                 <motion.div
                   key={t.id}
+                  data-testid="task-card"
                   className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
-                  draggable
-                  onDragStart={onDragStart(t.id)}
+                  draggable={!isMobile}
+                  onDragStart={!isMobile ? onDragStart(t.id) : undefined}
                   onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
                   onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
                 >
