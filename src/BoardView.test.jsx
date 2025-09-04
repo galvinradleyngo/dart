@@ -1,4 +1,5 @@
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
+import { useState } from 'react';
 import { BoardView } from './App.jsx';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
@@ -84,5 +85,35 @@ describe('BoardView swipe transitions', () => {
     const card = container.querySelector('[draggable="true"]');
     swipe(card, 100);
     expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('replaces status dropdown with pill and updates text on swipe', async () => {
+    const Wrapper = () => {
+      const [tasks, setTasks] = useState([{ ...sampleTask }]);
+      return (
+        <BoardView
+          tasks={tasks}
+          team={[]}
+          milestones={[]}
+          onUpdate={(id, patch) =>
+            setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+          }
+          onDelete={() => {}}
+          onDragStart={() => () => {}}
+          onDragOverCol={() => {}}
+          onDropToCol={() => () => {}}
+          onAddLink={() => {}}
+          onRemoveLink={() => {}}
+          onDuplicate={() => {}}
+        />
+      );
+    };
+    const { container } = render(<Wrapper />);
+    expect(container.querySelector('select')).toBeNull();
+    expect(container.textContent).toContain('To Do');
+    const card = container.querySelector('[draggable="true"]');
+    fireEvent.touchStart(card, { touches: [{ clientX: 0 }] });
+    fireEvent.touchEnd(card, { changedTouches: [{ clientX: 100 }] });
+    await screen.findByText('In Progress');
   });
 });
