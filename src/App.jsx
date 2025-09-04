@@ -877,6 +877,17 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
 
 export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const isMobile = useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
+  const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
+  const handleTouchEnd = (e) => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const threshold = 50;
+    if (dx > threshold) onUpdate?.(t.id, { status: 'done' });
+    else if (dx < -threshold) onUpdate?.(t.id, { status: 'todo' });
+    setTouchStartX(null);
+  };
   const a = team.find((m) => m.id === t.assigneeId);
   const statusPillClass = (status) => {
     if (status === "done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300";
@@ -887,6 +898,8 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     <motion.div
       {...dragHandlers}
       className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragHandlers.draggable ? "cursor-move" : ""}`}
+      onTouchStart={isMobile ? handleTouchStart : undefined}
+      onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -1085,6 +1098,18 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
+  const isMobile = React.useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
+  const touchStartRef = React.useRef({});
+  const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
+  const handleTouchEnd = (id) => (e) => {
+    const start = touchStartRef.current[id];
+    if (start == null) return;
+    const dx = e.changedTouches[0].clientX - start;
+    const threshold = 50;
+    if (dx > threshold) onUpdate(id, { status: 'done' });
+    else if (dx < -threshold) onUpdate(id, { status: 'todo' });
+    delete touchStartRef.current[id];
+  };
   React.useEffect(() => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -1102,7 +1127,14 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
             <div className="space-y-2 min-h-[140px]">
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
-                <motion.div key={t.id} className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`} draggable onDragStart={onDragStart(t.id)}>
+                <motion.div
+                  key={t.id}
+                  className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
+                  draggable
+                  onDragStart={onDragStart(t.id)}
+                  onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
+                  onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
                     <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete"><Trash2 size={16}/></button></div>
