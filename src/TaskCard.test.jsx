@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import TaskCard from './TaskCard';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 
 // Sample task data
 const sampleTask = {
@@ -75,5 +75,76 @@ describe('TaskCard', () => {
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'm2' } });
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { milestoneId: 'm2' });
+  });
+
+  describe('swipe status transitions', () => {
+    beforeAll(() => {
+      window.matchMedia = window.matchMedia || (() => ({
+        matches: true,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }));
+    });
+
+    const renderWithStatus = (status, onUpdate) =>
+      render(
+        <TaskCard
+          task={{ ...sampleTask, status }}
+          milestones={milestones}
+          onUpdate={onUpdate}
+          onDelete={() => {}}
+          onDuplicate={() => {}}
+        />
+      );
+
+    const swipe = (element, dx) => {
+      fireEvent.touchStart(element, { touches: [{ clientX: 0 }] });
+      fireEvent.touchEnd(element, { changedTouches: [{ clientX: dx }] });
+    };
+
+    it('swipe right from todo moves to inprogress', () => {
+      const onUpdate = vi.fn();
+      const { container } = renderWithStatus('todo', onUpdate);
+      swipe(container.firstChild, 100);
+      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
+    });
+
+    it('swipe left from todo stays at todo', () => {
+      const onUpdate = vi.fn();
+      const { container } = renderWithStatus('todo', onUpdate);
+      swipe(container.firstChild, -100);
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
+
+    it('swipe right from inprogress moves to done', () => {
+      const onUpdate = vi.fn();
+      const { container } = renderWithStatus('inprogress', onUpdate);
+      swipe(container.firstChild, 100);
+      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'done' });
+    });
+
+    it('swipe left from inprogress moves to todo', () => {
+      const onUpdate = vi.fn();
+      const { container } = renderWithStatus('inprogress', onUpdate);
+      swipe(container.firstChild, -100);
+      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'todo' });
+    });
+
+    it('swipe left from done moves to inprogress', () => {
+      const onUpdate = vi.fn();
+      const { container } = renderWithStatus('done', onUpdate);
+      swipe(container.firstChild, -100);
+      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
+    });
+
+    it('swipe right from done stays at done', () => {
+      const onUpdate = vi.fn();
+      const { container } = renderWithStatus('done', onUpdate);
+      swipe(container.firstChild, 100);
+      expect(onUpdate).not.toHaveBeenCalled();
+    });
   });
 });
