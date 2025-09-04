@@ -41,48 +41,54 @@ describe('BoardView swipe transitions', () => {
 
   it('swipe right from todo moves to inprogress', () => {
     const onUpdate = vi.fn();
-    const { container } = renderBoard('todo', onUpdate);
-    const card = container.querySelector('[draggable="true"]');
+    renderBoard('todo', onUpdate);
+    const card = screen.getByTestId('task-card');
+    expect(card.hasAttribute('draggable')).toBe(false);
     swipe(card, 100);
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'inprogress' });
   });
 
   it('swipe left from todo stays at todo', () => {
     const onUpdate = vi.fn();
-    const { container } = renderBoard('todo', onUpdate);
-    const card = container.querySelector('[draggable="true"]');
+    renderBoard('todo', onUpdate);
+    const card = screen.getByTestId('task-card');
+    expect(card.hasAttribute('draggable')).toBe(false);
     swipe(card, -100);
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it('swipe right from inprogress moves to done', () => {
     const onUpdate = vi.fn();
-    const { container } = renderBoard('inprogress', onUpdate);
-    const card = container.querySelector('[draggable="true"]');
+    renderBoard('inprogress', onUpdate);
+    const card = screen.getByTestId('task-card');
+    expect(card.hasAttribute('draggable')).toBe(false);
     swipe(card, 100);
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'done' });
   });
 
   it('swipe left from inprogress moves to todo', () => {
     const onUpdate = vi.fn();
-    const { container } = renderBoard('inprogress', onUpdate);
-    const card = container.querySelector('[draggable="true"]');
+    renderBoard('inprogress', onUpdate);
+    const card = screen.getByTestId('task-card');
+    expect(card.hasAttribute('draggable')).toBe(false);
     swipe(card, -100);
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'todo' });
   });
 
   it('swipe left from done moves to inprogress', () => {
     const onUpdate = vi.fn();
-    const { container } = renderBoard('done', onUpdate);
-    const card = container.querySelector('[draggable="true"]');
+    renderBoard('done', onUpdate);
+    const card = screen.getByTestId('task-card');
+    expect(card.hasAttribute('draggable')).toBe(false);
     swipe(card, -100);
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'inprogress' });
   });
 
   it('swipe right from done stays at done', () => {
     const onUpdate = vi.fn();
-    const { container } = renderBoard('done', onUpdate);
-    const card = container.querySelector('[draggable="true"]');
+    renderBoard('done', onUpdate);
+    const card = screen.getByTestId('task-card');
+    expect(card.hasAttribute('draggable')).toBe(false);
     swipe(card, 100);
     expect(onUpdate).not.toHaveBeenCalled();
   });
@@ -108,10 +114,11 @@ describe('BoardView swipe transitions', () => {
         />
       );
     };
-    const { container } = render(<Wrapper />);
-    expect(container.querySelector('select')).toBeNull();
-    expect(container.textContent).toContain('To Do');
-    const card = container.querySelector('[draggable="true"]');
+    render(<Wrapper />);
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.getByText('To Do')).toBeInTheDocument();
+    const card = screen.getByTestId('task-card');
+    expect(card.hasAttribute('draggable')).toBe(false);
     fireEvent.touchStart(card, { touches: [{ clientX: 0 }] });
     fireEvent.touchEnd(card, { changedTouches: [{ clientX: 100 }] });
     await screen.findByText('In Progress');

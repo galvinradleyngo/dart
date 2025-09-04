@@ -912,6 +912,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   const [collapsed, setCollapsed] = useState(true);
   const [touchStartX, setTouchStartX] = useState(null);
   const isMobile = useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
+  const dragProps = isMobile ? {} : dragHandlers;
   const statusList = ['todo', 'inprogress', 'done'];
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
@@ -939,8 +940,9 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   };
   return (
     <motion.div
-      {...dragHandlers}
-      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragHandlers.draggable ? "cursor-move" : ""}`}
+      data-testid="task-card"
+      {...dragProps}
+      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragProps.draggable ? "cursor-move" : ""}`}
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
     >
@@ -1200,9 +1202,10 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
                 <motion.div
                   key={t.id}
+                  data-testid="task-card"
                   className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
-                  draggable
-                  onDragStart={onDragStart(t.id)}
+                  draggable={!isMobile}
+                  onDragStart={!isMobile ? onDragStart(t.id) : undefined}
                   onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
                   onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
                 >
