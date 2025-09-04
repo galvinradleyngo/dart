@@ -1963,10 +1963,10 @@ function CoursesHub({
                       <Ring size={72} stroke={10} progress={t.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{t.pct}%</div><div className="text-[10px] text-black/60">{t.done}/{t.total}</div></div></Ring>
                       <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
                     </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
-                      <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
-                      <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
                     </div>
                   </motion.div>
                 );
