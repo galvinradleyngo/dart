@@ -912,13 +912,22 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   const [collapsed, setCollapsed] = useState(true);
   const [touchStartX, setTouchStartX] = useState(null);
   const isMobile = useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
+  const statusList = ['todo', 'inprogress', 'done'];
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
   const handleTouchEnd = (e) => {
     if (touchStartX === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const threshold = 50;
-    if (dx > threshold) onUpdate?.(t.id, { status: 'done' });
-    else if (dx < -threshold) onUpdate?.(t.id, { status: 'todo' });
+    const curIdx = statusList.indexOf(t.status);
+    if (dx > threshold) {
+      const nextIdx = Math.min(curIdx + 1, statusList.length - 1);
+      const nextStatus = statusList[nextIdx];
+      if (nextStatus !== t.status) onUpdate?.(t.id, { status: nextStatus });
+    } else if (dx < -threshold) {
+      const prevIdx = Math.max(curIdx - 1, 0);
+      const prevStatus = statusList[prevIdx];
+      if (prevStatus !== t.status) onUpdate?.(t.id, { status: prevStatus });
+    }
     setTouchStartX(null);
   };
   const a = team.find((m) => m.id === t.assigneeId);
@@ -1127,20 +1136,31 @@ function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLin
   );
 }
 
-function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
+export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
   const isMobile = React.useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
   const touchStartRef = React.useRef({});
+  const statusList = ['todo', 'inprogress', 'done'];
   const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
   const handleTouchEnd = (id) => (e) => {
     const start = touchStartRef.current[id];
     if (start == null) return;
     const dx = e.changedTouches[0].clientX - start;
     const threshold = 50;
-    if (dx > threshold) onUpdate(id, { status: 'done' });
-    else if (dx < -threshold) onUpdate(id, { status: 'todo' });
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    const curIdx = statusList.indexOf(task.status);
+    if (dx > threshold) {
+      const nextIdx = Math.min(curIdx + 1, statusList.length - 1);
+      const nextStatus = statusList[nextIdx];
+      if (nextStatus !== task.status) onUpdate(id, { status: nextStatus });
+    } else if (dx < -threshold) {
+      const prevIdx = Math.max(curIdx - 1, 0);
+      const prevStatus = statusList[prevIdx];
+      if (prevStatus !== task.status) onUpdate(id, { status: prevStatus });
+    }
     delete touchStartRef.current[id];
   };
   React.useEffect(() => {
