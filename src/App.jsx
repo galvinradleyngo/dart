@@ -392,6 +392,32 @@ const handleSave = async () => {
   const team = state.team; const milestones = state.milestones; const tasksRaw = state.tasks;
   const dueKey = (t) => (t.dueDate ? new Date(t.dueDate).getTime() : Number.POSITIVE_INFINITY);
 
+  const sortByDep = (arr) => {
+    const ordered = [...arr].sort(
+      (a, b) => dueKey(a) - dueKey(b) || (a.title || "").localeCompare(b.title || "")
+    );
+    const map = new Map(ordered.map((t) => [t.id, t]));
+    const visited = new Set();
+    const stack = new Set();
+    const res = [];
+    const visit = (task) => {
+      if (visited.has(task.id)) return;
+      if (stack.has(task.id)) {
+        stack.delete(task.id);
+        visited.add(task.id);
+        res.push(task);
+        return;
+      }
+      stack.add(task.id);
+      if (task.depTaskId && map.has(task.depTaskId)) visit(map.get(task.depTaskId));
+      stack.delete(task.id);
+      visited.add(task.id);
+      res.push(task);
+    };
+    ordered.forEach(visit);
+    return res;
+  };
+
 const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
 const groupedTasks = useMemo(() => {
   return filteredTasks.reduce((acc, t) => {
@@ -400,8 +426,14 @@ const groupedTasks = useMemo(() => {
   }, {});
 }, [filteredTasks]);
 const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones : milestones.filter((m) => m.id === milestoneFilter)), [milestones, milestoneFilter]);
-const tasksActive = useMemo(() => { const arr = filteredTasks.filter((t) => t.status !== "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredTasks]);
-const tasksDone   = useMemo(() => { const arr = filteredTasks.filter((t) => t.status === "done"); return [...arr].sort((a,b)=> dueKey(a)-dueKey(b) || (a.title||"").localeCompare(b.title||"")); }, [filteredTasks]);
+const tasksActive = useMemo(() => {
+  const arr = filteredTasks.filter((t) => t.status !== "done");
+  return sortByDep(arr);
+}, [filteredTasks]);
+const tasksDone = useMemo(() => {
+  const arr = filteredTasks.filter((t) => t.status === "done");
+  return sortByDep(arr);
+}, [filteredTasks]);
 
   const totals = useMemo(() => {
     const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
