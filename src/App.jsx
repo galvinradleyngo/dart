@@ -789,6 +789,7 @@ const tasksDone = useMemo(() => {
                       onDuplicate={duplicateTask}
                       onDuplicateMilestone={duplicateMilestone}
                       onDeleteMilestone={deleteMilestone}
+                      onUpdateMilestone={updateMilestone}
                       onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                       onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
                     />

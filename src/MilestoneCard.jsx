@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Copy as CopyIcon, Trash2, ChevronDown } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 
@@ -15,7 +15,18 @@ export default function MilestoneCard({
   onDeleteMilestone,
   onAddLink,
   onRemoveLink,
+  onUpdateMilestone,
 }) {
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(milestone.title);
+  useEffect(() => setTitleDraft(milestone.title), [milestone.title]);
+  const commitTitle = () => {
+    setEditingTitle(false);
+    if (titleDraft !== milestone.title) {
+      onUpdateMilestone?.(milestone.id, { title: titleDraft });
+    }
+  };
+
   const statusOrder = { todo: 0, inprogress: 1, done: 2 };
 
   const { done, pct, tasksSorted } = useMemo(() => {
@@ -34,7 +45,37 @@ export default function MilestoneCard({
         <div className="flex items-center gap-2 flex-1">
           <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
           <div className="flex-1">
-            <div className="font-semibold">{milestone.title}</div>
+            {onUpdateMilestone ? (
+              editingTitle ? (
+                <input
+                  autoFocus
+                  className="w-full font-semibold rounded border border-black/10 px-1"
+                  value={titleDraft}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onBlur={commitTitle}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitTitle();
+                    if (e.key === 'Escape') {
+                      setTitleDraft(milestone.title);
+                      setEditingTitle(false);
+                    }
+                  }}
+                />
+              ) : (
+                <div
+                  className="font-semibold cursor-text hover:bg-black/5 rounded px-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTitle(true);
+                  }}
+                >
+                  {milestone.title}
+                </div>
+              )
+            ) : (
+              <div className="font-semibold">{milestone.title}</div>
+            )}
               <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
                 <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
               </div>
