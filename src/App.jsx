@@ -1389,12 +1389,12 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return g;
   }, [myTasks]);
 
-  const upcoming = useMemo(() => {
+  const week = useMemo(() => {
     const now = new Date();
     const start = new Date(now);
     start.setDate(start.getDate() - start.getDay());
     start.setHours(0, 0, 0, 0);
-    return [...Array(14)].map((_, i) => {
+    return [...Array(7)].map((_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const ds = fmt(d);
@@ -1441,13 +1441,13 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         <section>
-          <h2 className="text-lg font-semibold mb-2">My Upcoming Deadlines</h2>
-          {upcoming.every((d) => d.tasks.length === 0) ? (
-            <div className="text-sm text-black/60">No upcoming deadlines.</div>
+          <h2 className="text-lg font-semibold mb-2">My Week at a Glance</h2>
+          {week.every((d) => d.tasks.length === 0) ? (
+            <div className="text-sm text-black/60">No tasks due this week.</div>
           ) : (
             <div className="overflow-x-auto">
               <div className="flex gap-2 min-w-max sm:min-w-0 sm:grid sm:grid-cols-7">
-                {upcoming.map(({ date, tasks }) => (
+                {week.map(({ date, tasks }) => (
                   <div key={fmt(date)} className="min-w-[10rem] sm:min-w-0 rounded-xl border border-black/10 bg-white p-3 flex flex-col">
                     <div className="text-xs font-medium mb-1">
                       {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
