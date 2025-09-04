@@ -47,6 +47,10 @@ const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 const rolePalette = { LD: "#4f46e5", SME: "#16a34a", MM: "#0891b2", PM: "#ea580c", PA: "#a855f7", Other: "#64748b" };
 const roleOrder = Object.keys(rolePalette);
 const roleColor = (roleType) => rolePalette[roleType] || rolePalette.Other;
+const isTouchDevice = () =>
+  window.matchMedia('(pointer: coarse)').matches ||
+  (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+  'ontouchstart' in window;
 
 const nextMemberName = (list) => {
   const base = "New Member";
@@ -911,13 +915,7 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
 export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
   const [touchStartX, setTouchStartX] = useState(null);
-  const isMobile = useMemo(
-    () =>
-      window.matchMedia('(pointer: coarse)').matches ||
-      (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
-      'ontouchstart' in window,
-    []
-  );
+  const isMobile = useMemo(isTouchDevice, []);
   const dragProps = isMobile ? {} : dragHandlers;
   const statusList = ['todo', 'inprogress', 'done'];
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
@@ -1165,13 +1163,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
-  const isMobile = React.useMemo(
-    () =>
-      window.matchMedia('(pointer: coarse)').matches ||
-      (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
-      'ontouchstart' in window,
-    []
-  );
+  const isMobile = React.useMemo(isTouchDevice, []);
   const touchStartRef = React.useRef({});
   const statusList = ['todo', 'inprogress', 'done'];
   const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
