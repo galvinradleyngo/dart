@@ -1143,18 +1143,11 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
-  const isMobile = React.useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
-  const touchStartRef = React.useRef({});
-  const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
-  const handleTouchEnd = (id) => (e) => {
-    const start = touchStartRef.current[id];
-    if (start == null) return;
-    const dx = e.changedTouches[0].clientX - start;
-    const threshold = 50;
-    if (dx > threshold) onUpdate(id, { status: 'done' });
-    else if (dx < -threshold) onUpdate(id, { status: 'todo' });
-    delete touchStartRef.current[id];
-  };
+  const currentIdRef = React.useRef(null);
+  const { isMobile, onTouchStart: swipeStart, onTouchEnd: swipeEnd } = useSwipe(
+    () => currentIdRef.current && onUpdate(currentIdRef.current, { status: 'todo' }),
+    () => currentIdRef.current && onUpdate(currentIdRef.current, { status: 'done' })
+  );
   React.useEffect(() => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -1177,8 +1170,8 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
                   className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
                   draggable
                   onDragStart={onDragStart(t.id)}
-                  onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
-                  onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
+                  onTouchStart={isMobile ? ((e) => { currentIdRef.current = t.id; swipeStart(e); }) : undefined}
+                  onTouchEnd={isMobile ? swipeEnd : undefined}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
