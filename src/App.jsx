@@ -25,6 +25,7 @@ import {
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
+import { useSwipe } from "./useSwipe.js";
 import pkg from "../package.json";
 
 /**
@@ -877,6 +878,10 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
 
 export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
+  const { isMobile, onTouchStart, onTouchEnd } = useSwipe(
+    () => onUpdate?.(t.id, { status: 'todo' }),
+    () => onUpdate?.(t.id, { status: 'done' })
+  );
   const a = team.find((m) => m.id === t.assigneeId);
   const statusPillClass = (status) => {
     if (status === "done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300";
@@ -887,6 +892,8 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     <motion.div
       {...dragHandlers}
       className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragHandlers.draggable ? "cursor-move" : ""}`}
+      onTouchStart={isMobile ? onTouchStart : undefined}
+      onTouchEnd={isMobile ? onTouchEnd : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -1081,10 +1088,39 @@ function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLin
   );
 }
 
+function DeadlineChip({ task, updateStatus }) {
+  const { isMobile, onTouchStart, onTouchEnd } = useSwipe(
+    () => updateStatus(task.courseId, task.id, 'todo'),
+    () => updateStatus(task.courseId, task.id, 'done')
+  );
+  return (
+    <li
+      className="text-xs truncate bg-slate-100 rounded px-2 py-1"
+      title={`${task.title} – ${task.courseName}`}
+      onTouchStart={isMobile ? onTouchStart : undefined}
+      onTouchEnd={isMobile ? onTouchEnd : undefined}
+    >
+      {task.title}
+    </li>
+  );
+}
+
 function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
+  const isMobile = React.useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
+  const touchStartRef = React.useRef({});
+  const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
+  const handleTouchEnd = (id) => (e) => {
+    const start = touchStartRef.current[id];
+    if (start == null) return;
+    const dx = e.changedTouches[0].clientX - start;
+    const threshold = 50;
+    if (dx > threshold) onUpdate(id, { status: 'done' });
+    else if (dx < -threshold) onUpdate(id, { status: 'todo' });
+    delete touchStartRef.current[id];
+  };
   React.useEffect(() => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -1102,7 +1138,14 @@ function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, o
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
             <div className="space-y-2 min-h-[140px]">
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
-                <motion.div key={t.id} className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`} draggable onDragStart={onDragStart(t.id)}>
+                <motion.div
+                  key={t.id}
+                  className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
+                  draggable
+                  onDragStart={onDragStart(t.id)}
+                  onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
+                  onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
                     <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete"><Trash2 size={16}/></button></div>
@@ -1312,6 +1355,20 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return g;
   }, [myTasks]);
 
+  const upcoming = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setDate(start.getDate() - start.getDay());
+    start.setHours(0, 0, 0, 0);
+    return [...Array(14)].map((_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const ds = fmt(d);
+      const tasks = myTasks.filter((t) => t.dueDate === ds && t.status !== 'done');
+      return { date: d, tasks };
+    });
+  }, [myTasks]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
@@ -1349,6 +1406,34 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <section>
+          <h2 className="text-lg font-semibold mb-2">My Upcoming Deadlines</h2>
+          {upcoming.every((d) => d.tasks.length === 0) ? (
+            <div className="text-sm text-black/60">No upcoming deadlines.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="flex gap-2 min-w-max sm:min-w-0 sm:grid sm:grid-cols-7">
+                {upcoming.map(({ date, tasks }) => (
+                  <div key={fmt(date)} className="min-w-[10rem] sm:min-w-0 rounded-xl border border-black/10 bg-white p-3 flex flex-col">
+                    <div className="text-xs font-medium mb-1">
+                      {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
+                    </div>
+                    <ul className="space-y-1 flex-1">
+                      {tasks.length === 0 ? (
+                        <li className="text-xs text-black/40">No tasks</li>
+                      ) : (
+                        tasks.map((t) => (
+                          <DeadlineChip key={t.id} task={t} updateStatus={updateTaskStatus} />
+                        ))
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         <section>
           <h2 className="text-lg font-semibold mb-2">My Courses</h2>
           {myCourses.length === 0 ? (
