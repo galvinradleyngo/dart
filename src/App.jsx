@@ -913,6 +913,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   const [touchStartX, setTouchStartX] = useState(null);
   const isMobile = useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
   const statusList = ['todo', 'inprogress', 'done'];
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
   const handleTouchEnd = (e) => {
     if (touchStartX === null) return;
@@ -987,15 +988,23 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
       {collapsed ? (
         <>
           <div className="mt-1">
-            <select
-              value={t.status}
-              onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
-              className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
-            >
-              <option value="todo">To Do</option>
-              <option value="inprogress">In Progress</option>
-              <option value="done">Done</option>
-            </select>
+            {isMobile ? (
+              <span
+                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+              >
+                {statusLabel[t.status]}
+              </span>
+            ) : (
+              <select
+                value={t.status}
+                onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
+                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+              >
+                <option value="todo">To Do</option>
+                <option value="inprogress">In Progress</option>
+                <option value="done">Done</option>
+              </select>
+            )}
           </div>
           <div className="text-xs text-black/60 mt-1 truncate">
               <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
@@ -1023,6 +1032,13 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
       ) : (
         <>
           <div className="mt-1">
+            {isMobile ? (
+              <span
+                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+              >
+                {statusLabel[t.status]}
+              </span>
+            ) : (
               <select
                 value={t.status}
                 onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
@@ -1032,7 +1048,8 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                 <option value="inprogress">In Progress</option>
                 <option value="done">Done</option>
               </select>
-            </div>
+            )}
+          </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <div className="flex items-center gap-1">
                 {a ? (
@@ -1172,6 +1189,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   }, [tasks]);
   const isCollapsed = (id) => collapsedIds.has(id); const toggleCollapse = (id) => setCollapsedIds((prev)=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
   const statusPillClass = (status) => { if(status==="done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300"; if(status==="inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300"; return "bg-slate-100 text-slate-700 border-slate-300"; };
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   return (
     <div>
       <div className="grid md:grid-cols-3 gap-3">
@@ -1194,14 +1212,14 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   </div>
                   {collapsed ? (
                     <>
-                      <div className="mt-1"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
+                      <div className="mt-1">{isMobile ? (<span className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}>{statusLabel[t.status]}</span>) : (<select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>)}</div>
                       <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
                   ) : (
                     <>
-                      <div className="mt-1"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
+                      <div className="mt-1">{isMobile ? (<span className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}>{statusLabel[t.status]}</span>) : (<select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>)}</div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
                         <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>

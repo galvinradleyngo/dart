@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
 import TaskCard from './TaskCard';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
@@ -145,6 +146,41 @@ describe('TaskCard', () => {
       const { container } = renderWithStatus('done', onUpdate);
       swipe(container.firstChild, 100);
       expect(onUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('mobile status control', () => {
+    beforeAll(() => {
+      window.matchMedia = window.matchMedia || (() => ({
+        matches: true,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }));
+    });
+
+    it('replaces status dropdown with pill and updates text on swipe', async () => {
+      const Wrapper = () => {
+        const [task, setTask] = useState(sampleTask);
+        return (
+          <TaskCard
+            task={task}
+            milestones={milestones}
+            onUpdate={(id, patch) => setTask((t) => ({ ...t, ...patch }))}
+            onDelete={() => {}}
+            onDuplicate={() => {}}
+          />
+        );
+      };
+      const { container } = render(<Wrapper />);
+      expect(container.querySelectorAll('select').length).toBe(1);
+      expect(screen.getByText('To Do')).toBeInTheDocument();
+      const card = container.firstChild;
+      fireEvent.touchStart(card, { touches: [{ clientX: 0 }] });
+      fireEvent.touchEnd(card, { changedTouches: [{ clientX: 100 }] });
+      await screen.findByText('In Progress');
     });
   });
 });
