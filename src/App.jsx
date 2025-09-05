@@ -1123,31 +1123,6 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
   const isMobile = React.useMemo(() => window.matchMedia('(pointer: coarse)').matches, []);
-  const touchStartRef = React.useRef({});
-  const statusList = ['todo', 'inprogress', 'done'];
-  const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
-  const handleTouchMove = (id) => (e) => {
-    if (touchStartRef.current[id] != null) e.preventDefault();
-  };
-  const handleTouchEnd = (id) => (e) => {
-    const start = touchStartRef.current[id];
-    if (start == null) return;
-    const dx = e.changedTouches[0].clientX - start;
-    const threshold = 50;
-    const task = tasks.find((t) => t.id === id);
-    if (!task) return;
-    const curIdx = statusList.indexOf(task.status);
-    if (dx > threshold) {
-      const nextIdx = Math.min(curIdx + 1, statusList.length - 1);
-      const nextStatus = statusList[nextIdx];
-      if (nextStatus !== task.status) onUpdate(id, { status: nextStatus });
-    } else if (dx < -threshold) {
-      const prevIdx = Math.max(curIdx - 1, 0);
-      const prevStatus = statusList[prevIdx];
-      if (prevStatus !== task.status) onUpdate(id, { status: prevStatus });
-    }
-    delete touchStartRef.current[id];
-  };
   React.useEffect(() => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -1157,7 +1132,6 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   }, [tasks]);
   const isCollapsed = (id) => collapsedIds.has(id); const toggleCollapse = (id) => setCollapsedIds((prev)=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
   const statusPillClass = (status) => { if(status==="done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300"; if(status==="inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300"; return "bg-slate-100 text-slate-700 border-slate-300"; };
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   return (
     <div>
       <div className="grid md:grid-cols-3 gap-3">
@@ -1165,17 +1139,17 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
           <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
             <div className="space-y-2 min-h-[140px]">
-              {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
+              {byCol(c.id).map((t) => {
+                const a = team.find((m)=>m.id===t.assigneeId);
+                const collapsed = isCollapsed(t.id);
+                const statusSelectClass = `${isMobile ? 'px-3 py-2 text-sm' : 'px-2 py-1 text-xs'} rounded-full border font-semibold ${statusPillClass(t.status)}`;
+                return (
                 <motion.div
                   key={t.id}
                   data-testid="task-card"
                   className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
                   draggable={!isMobile}
                   onDragStart={!isMobile ? onDragStart(t.id) : undefined}
-                  onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
-                  onTouchMove={isMobile ? handleTouchMove(t.id) : undefined}
-                  onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
-                  style={isMobile ? { touchAction: 'pan-y' } : undefined}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
@@ -1183,14 +1157,26 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   </div>
                   {collapsed ? (
                     <>
-                      <div className="mt-1">{isMobile ? (<span className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}>{statusLabel[t.status]}</span>) : (<select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>)}</div>
+                      <div className="mt-1">
+                        <select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={statusSelectClass}>
+                          <option value="todo">To Do</option>
+                          <option value="inprogress">In Progress</option>
+                          <option value="done">Done</option>
+                        </select>
+                      </div>
                       <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
                   ) : (
                     <>
-                      <div className="mt-1">{isMobile ? (<span className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}>{statusLabel[t.status]}</span>) : (<select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>)}</div>
+                      <div className="mt-1">
+                        <select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={statusSelectClass}>
+                          <option value="todo">To Do</option>
+                          <option value="inprogress">In Progress</option>
+                          <option value="done">Done</option>
+                        </select>
+                      </div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
                         <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
