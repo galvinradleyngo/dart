@@ -1,7 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { useState } from 'react';
 import TaskCard from './TaskCard';
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Sample task data
 const sampleTask = {
@@ -77,119 +76,40 @@ describe('TaskCard', () => {
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'm2' } });
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { milestoneId: 'm2' });
   });
-
-  describe('swipe status transitions', () => {
-    beforeAll(() => {
-      window.matchMedia = window.matchMedia || (() => ({
-        matches: true,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        addListener: () => {},
-        removeListener: () => {},
-        dispatchEvent: () => false,
-      }));
-    });
-
-    const renderWithStatus = (status, onUpdate) => {
-      render(
-        <TaskCard
-          task={{ ...sampleTask, status }}
-          milestones={milestones}
-          onUpdate={onUpdate}
-          onDelete={() => {}}
-          onDuplicate={() => {}}
-        />
-      );
-      return screen.getByTestId('task-card');
-    };
-
-    const swipe = (element, dx) => {
-      fireEvent.touchStart(element, { touches: [{ clientX: 0 }] });
-      fireEvent.touchEnd(element, { changedTouches: [{ clientX: dx }] });
-    };
-
-    it('swipe right from todo moves to inprogress', () => {
-      const onUpdate = vi.fn();
-      const card = renderWithStatus('todo', onUpdate);
-      expect(card.hasAttribute('draggable')).toBe(false);
-      swipe(card, 100);
-      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
-    });
-
-    it('swipe left from todo stays at todo', () => {
-      const onUpdate = vi.fn();
-      const card = renderWithStatus('todo', onUpdate);
-      expect(card.hasAttribute('draggable')).toBe(false);
-      swipe(card, -100);
-      expect(onUpdate).not.toHaveBeenCalled();
-    });
-
-    it('swipe right from inprogress moves to done', () => {
-      const onUpdate = vi.fn();
-      const card = renderWithStatus('inprogress', onUpdate);
-      expect(card.hasAttribute('draggable')).toBe(false);
-      swipe(card, 100);
-      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'done' });
-    });
-
-    it('swipe left from inprogress moves to todo', () => {
-      const onUpdate = vi.fn();
-      const card = renderWithStatus('inprogress', onUpdate);
-      expect(card.hasAttribute('draggable')).toBe(false);
-      swipe(card, -100);
-      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'todo' });
-    });
-
-    it('swipe left from done moves to inprogress', () => {
-      const onUpdate = vi.fn();
-      const card = renderWithStatus('done', onUpdate);
-      expect(card.hasAttribute('draggable')).toBe(false);
-      swipe(card, -100);
-      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
-    });
-
-    it('swipe right from done stays at done', () => {
-      const onUpdate = vi.fn();
-      const card = renderWithStatus('done', onUpdate);
-      expect(card.hasAttribute('draggable')).toBe(false);
-      swipe(card, 100);
-      expect(onUpdate).not.toHaveBeenCalled();
-    });
+  it('updates status via dropdown', () => {
+    const onUpdate = vi.fn();
+    render(
+      <TaskCard
+        task={sampleTask}
+        milestones={milestones}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+    fireEvent.change(screen.getByDisplayValue('todo'), { target: { value: 'inprogress' } });
+    expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
   });
 
-  describe('mobile status control', () => {
-    beforeAll(() => {
-      window.matchMedia = window.matchMedia || (() => ({
-        matches: true,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        addListener: () => {},
-        removeListener: () => {},
-        dispatchEvent: () => false,
-      }));
-    });
-
-    it('replaces status dropdown with pill and updates text on swipe', async () => {
-      const Wrapper = () => {
-        const [task, setTask] = useState(sampleTask);
-        return (
-          <TaskCard
-            task={task}
-            milestones={milestones}
-            onUpdate={(id, patch) => setTask((t) => ({ ...t, ...patch }))}
-            onDelete={() => {}}
-            onDuplicate={() => {}}
-          />
-        );
-      };
-      render(<Wrapper />);
-      expect(screen.getAllByRole('combobox').length).toBe(1);
-      expect(screen.getByText('To Do')).toBeInTheDocument();
-      const card = screen.getByTestId('task-card');
-      expect(card.hasAttribute('draggable')).toBe(false);
-      fireEvent.touchStart(card, { touches: [{ clientX: 0 }] });
-      fireEvent.touchEnd(card, { changedTouches: [{ clientX: 100 }] });
-      await screen.findByText('In Progress');
-    });
+  it('uses larger status select on mobile', () => {
+    window.matchMedia = window.matchMedia || (() => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }));
+    render(
+      <TaskCard
+        task={sampleTask}
+        milestones={milestones}
+        onUpdate={() => {}}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+    const statusSelect = screen.getByDisplayValue('todo');
+    expect(statusSelect.className).toContain('text-sm');
   });
 });
