@@ -916,6 +916,9 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   const statusList = ['todo', 'inprogress', 'done'];
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
+  const handleTouchMove = (e) => {
+    if (touchStartX !== null) e.preventDefault();
+  };
   const handleTouchEnd = (e) => {
     if (touchStartX === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
@@ -944,7 +947,9 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
       {...dragProps}
       className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragProps.draggable ? "cursor-move" : ""}`}
       onTouchStart={isMobile ? handleTouchStart : undefined}
+      onTouchMove={isMobile ? handleTouchMove : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
+      style={isMobile ? { touchAction: 'pan-y' } : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -1163,6 +1168,9 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   const touchStartRef = React.useRef({});
   const statusList = ['todo', 'inprogress', 'done'];
   const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
+  const handleTouchMove = (id) => (e) => {
+    if (touchStartRef.current[id] != null) e.preventDefault();
+  };
   const handleTouchEnd = (id) => (e) => {
     const start = touchStartRef.current[id];
     if (start == null) return;
@@ -1207,7 +1215,9 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   draggable={!isMobile}
                   onDragStart={!isMobile ? onDragStart(t.id) : undefined}
                   onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
+                  onTouchMove={isMobile ? handleTouchMove(t.id) : undefined}
                   onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
+                  style={isMobile ? { touchAction: 'pan-y' } : undefined}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
