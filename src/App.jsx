@@ -24,10 +24,23 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
 import pkg from "../package.json";
+import {
+  uid,
+  todayStr,
+  fmt,
+  clamp,
+  rolePalette,
+  roleOrder,
+  roleColor,
+  nextMemberName,
+  isHoliday,
+  isWorkday,
+  addBusinessDays
+} from "./utils.js";
 
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
@@ -44,41 +57,7 @@ const SoundContext = createContext(true);
 // =====================================================
 // Utilities
 // =====================================================
-const uid = () => Math.random().toString(36).slice(2, 9);
-const todayStr = () => new Date().toISOString().slice(0, 10);
-const fmt = (d) => new Date(d).toISOString().slice(0, 10);
-const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-const rolePalette = { LD: "#4f46e5", SME: "#16a34a", MM: "#0891b2", PM: "#ea580c", PA: "#a855f7", Other: "#64748b" };
-const roleOrder = Object.keys(rolePalette);
-const roleColor = (roleType) => rolePalette[roleType] || rolePalette.Other;
-
-const nextMemberName = (list) => {
-  const base = "New Member";
-  const names = new Set(list.map((m) => m.name));
-  let name = base;
-  let i = 2;
-  while (names.has(name)) {
-    name = `${base} ${i++}`;
-  }
-  return name;
-};
-
-const isHoliday = (dateObj, holidaySet) => holidaySet.has(fmt(dateObj));
-const isWorkday = (dateObj, workweekSet) => workweekSet.has(dateObj.getDay());
-const addBusinessDays = (dateStr, workdays, workweek = [1,2,3,4,5], holidays = []) => {
-  if (!dateStr || isNaN(workdays)) return "";
-  const workweekSet = new Set(workweek);
-  const holidaySet = new Set(holidays);
-  let remaining = Number(workdays);
-  let cur = new Date(dateStr);
-  while (!isWorkday(cur, workweekSet) || isHoliday(cur, holidaySet)) cur.setDate(cur.getDate() + 1);
-  let counted = 0;
-  while (counted < remaining) {
-    cur.setDate(cur.getDate() + 1);
-    if (isWorkday(cur, workweekSet) && !isHoliday(cur, holidaySet)) counted++;
-  }
-  return fmt(cur);
-};
+// utilities moved to utils.js
 
 // =====================================================
 // Global Schedule Store (shared across courses)
@@ -2230,38 +2209,3 @@ export default function PMApp() {
 // =====================================================
 // Lightweight tests (console)
 // =====================================================
-function runTests() {
-  try {
-    const dueMon = addBusinessDays("2025-01-10", 1, [1,2,3,4,5], []); // Fri + 1 -> Mon 13
-    console.assert(dueMon === "2025-01-13", `addBusinessDays Fri+1 -> Mon failed: ${dueMon}`);
-
-    const dueTueSkipHoliday = addBusinessDays("2025-01-10", 1, [1,2,3,4,5], ["2025-01-13"]);
-    console.assert(dueTueSkipHoliday === "2025-01-14", `addBusinessDays skip holiday failed: ${dueTueSkipHoliday}`);
-
-    (function(){
-      const schedule = { workweek:[1,2,3,4,5], holidays:[] };
-      const predecessorDue = "2025-01-10"; // Fri
-      const succStart = predecessorDue;
-      const succDue = addBusinessDays(succStart, 2, schedule.workweek, schedule.holidays); // Mon+Tue => Tue 14
-      console.assert(succStart === "2025-01-10", `forecast start equals predecessor due: ${succStart}`);
-      console.assert(succDue === "2025-01-14", `forecast due should be Tue 14: ${succDue}`);
-    })();
-
-    (function(){
-      const today = todayStr();
-      const t = { status:"done", completedDate:"" };
-      const completed = t.completedDate || today;
-      console.assert(completed === today, `completedDate should stamp today: ${completed}`);
-    })();
-
-    (function(){
-      const sched = { workweek:[0,6], holidays:[] }; // weekends only
-      const start = "2025-01-09"; // Thu
-      const due = addBusinessDays(start, 1, sched.workweek, sched.holidays); // next weekend day => Sat 11
-      console.assert(due === "2025-01-11" || due === "2025-01-12", `custom workweek calc unexpected: ${due}`);
-    })();
-  } catch (e) {
-    console.warn('Test runner error', e);
-  }
-}
-runTests();
