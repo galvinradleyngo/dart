@@ -1274,7 +1274,9 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
 // =====================================================
 // User Dashboard (NEW)
 // =====================================================
-function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
+const UPCOMING_DAYS = 15;
+
+export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
     const onStorage = () => setCourses(loadCourses());
