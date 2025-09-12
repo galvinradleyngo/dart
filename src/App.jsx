@@ -298,7 +298,7 @@ function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onTo
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
-function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [] }) {
+function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], onOpenUser }) {
   const [state, setState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
@@ -603,7 +603,7 @@ const tasksDone = useMemo(() => {
           onUpdateMember={updateMember}
           onDeleteMember={deleteMember}
           onToggleCourseWide={toggleCourseWide}
-          onOpenUser={openUser}
+          onOpenUser={onOpenUser}
           courseLDIds={state.course.courseLDIds}
           courseSMEIds={state.course.courseSMEIds}
         />
@@ -2250,7 +2250,7 @@ export default function PMApp() {
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
     const handleChange = (s) => { saveTemplate(s); saveTemplateRemote(s).catch(()=>{}); };
-    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} />;
+    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} onOpenUser={openUser} />;
   } else {
     // open selected course
     const courses = loadCourses();
@@ -2264,7 +2264,7 @@ export default function PMApp() {
       else all.push(s);
       saveCourses(all);
     };
-    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} />;
+    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} onOpenUser={openUser} />;
   }
   return (
     <SoundContext.Provider value={soundEnabled}>
