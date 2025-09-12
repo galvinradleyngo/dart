@@ -217,6 +217,10 @@ const remapSeed = (s) => {
   const SME = s.team.find((m) => m.roleType === "SME");
   s.course.courseLDIds  = s.course.courseLDIds?.length  ? s.course.courseLDIds  : (LD  ? [LD.id]  : []);
   s.course.courseSMEIds = s.course.courseSMEIds?.length ? s.course.courseSMEIds : (SME ? [SME.id] : []);
+  if (s.course.courseLDIds.length) {
+    const defaultLd = s.course.courseLDIds[0];
+    s.tasks = s.tasks.map((t) => ({ ...t, assigneeId: t.assigneeId ?? defaultLd }));
+  }
   return s;
 };
 
@@ -522,7 +526,21 @@ const tasksDone = useMemo(() => {
     return { ...s, team: [...s.team, { ...person }] };
   });
   const deleteMember = (id) => setState((s)=>({ ...s, team: s.team.filter((m)=>m.id!==id), course: { ...s.course, courseLDIds: s.course.courseLDIds.filter((mId)=>mId!==id), courseSMEIds: s.course.courseSMEIds.filter((mId)=>mId!==id) }, tasks: s.tasks.map((t)=>(t.assigneeId===id?{...t, assigneeId:null}:t)) }));
-  const toggleCourseWide = (kind, id) => setState((s)=>{ const key = kind === "LD" ? "courseLDIds" : "courseSMEIds"; const list = new Set(s.course[key]); list.has(id)?list.delete(id):list.add(id); return { ...s, course: { ...s.course, [key]: Array.from(list) } }; });
+  const toggleCourseWide = (kind, id) =>
+    setState((s) => {
+      const key = kind === "LD" ? "courseLDIds" : "courseSMEIds";
+      const list = new Set(s.course[key]);
+      list.has(id) ? list.delete(id) : list.add(id);
+      const course = { ...s.course, [key]: Array.from(list) };
+      let tasks = s.tasks;
+      if (kind === "LD") {
+        const defaultLd = course.courseLDIds[0] || null;
+        tasks = s.tasks.map((t) =>
+          t.assigneeId ? t : { ...t, assigneeId: defaultLd }
+        );
+      }
+      return { ...s, course, tasks };
+    });
 
    // Task DnD columns
   const dragTaskId = useRef(null);
