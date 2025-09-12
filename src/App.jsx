@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState, useRef, Fragment } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import React, { useEffect, useMemo, useState, useRef, Fragment, useContext, createContext } from "react";
+import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import {
   Plus,
   Calendar,
@@ -21,6 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 import { db } from "./firebase.js";
@@ -36,6 +38,8 @@ import pkg from "../package.json";
  * • Task card **Note** field (freeform notes)
  * • Header/banner shows **DART: Design and Development Accountability and Responsibility Tracker**
  */
+
+const SoundContext = createContext(true);
 
 // =====================================================
 // Utilities
@@ -915,6 +919,36 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   const dragProps = isMobile ? {} : dragHandlers;
   const statusList = ['todo', 'inprogress', 'done'];
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
+  const soundEnabled = useContext(SoundContext);
+  const audioCtxRef = useRef(null);
+  const controls = useAnimation();
+  const statusColors = { todo: '#ffffff', inprogress: '#ecfdf5', done: '#d1fae5' };
+  useEffect(() => { controls.set({ backgroundColor: statusColors[t.status], scale: 1 }); }, []);
+  useEffect(() => {
+    controls.start({
+      backgroundColor: statusColors[t.status],
+      scale: [1.02, 1],
+      transition: { duration: 0.2 }
+    });
+  }, [t.status, controls]);
+  const playSound = () => {
+    if (!soundEnabled) return;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = audioCtxRef.current || new Ctx();
+      audioCtxRef.current = ctx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 440;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2);
+      osc.stop(ctx.currentTime + 0.2);
+    } catch {}
+  };
+  const update = (id, patch) => { onUpdate?.(id, patch); playSound(); };
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
   const handleTouchMove = (e) => {
     if (touchStartX !== null) e.preventDefault();
@@ -927,11 +961,11 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     if (dx > threshold) {
       const nextIdx = Math.min(curIdx + 1, statusList.length - 1);
       const nextStatus = statusList[nextIdx];
-      if (nextStatus !== t.status) onUpdate?.(t.id, { status: nextStatus });
+      if (nextStatus !== t.status) update(t.id, { status: nextStatus });
     } else if (dx < -threshold) {
       const prevIdx = Math.max(curIdx - 1, 0);
       const prevStatus = statusList[prevIdx];
-      if (prevStatus !== t.status) onUpdate?.(t.id, { status: prevStatus });
+      if (prevStatus !== t.status) update(t.id, { status: prevStatus });
     }
     setTouchStartX(null);
   };
@@ -945,7 +979,8 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     <motion.div
       data-testid="task-card"
       {...dragProps}
-      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${t.status === "inprogress" ? "bg-emerald-50" : "bg-white"} ${dragProps.draggable ? "cursor-move" : ""}`}
+      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${dragProps.draggable ? "cursor-move" : ""}`}
+      animate={controls}
       onTouchStart={isMobile ? handleTouchStart : undefined}
       onTouchMove={isMobile ? handleTouchMove : undefined}
       onTouchEnd={isMobile ? handleTouchEnd : undefined}
@@ -955,7 +990,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
         <div className="min-w-0">
           <select
             value={t.milestoneId}
-            onChange={(e) => onUpdate?.(t.id, { milestoneId: e.target.value })}
+            onChange={(e) => update(t.id, { milestoneId: e.target.value })}
             className="mb-1 text-xs border rounded px-1 py-0.5"
           >
             {milestones.map((m) => (
@@ -965,7 +1000,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
             ))}
           </select>
           <div className="text-sm sm:text-base font-semibold leading-tight truncate">
-            <InlineText value={t.title} onChange={(v) => onUpdate?.(t.id, { title: v })} />
+            <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -1004,7 +1039,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
             ) : (
               <select
                 value={t.status}
-                onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
+                onChange={(e) => update(t.id, { status: e.target.value })}
                 className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
@@ -1014,7 +1049,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
             )}
           </div>
           <div className="text-xs text-black/60 mt-1 truncate">
-              <InlineText value={t.details} onChange={(v) => onUpdate?.(t.id, { details: v })} placeholder="Details…" />
+              <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
             </div>
             {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
             <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
@@ -1048,7 +1083,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
             ) : (
               <select
                 value={t.status}
-                onChange={(e) => onUpdate?.(t.id, { status: e.target.value })}
+                onChange={(e) => update(t.id, { status: e.target.value })}
                 className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
@@ -1066,7 +1101,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                 )}
                 <select
                   value={t.assigneeId || ""}
-                  onChange={(e) => onUpdate?.(t.id, { assigneeId: e.target.value || null })}
+                  onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
                   className="border rounded px-1.5 py-1"
                 >
                   <option value="">Unassigned</option>
@@ -1085,7 +1120,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                   <input
                     type="date"
                     value={t.startDate || ""}
-                    onChange={(e) => onUpdate?.(t.id, { startDate: e.target.value })}
+                    onChange={(e) => update(t.id, { startDate: e.target.value })}
                     disabled={t.status === "todo"}
                     className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`}
                   />
@@ -1097,7 +1132,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                   type="number"
                   min={0}
                   value={t.workDays ?? 0}
-                  onChange={(e) => onUpdate?.(t.id, { workDays: Number(e.target.value) })}
+                  onChange={(e) => update(t.id, { workDays: Number(e.target.value) })}
                   className="w-20 border rounded px-1.5 py-1"
                 />
               </div>
@@ -1111,12 +1146,12 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                 <span className="font-medium mr-1">Note:</span>
                 <InlineText
                   value={t.note}
-                  onChange={(v) => onUpdate?.(t.id, { note: v })}
+                  onChange={(v) => update(t.id, { note: v })}
                   placeholder="Add a quick note…"
                   multiline
                 />
               </div>
-              <DepPicker task={t} tasks={tasks} onUpdate={onUpdate} />
+              <DepPicker task={t} tasks={tasks} onUpdate={update} />
               <div className="ml-auto flex items-center gap-2">
                 <DuePill date={t.dueDate} status={t.status} />
                 {t.status === "done" && (
@@ -2083,6 +2118,15 @@ export default function PMApp() {
     savePeople(arr);
     return arr;
   });
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const stored = localStorage.getItem('soundEnabled');
+    return stored !== 'false';
+  });
+  const toggleSound = () => setSoundEnabled(v => {
+    const next = !v;
+    localStorage.setItem('soundEnabled', next ? 'true' : 'false');
+    return next;
+  });
   const handlePeopleChange = (next) => {
     setPeople(next);
     savePeople(next);
@@ -2169,10 +2213,17 @@ export default function PMApp() {
     content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} />;
   }
   return (
-    <>
+    <SoundContext.Provider value={soundEnabled}>
       {content}
+      <button
+        onClick={toggleSound}
+        className="fixed bottom-2 left-2 z-50 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white text-slate-600 shadow"
+        title={soundEnabled ? "Mute sounds" : "Unmute sounds"}
+      >
+        {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+      </button>
       <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-xs">v{version}</div>
-    </>
+    </SoundContext.Provider>
   );
 }
 
