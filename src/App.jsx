@@ -1500,48 +1500,44 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {upcoming.every((d) => d.tasks.length === 0) ? (
             <div className="text-sm text-black/60">No tasks due in the next 2 weeks.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <div className="flex gap-2 min-w-max sm:min-w-0 sm:grid sm:grid-cols-7">
-                {upcoming.map(({ date, tasks }) => (
-                  <div key={fmt(date)} className="min-w-[10rem] sm:min-w-0 rounded-xl border border-black/10 bg-white p-3 flex flex-col">
+            <ul className="space-y-2">
+              {upcoming
+                .filter(({ tasks }) => tasks.length > 0)
+                .map(({ date, tasks }) => (
+                  <li key={fmt(date)} className="rounded-xl border border-black/10 bg-white p-3">
                     <div className="text-xs font-medium mb-1">
                       {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
                     </div>
-                    <ul className="space-y-1 flex-1">
-                      {tasks.length === 0 ? (
-                        <li className="text-xs text-black/40">No tasks</li>
-                      ) : (
-                        tasks.map((t) => (
-                          <li
-                            key={t.id}
-                            className="text-xs flex items-center gap-1 truncate bg-slate-100 rounded px-2 py-1"
+                    <ul className="space-y-1">
+                      {tasks.map((t) => (
+                        <li
+                          key={t.id}
+                          className="text-xs flex items-center gap-1 truncate bg-slate-100 rounded px-2 py-1"
+                        >
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-300"
+                            aria-label={`${t.title} in ${t.courseName}`}
+                            checked={t.status === 'done'}
+                            onChange={(e) =>
+                              updateTask(t.courseId, t.id, {
+                                status: e.target.checked ? 'done' : 'todo'
+                              })
+                            }
+                          />
+                          <button
+                            onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
+                            className="truncate text-left flex-1"
+                            title={`${t.title} – ${t.courseName}`}
                           >
-                            <input
-                              type="checkbox"
-                              className="rounded border-slate-300"
-                              aria-label={`${t.title} in ${t.courseName}`}
-                              checked={t.status === 'done'}
-                              onChange={(e) =>
-                                updateTask(t.courseId, t.id, {
-                                  status: e.target.checked ? 'done' : 'todo'
-                                })
-                              }
-                            />
-                            <button
-                              onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
-                              className="truncate text-left flex-1"
-                              title={`${t.title} – ${t.courseName}`}
-                            >
-                              {t.title} <span className="text-black/60">in {t.courseName}</span>
-                            </button>
-                          </li>
-                        ))
-                      )}
+                            {t.title} <span className="text-black/60">in {t.courseName}</span>
+                          </button>
+                        </li>
+                      ))}
                     </ul>
-                  </div>
+                  </li>
                 ))}
-              </div>
-            </div>
+            </ul>
           )}
         </section>
 
