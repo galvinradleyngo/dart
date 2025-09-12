@@ -15,6 +15,7 @@ describe('Upcoming Deadlines window', () => {
     localStorage.clear();
   });
 
+  // The dashboard should list tasks due today through UPCOMING_DAYS-1 and ignore later ones
   it('shows tasks due today and 14 days out', async () => {
     const today = new Date();
     const day14 = new Date();
