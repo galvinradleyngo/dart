@@ -54,6 +54,8 @@ import {
 
 const SoundContext = createContext(true);
 
+const UPCOMING_DAYS = 15; // include today plus 14 days ahead
+
 // =====================================================
 // Utilities
 // =====================================================
@@ -1445,7 +1447,7 @@ function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const upcoming = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    return [...Array(14)].map((_, i) => {
+    return [...Array(UPCOMING_DAYS)].map((_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const ds = fmt(d);
