@@ -1502,16 +1502,23 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           ) : (
             <div className="overflow-x-auto">
               <div className="flex gap-2 min-w-max sm:min-w-0 sm:grid sm:grid-cols-7">
-                {upcoming.map(({ date, tasks }) => (
-                  <div key={fmt(date)} className="min-w-[10rem] sm:min-w-0 rounded-xl border border-black/10 bg-white p-3 flex flex-col">
-                    <div className="text-xs font-medium mb-1">
-                      {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
-                    </div>
-                    <ul className="space-y-1 flex-1">
-                      {tasks.length === 0 ? (
-                        <li className="text-xs text-black/40">No tasks</li>
-                      ) : (
-                        tasks.map((t) => (
+                {upcoming
+                  .filter(({ tasks }) => tasks.length > 0)
+                  .map(({ date, tasks }) => (
+                    <div
+                      key={fmt(date)}
+                      data-testid="upcoming-day"
+                      className="min-w-[10rem] sm:min-w-0 rounded-xl border border-black/10 bg-white p-3 flex flex-col"
+                    >
+                      <div className="text-xs font-medium mb-1">
+                        {date.toLocaleDateString(undefined, {
+                          weekday: 'short',
+                          month: 'numeric',
+                          day: 'numeric'
+                        })}
+                      </div>
+                      <ul className="space-y-1 flex-1">
+                        {tasks.map((t) => (
                           <li
                             key={t.id}
                             className="text-xs flex items-center gap-1 truncate bg-slate-100 rounded px-2 py-1"
@@ -1535,11 +1542,10 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                               {t.title} <span className="text-black/60">in {t.courseName}</span>
                             </button>
                           </li>
-                        ))
-                      )}
-                    </ul>
-                  </div>
-                ))}
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
               </div>
             </div>
           )}

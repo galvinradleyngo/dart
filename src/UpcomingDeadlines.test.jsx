@@ -22,6 +22,16 @@ describe('Upcoming Deadlines window', () => {
     day14.setDate(today.getDate() + (UPCOMING_DAYS - 1));
     const day15 = new Date();
     day15.setDate(today.getDate() + UPCOMING_DAYS);
+    const todayLabel = today.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric',
+    });
+    const futureLabel = day14.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric',
+    });
 
     const courses = [{
       course: { id: 'c1', name: 'Course 1' },
@@ -36,7 +46,15 @@ describe('Upcoming Deadlines window', () => {
 
     localStorage.setItem('healthPM:courses:v1', JSON.stringify(courses));
 
-    render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
+    render(
+      <UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />
+    );
+
+    const days = await screen.findAllByTestId('upcoming-day');
+    expect(days).toHaveLength(2);
+    expect(days[0]).toHaveTextContent(todayLabel);
+    expect(days[1]).toHaveTextContent(futureLabel);
+    expect(screen.queryByText('No tasks')).toBeNull();
 
     expect(
       await screen.findByRole('button', { name: 'Today Task in Course 1' })
