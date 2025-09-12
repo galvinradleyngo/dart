@@ -1588,13 +1588,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     const tDone = c.tasks.filter((t) => t.assigneeId === userId && t.status === 'done').length;
                     const pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
                     return (
-                      <li key={c.id || c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex flex-col gap-2">
+                      <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <div className="min-w-0">
                             <div className="font-medium truncate">{c.course.name}</div>
                             <div className="text-xs text-black/60 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
                           </div>
-                          <button onClick={()=>onOpenCourse(c.id || c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                          <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
                         </div>
                         <div className="h-2 bg-slate-100 rounded">
                           <div className="h-2 bg-emerald-500 rounded" style={{width:`${pct}%`}} />
