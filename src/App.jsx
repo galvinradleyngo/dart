@@ -1818,6 +1818,22 @@ function CoursesHub({
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
   const [membersEditing, setMembersEditing] = useState(false);
+  const [history, setHistory] = useState([]);
+
+  const pushHistory = useCallback((snapshot) => {
+    setHistory((h) => [JSON.parse(JSON.stringify(snapshot)), ...h].slice(0, 5));
+  }, []);
+
+  const undo = () => {
+    setHistory((h) => {
+      if (!h.length) return h;
+      const [latest, ...rest] = h;
+      saveCourses(latest);
+      saveCoursesRemote(latest).catch(() => {});
+      setCourses(latest);
+      return rest;
+    });
+  };
 
   useEffect(() => {
     const onSchedStorage = (e) => {
@@ -1900,6 +1916,7 @@ function CoursesHub({
       const set = new Set(s.workweek);
       set.has(dow) ? set.delete(dow) : set.add(dow);
       const next = { ...s, workweek: Array.from(set).sort() };
+      pushHistory(loadCourses());
       applySchedule(next);
       return next;
     });
@@ -1910,6 +1927,7 @@ function CoursesHub({
     setSchedule((s) => {
       const holidays = Array.from(new Set([...s.holidays, dateStr])).sort();
       const next = { ...s, holidays };
+      pushHistory(loadCourses());
       applySchedule(next);
       return next;
     });
@@ -1918,12 +1936,14 @@ function CoursesHub({
   const removeHoliday = (dateStr) => {
     setSchedule((s) => {
       const next = { ...s, holidays: s.holidays.filter((h) => h !== dateStr) };
+      pushHistory(loadCourses());
       applySchedule(next);
       return next;
     });
   };
 
   const removeCourse = (id) => {
+    pushHistory(courses);
     const next = courses.filter((c) => c.id !== id);
     saveCourses(next);
     saveCoursesRemote(next).catch(() => {});
@@ -1931,6 +1951,7 @@ function CoursesHub({
     onRemoveCourse && onRemoveCourse(id);
   };
   const duplicateCourse = (id) => {
+    pushHistory(courses);
     const src = courses.find((c) => c.id === id);
     if (!src) return;
     const copy = JSON.parse(JSON.stringify(src));
@@ -1942,6 +1963,10 @@ function CoursesHub({
     saveCoursesRemote(next).catch(() => {});
     setCourses(next);
     onDuplicateCourse && onDuplicateCourse(copy.id);
+  };
+  const handleAddCourse = () => {
+    pushHistory(courses);
+    onAddCourse();
   };
   const open = (id) => onOpenCourse(id);
   const addPerson = () => {
@@ -1977,7 +2002,14 @@ function CoursesHub({
           <div className="flex items-center gap-2">
             <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
             <button
-              onClick={onAddCourse}
+              onClick={undo}
+              disabled={!history.length}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <RefreshCcw size={16}/> Undo
+            </button>
+            <button
+              onClick={handleAddCourse}
               className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
             >
               <Plus size={16}/> Add Course
