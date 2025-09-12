@@ -56,6 +56,13 @@ import {
 
 const SoundContext = createContext(true);
 
+// Predefined emoji choices for user avatars
+const AVATAR_CHOICES = [
+  "😀","😎","🤓","😂","😍","🥰","😇","😉","🙃","😛",
+  "🤠","😺","🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼",
+  "🐨","🐯","🦁","🐮","🐷","🐸","🐵","🦄","🐝","🐢"
+];
+
 
 // =====================================================
 // Utilities
@@ -2088,20 +2095,38 @@ export function CoursesHub({
           {people.length === 0 ? (
             <div className="text-sm text-black/60">No team members</div>
           ) : (
-            <div className="flex flex-wrap gap-3">
-              {[...people].sort((a, b) => {
-                const roleCmp = roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType);
-                return roleCmp !== 0 ? roleCmp : a.name.localeCompare(b.name);
-              }).map((m) => (
-                <div
-                  key={m.id}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2 shadow border-2"
-                  style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
-                >
-                  <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} className="w-10 h-10 text-base" />
-                  <div className="text-left">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {[...people]
+                .sort((a, b) => {
+                  const roleCmp = roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType);
+                  return roleCmp !== 0 ? roleCmp : a.name.localeCompare(b.name);
+                })
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    className="rounded-xl p-4 shadow border-2 flex flex-col items-center text-center"
+                    style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
+                  >
+                    <Avatar
+                      name={m.name}
+                      roleType={m.roleType}
+                      avatar={m.avatar}
+                      className="w-12 h-12 text-2xl mb-2"
+                    />
                     {membersEditing ? (
                       <>
+                        <select
+                          value={m.avatar}
+                          onChange={(e) => updatePerson(m.id, { avatar: e.target.value })}
+                          className="border rounded px-2 py-1 text-sm mb-2"
+                        >
+                          <option value="">None</option>
+                          {AVATAR_CHOICES.map((e) => (
+                            <option key={e} value={e}>
+                              {e}
+                            </option>
+                          ))}
+                        </select>
                         <InlineText
                           value={m.name}
                           onChange={(v) => renamePerson(m.id, v)}
@@ -2118,13 +2143,27 @@ export function CoursesHub({
                             </option>
                           ))}
                         </select>
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => onOpenUser(m.id)}
+                            className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                          >
+                            Open
+                          </button>
+                          <button
+                            onClick={() => removePerson(m.id)}
+                            className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
                         <button
                           type="button"
                           onClick={() => onOpenUser(m.id)}
-                          className="font-medium leading-tight text-left hover:underline"
+                          className="font-medium leading-tight hover:underline"
                         >
                           {m.name}
                         </button>
@@ -2132,24 +2171,7 @@ export function CoursesHub({
                       </>
                     )}
                   </div>
-                  {membersEditing && (
-                    <div className="ml-auto flex gap-2">
-                      <button
-                        onClick={() => onOpenUser(m.id)}
-                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
-                      >
-                        Open
-                      </button>
-                      <button
-                        onClick={() => removePerson(m.id)}
-                        className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </section>
