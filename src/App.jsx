@@ -54,7 +54,6 @@ import {
 
 const SoundContext = createContext(true);
 
-const UPCOMING_DAYS = 15; // include today plus 14 days ahead
 
 // =====================================================
 // Utilities
@@ -1274,7 +1273,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
 // =====================================================
 // User Dashboard (NEW)
 // =====================================================
-const UPCOMING_DAYS = 15;
+export const UPCOMING_DAYS = 15;
 
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
