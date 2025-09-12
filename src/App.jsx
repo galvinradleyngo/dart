@@ -4,7 +4,6 @@ import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import {
   Plus,
   Calendar,
-  Users,
   ClipboardList,
   ListChecks,
   Download,
@@ -28,6 +27,7 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
+import TeamMembersSection from "./components/TeamMembersSection.jsx";
 import pkg from "../package.json";
 import {
   uid,
@@ -313,7 +313,6 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [listTab, setListTab] = useState("active");
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(true);
-  const [membersEditing, setMembersEditing] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
 
@@ -595,89 +594,18 @@ const tasksDone = useMemo(() => {
         </section>
 
         {/* Team Members FIRST */}
-        <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold flex items-center gap-2"><Users size={18}/> Team Members</h2>
-            <div className="flex items-center gap-2">
-              <select
-                value=""
-                onChange={(e)=>{ if(e.target.value) { addExistingMember(e.target.value); e.target.value=''; } }}
-                className="text-sm border rounded px-2 py-1"
-              >
-                <option value="">Add existing...</option>
-                {people.filter((p)=>!team.some((m)=>m.id===p.id)).map((p)=>(
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
-              <button onClick={() => addMember()} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><UserPlus size={16}/> Add Member</button>
-              <button
-                onClick={() => setMembersEditing(v => !v)}
-                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-              >
-                {membersEditing ? 'Done' : 'Edit Members'}
-              </button>
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {team.map((m) => (
-              <div key={m.id} className="rounded-xl border border-black/10 p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} />
-                  {membersEditing ? (
-                    <InlineText
-                      value={m.name}
-                      onChange={(v) => updateMember(m.id, { name: v })}
-                      className="font-medium truncate"
-                    />
-                  ) : (
-                    <button
-                      onClick={() => openUser(m.id)}
-                      className="font-medium truncate text-left hover:underline"
-                    >
-                      {m.name}
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {membersEditing ? (
-                    <Fragment>
-                      <select
-                        value={m.roleType}
-                        onChange={(e) => updateMember(m.id, { roleType: e.target.value })}
-                        className="border rounded px-2 py-1 text-sm"
-                      >
-                        {Object.keys(rolePalette).map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                      {(m.roleType === "LD" || m.roleType === "SME") && (
-                        <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={(m.roleType === "LD" ? state.course.courseLDIds : state.course.courseSMEIds).includes(m.id)}
-                            onChange={() => toggleCourseWide(m.roleType, m.id)}
-                          />
-                          course-wide
-                        </label>
-                      )}
-                      <button
-                        className="text-black/40 hover:text-red-500"
-                        title="Remove member"
-                        onClick={() => deleteMember(m.id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </Fragment>
-                  ) : (
-                    <span className="text-sm">{m.roleType}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <TeamMembersSection
+          team={team}
+          people={people}
+          onAddMember={addMember}
+          onAddExistingMember={addExistingMember}
+          onUpdateMember={updateMember}
+          onDeleteMember={deleteMember}
+          onToggleCourseWide={toggleCourseWide}
+          onOpenUser={openUser}
+          courseLDIds={state.course.courseLDIds}
+          courseSMEIds={state.course.courseSMEIds}
+        />
         {/* Milestones */}
           <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
             <div
