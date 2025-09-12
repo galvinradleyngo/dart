@@ -1512,8 +1512,28 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         <li className="text-xs text-black/40">No tasks</li>
                       ) : (
                         tasks.map((t) => (
-                          <li key={t.id} className="text-xs truncate bg-slate-100 rounded px-2 py-1" title={`${t.title} – ${t.courseName}`}>
-                            {t.title}
+                          <li
+                            key={t.id}
+                            className="text-xs flex items-center gap-1 truncate bg-slate-100 rounded px-2 py-1"
+                          >
+                            <input
+                              type="checkbox"
+                              className="rounded border-slate-300"
+                              aria-label={`${t.title} in ${t.courseName}`}
+                              checked={t.status === 'done'}
+                              onChange={(e) =>
+                                updateTask(t.courseId, t.id, {
+                                  status: e.target.checked ? 'done' : 'todo'
+                                })
+                              }
+                            />
+                            <button
+                              onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
+                              className="truncate text-left flex-1"
+                              title={`${t.title} – ${t.courseName}`}
+                            >
+                              {t.title} <span className="text-black/60">in {t.courseName}</span>
+                            </button>
                           </li>
                         ))
                       )}
