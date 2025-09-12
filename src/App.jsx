@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef, Fragment, useContext, createContext } from "react";
+import React, { useEffect, useMemo, useState, useRef, Fragment, useContext, createContext, useCallback } from "react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import {
@@ -28,6 +28,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
 import TeamMembersSection from "./components/TeamMembersSection.jsx";
+import SectionCard from "./components/SectionCard.jsx";
 import pkg from "../package.json";
 import {
   uid,
@@ -216,6 +217,10 @@ const remapSeed = (s) => {
   const SME = s.team.find((m) => m.roleType === "SME");
   s.course.courseLDIds  = s.course.courseLDIds?.length  ? s.course.courseLDIds  : (LD  ? [LD.id]  : []);
   s.course.courseSMEIds = s.course.courseSMEIds?.length ? s.course.courseSMEIds : (SME ? [SME.id] : []);
+  if (s.course.courseLDIds.length) {
+    const defaultLd = s.course.courseLDIds[0];
+    s.tasks = s.tasks.map((t) => ({ ...t, assigneeId: t.assigneeId ?? defaultLd }));
+  }
   return s;
 };
 
@@ -297,7 +302,7 @@ function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onTo
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
-function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [] }) {
+function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], onOpenUser }) {
   const [state, setState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
@@ -521,7 +526,21 @@ const tasksDone = useMemo(() => {
     return { ...s, team: [...s.team, { ...person }] };
   });
   const deleteMember = (id) => setState((s)=>({ ...s, team: s.team.filter((m)=>m.id!==id), course: { ...s.course, courseLDIds: s.course.courseLDIds.filter((mId)=>mId!==id), courseSMEIds: s.course.courseSMEIds.filter((mId)=>mId!==id) }, tasks: s.tasks.map((t)=>(t.assigneeId===id?{...t, assigneeId:null}:t)) }));
-  const toggleCourseWide = (kind, id) => setState((s)=>{ const key = kind === "LD" ? "courseLDIds" : "courseSMEIds"; const list = new Set(s.course[key]); list.has(id)?list.delete(id):list.add(id); return { ...s, course: { ...s.course, [key]: Array.from(list) } }; });
+  const toggleCourseWide = (kind, id) =>
+    setState((s) => {
+      const key = kind === "LD" ? "courseLDIds" : "courseSMEIds";
+      const list = new Set(s.course[key]);
+      list.has(id) ? list.delete(id) : list.add(id);
+      const course = { ...s.course, [key]: Array.from(list) };
+      let tasks = s.tasks;
+      if (kind === "LD") {
+        const defaultLd = course.courseLDIds[0] || null;
+        tasks = s.tasks.map((t) =>
+          t.assigneeId ? t : { ...t, assigneeId: defaultLd }
+        );
+      }
+      return { ...s, course, tasks };
+    });
 
    // Task DnD columns
   const dragTaskId = useRef(null);
@@ -602,7 +621,7 @@ const tasksDone = useMemo(() => {
           onUpdateMember={updateMember}
           onDeleteMember={deleteMember}
           onToggleCourseWide={toggleCourseWide}
-          onOpenUser={openUser}
+          onOpenUser={onOpenUser}
           courseLDIds={state.course.courseLDIds}
           courseSMEIds={state.course.courseSMEIds}
         />
@@ -1074,7 +1093,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     );
   }
 
-function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
+function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
   if (!task) return null;
   const assignee = team.find((m) => m.id === task.assigneeId);
   return (
@@ -1088,6 +1107,19 @@ function TaskModal({ task, tasks, team, milestones, onUpdate, onDelete, onAddLin
           <button onClick={onClose} className="text-slate-500 hover:text-black">×</button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          {courses && onChangeCourse && (
+            <select
+              value={courseId}
+              onChange={(e) => onChangeCourse(e.target.value)}
+              className="border rounded px-1.5 py-1"
+            >
+              {courses.map((c) => (
+                <option key={c.course.id} value={c.course.id}>
+                  {c.course.name}
+                </option>
+              ))}
+            </select>
+          )}
           <select value={task.milestoneId} onChange={(e)=>onUpdate(task.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
           <div className="flex items-center gap-1">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-black/40">—</span>}<select value={task.assigneeId || ""} onChange={(e)=>onUpdate(task.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{team.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
           <select value={task.status} onChange={(e)=>onUpdate(task.id,{ status:e.target.value })} className={`border rounded px-1.5 py-1 ${statusBg(task.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>
@@ -1223,6 +1255,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
   const [taskView, setTaskView] = useState('board');
   const [saveState, setSaveState] = useState('saved');
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('userTab') || 'deadlines');
+  useEffect(() => { localStorage.setItem('userTab', activeTab); }, [activeTab]);
 
   const recomputeDue = (t, patch = {}, schedule) => {
     const start = patch.startDate ?? t.startDate;
@@ -1326,12 +1361,62 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.filter((t) => t.id !== id) } : c));
     setSaveState('unsaved');
   };
-  const handleSave = async () => {
+  const changeTaskCourse = (fromCourseId, taskId, toCourseId) => {
+    setCourses((cs) => {
+      const from = cs.find((c) => c.course.id === fromCourseId);
+      const to = cs.find((c) => c.course.id === toCourseId);
+      if (!from || !to) return cs;
+      const task = from.tasks.find((t) => t.id === taskId);
+      if (!task) return cs;
+      return cs.map((c) => {
+        if (c.course.id === fromCourseId) {
+          return { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) };
+        }
+        if (c.course.id === toCourseId) {
+          return { ...c, tasks: [...c.tasks, task] };
+        }
+        return c;
+      });
+    });
+    setEditing({ courseId: toCourseId, taskId });
+    setSaveState('unsaved');
+  };
+  const handleNewTask = () => {
+    if (myCoursesAll.length === 0) return;
+    const cid = myCoursesAll[0].course.id;
+    const targetCourse = courses.find((c) => c.course.id === cid);
+    if (!targetCourse) return;
+    const newTask = {
+      id: uid(),
+      order: targetCourse.tasks.length,
+      title: '',
+      details: '',
+      note: '',
+      links: [],
+      assigneeId: userId || null,
+      milestoneId: targetCourse.milestones[0]?.id || null,
+      status: 'todo',
+      startDate: '',
+      workDays: 0,
+      dueDate: '',
+      depTaskId: null,
+      completedDate: '',
+    };
+    setCourses((cs) => cs.map((c) => c.course.id === cid ? { ...c, tasks: [...c.tasks, newTask] } : c));
+    setEditing({ courseId: cid, taskId: newTask.id });
+    setSaveState('unsaved');
+  };
+  const handleSave = useCallback(async () => {
     setSaveState('saving');
     saveCourses(courses);
     await saveCoursesRemote(courses);
     setSaveState('saved');
-  };
+  }, [courses]);
+  useEffect(() => {
+    if (saveState !== 'unsaved') return;
+    const t = setTimeout(handleSave, 1500);
+    return () => clearTimeout(t);
+  }, [saveState, handleSave]);
   const cycleStatus = (s) => (s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'done' : 'todo');
   const [calMonth, setCalMonth] = useState(() => new Date());
   const [editing, setEditing] = useState(null);
@@ -1342,32 +1427,51 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return Array.from(map.values());
   }, [courses]);
 
-  const [userId, setUserId] = useState(initialUserId || '');
+  const [userId, setUserId] = useState(() => localStorage.getItem('userId') || initialUserId || '');
   useEffect(() => {
     if (!userId && members[0]) setUserId(members[0].id);
   }, [members, userId]);
+  useEffect(() => {
+    if (userId) localStorage.setItem('userId', userId);
+  }, [userId]);
   useEffect(() => {
     if (initialUserId) setUserId(initialUserId);
   }, [initialUserId]);
   const user = members.find((m) => m.id === userId);
 
-
-  const myCourses = useMemo(() => courses.filter((c) => c.team.some((m) => m.id === userId)), [courses, userId]);
+  const myCoursesAll = useMemo(
+    () => courses.filter((c) => c.team.some((m) => m.id === userId)),
+    [courses, userId]
+  );
+  const myCourses = useMemo(
+    () =>
+      myCoursesAll.filter((c) =>
+        c.course.name.toLowerCase().includes(query.toLowerCase())
+      ),
+    [myCoursesAll, query]
+  );
   const myTasks = useMemo(() => {
     const arr = [];
     courses.forEach((c) => {
       c.tasks.forEach((t) => {
-        if (t.assigneeId === userId) arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
+        if (t.assigneeId === userId)
+          arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
       });
     });
-    return arr.sort((a, b) => {
-      const nameCmp = a.courseName.localeCompare(b.courseName);
-      if (nameCmp !== 0) return nameCmp;
-      const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-      return da - db;
-    });
-  }, [courses, userId]);
+    return arr
+      .filter(
+        (t) =>
+          t.title.toLowerCase().includes(query.toLowerCase()) ||
+          t.courseName.toLowerCase().includes(query.toLowerCase())
+      )
+      .sort((a, b) => {
+        const nameCmp = a.courseName.localeCompare(b.courseName);
+        if (nameCmp !== 0) return nameCmp;
+        const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+        const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        return da - db;
+      });
+  }, [courses, userId, query]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
@@ -1385,6 +1489,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       return { date: d, tasks };
     });
   }, [myTasks]);
+  const today = fmt(new Date());
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
@@ -1422,213 +1527,252 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        <section>
-          <h2 className="text-lg font-semibold mb-2">Upcoming Deadlines</h2>
-          {upcoming.every((d) => d.tasks.length === 0) ? (
-            <div className="text-sm text-black/60">No tasks due in the next 2 weeks.</div>
-          ) : (
-            <ul className="space-y-2">
-              {upcoming
-                .filter(({ tasks }) => tasks.length > 0)
-                .map(({ date, tasks }) => (
-                  <li key={fmt(date)} className="rounded-xl border border-black/10 bg-white p-3">
-                    <div className="text-xs font-medium mb-1">
-                      {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
-                    </div>
-                    <ul className="space-y-1">
-                      {tasks.map((t) => (
-                        <li
-                          key={t.id}
-                          className="text-xs flex items-center gap-1 truncate bg-slate-100 rounded px-2 py-1"
-                        >
-                          <input
-                            type="checkbox"
-                            className="rounded border-slate-300"
-                            aria-label={`${t.title} in ${t.courseName}`}
-                            checked={t.status === 'done'}
-                            onChange={(e) =>
-                              updateTask(t.courseId, t.id, {
-                                status: e.target.checked ? 'done' : 'todo'
-                              })
-                            }
-                          />
-                          <button
-                            onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
-                            className="truncate text-left flex-1"
-                            title={`${t.title} – ${t.courseName}`}
-                          >
-                            {t.title} <span className="text-black/60">in {t.courseName}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-            </ul>
-          )}
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold mb-2">My Courses</h2>
-          {myCourses.length === 0 ? (
-            <div className="text-sm text-black/60">No courses</div>
-          ) : (
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {myCourses.map((c) => {
-                const tCount = c.tasks.filter((t) => t.assigneeId === userId).length;
-                return (
-                  <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between">
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{c.course.name}</div>
-                      <div className="text-xs text-black/60 truncate">{tCount} task{tCount!==1?'s':''}</div>
-                    </div>
-                    <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        <section>
-          <h2 className="text-lg font-semibold mb-2">My Milestones</h2>
-          {myCourses.length === 0 ? (
-            <div className="text-sm text-black/60">No milestones</div>
-          ) : (
-            <div className="space-y-4">
-              {myCourses.map((c) => (
-                <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
-                  <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
-                    <div className="flex items-center gap-2">
-                      <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                      <div className="font-medium">{c.course.name}</div>
-                    </div>
-                  </summary>
-                  <div className="p-4 space-y-2">
-                    {c.milestones.map((m) => (
-                      <MilestoneCard
-                        key={m.id}
-                        milestone={m}
-                        tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
-                        tasksAll={c.tasks}
-                        team={c.team}
-                        milestones={c.milestones}
-                        onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-                        onDelete={(id) => deleteTask(c.course.id, id)}
-                        onDuplicate={(id) => duplicateTask(c.course.id, id)}
-                        onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-                        onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
-                      />
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="mb-4 flex gap-2">
+          {[['deadlines','Deadlines'],['courses','Courses'],['milestones','Milestones'],['tasks','Tasks']].map(([id,label]) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`px-3 py-1.5 text-sm rounded border ${activeTab===id?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="space-y-6">
+          {activeTab === 'deadlines' && (
+            <SectionCard title="Upcoming Deadlines">
+              {upcoming.every((d) => d.tasks.length === 0) ? (
+                <div className="text-sm text-black/60">No tasks due in the next 2 weeks.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {upcoming
+                    .filter(({ tasks }) => tasks.length > 0)
+                    .map(({ date, tasks }) => (
+                      <li key={fmt(date)} className="rounded-xl border border-black/10 bg-white p-3">
+                        <div className="text-xs font-medium mb-1">
+                          {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
+                        </div>
+                        <ul className="space-y-1">
+                          {tasks.map((t) => {
+                            const urgentClass =
+                              t.dueDate < today
+                                ? 'bg-rose-100 text-rose-800'
+                                : t.dueDate === today
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100';
+                            return (
+                              <li
+                                key={t.id}
+                                className={`text-xs flex items-center gap-1 truncate rounded px-2 py-1 ${urgentClass}`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="rounded border-slate-300"
+                                  aria-label={`${t.title} in ${t.courseName}`}
+                                  checked={t.status === 'done'}
+                                  onChange={(e) =>
+                                    updateTask(t.courseId, t.id, {
+                                      status: e.target.checked ? 'done' : 'todo'
+                                    })
+                                  }
+                                />
+                                <button
+                                  onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
+                                  className="truncate text-left flex-1"
+                                  title={`${t.title} – ${t.courseName}`}
+                                >
+                                  {t.title} <span className="text-black/60">in {t.courseName}</span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </li>
                     ))}
-                  </div>
-                </details>
-              ))}
-            </div>
+                </ul>
+              )}
+            </SectionCard>
           )}
-        </section>
 
-        <section>
-          <h2 className="text-lg font-semibold mb-2">My Tasks</h2>
-          {myTasks.length === 0 ? (
-            <div className="text-sm text-black/60">No tasks assigned.</div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2 mb-2">
-                <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-xs rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>List</button>
-                <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-xs rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Board</button>
-                <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-xs rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Calendar</button>
-              </div>
-              {taskView === 'list' && (
-                <div className="space-y-2">
-                  {myTasks.map((t) => {
-                    const c = courses.find((x) => x.course.id === t.courseId);
-                    if (!c) return null;
+          {activeTab === 'courses' && (
+            <SectionCard title="My Courses">
+              {myCourses.length === 0 ? (
+                <div className="text-sm text-black/60">No courses</div>
+              ) : (
+                <ul className="grid gap-2 sm:grid-cols-2">
+                  {myCourses.map((c) => {
+                    const tTotal = c.tasks.filter((t) => t.assigneeId === userId).length;
+                    const tDone = c.tasks.filter((t) => t.assigneeId === userId && t.status === 'done').length;
+                    const pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
                     return (
-                      <TaskCard
-                        key={t.id}
-                        task={t}
-                        tasks={c.tasks}
-                        team={c.team}
-                        milestones={c.milestones}
-                        onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-                        onDelete={(id) => deleteTask(c.course.id, id)}
-                        onDuplicate={(id) => duplicateTask(c.course.id, id)}
-                        onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-                        onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
-                      />
+                      <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex flex-col gap-2">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{c.course.name}</div>
+                            <div className="text-xs text-black/60 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
+                          </div>
+                          <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded">
+                          <div className="h-2 bg-emerald-500 rounded" style={{width:`${pct}%`}} />
+                        </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
-              {taskView === 'board' && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {[
-                    { id: 'todo', label: 'To Do' },
-                    { id: 'inprogress', label: 'In Progress' },
-                    { id: 'done', label: 'Done' },
-                  ].map(({ id, label }) => (
-                    <div
-                      key={id}
-                      className={`rounded-xl border border-black/10 p-3 ${id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        const tid = e.dataTransfer.getData('text/task');
-                        const cid = e.dataTransfer.getData('text/course');
-                        if (tid && cid) updateTaskStatus(cid, tid, id);
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-sm font-medium text-black/70">{label}</div>
+            </SectionCard>
+          )}
+
+          {activeTab === 'milestones' && (
+            <SectionCard title="My Milestones">
+              {myCourses.length === 0 ? (
+                <div className="text-sm text-black/60">No milestones</div>
+              ) : (
+                <div className="space-y-4">
+                  {myCourses.map((c) => (
+                    <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
+                      <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                        <div className="flex items-center gap-2">
+                          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                          <div className="font-medium">{c.course.name}</div>
+                        </div>
+                      </summary>
+                      <div className="p-4 space-y-2">
+                        {c.milestones.map((m) => (
+                          <MilestoneCard
+                            key={m.id}
+                            milestone={m}
+                            tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
+                            tasksAll={c.tasks}
+                            team={c.team}
+                            milestones={c.milestones}
+                            onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+                            onDelete={(id) => deleteTask(c.course.id, id)}
+                            onDuplicate={(id) => duplicateTask(c.course.id, id)}
+                            onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+                            onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                          />
+                        ))}
                       </div>
-                      <div className="space-y-2 min-h-[140px]">
-                        {groupedTasks[id].map((t) => {
-                          const c = courses.find((x) => x.course.id === t.courseId);
-                          if (!c) return null;
-                          return (
-                            <TaskCard
-                              key={t.id}
-                              task={t}
-                              tasks={c.tasks}
-                              team={c.team}
-                              milestones={c.milestones}
-                              onUpdate={(tid, patch) => updateTask(c.course.id, tid, patch)}
-                              onDelete={(tid) => deleteTask(c.course.id, tid)}
-                              onDuplicate={(tid) => duplicateTask(c.course.id, tid)}
-                              onAddLink={(tid, url) => patchTaskLinks(c.course.id, tid, 'add', url)}
-                              onRemoveLink={(tid, idx) => patchTaskLinks(c.course.id, tid, 'remove', idx)}
-                              dragHandlers={{
-                                draggable: true,
-                                onDragStart: (e) => {
-                                  e.dataTransfer.setData('text/task', t.id);
-                                  e.dataTransfer.setData('text/course', t.courseId);
-                                },
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
+                    </details>
                   ))}
                 </div>
               )}
-              {taskView === 'calendar' && (
-                <CalendarView
-                  monthDate={calMonth}
-                  tasks={myTasks}
-                  milestones={[]}
-                  team={[]}
-                  onPrev={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
-                  onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
-                  onToday={() => setCalMonth(new Date())}
-                  schedule={loadGlobalSchedule()}
-                  // open TaskModal when clicking a calendar event
-                  onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
-                />
-              )}
-            </>
+            </SectionCard>
           )}
-        </section>
+
+          {activeTab === 'tasks' && (
+            <SectionCard title="My Tasks" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> New Task</button>}>
+              {myTasks.length === 0 ? (
+                <div className="text-sm text-black/60">No tasks assigned.</div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search..."
+                      className="px-2 py-1 text-xs border rounded flex-1"
+                    />
+                    <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-xs rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>List</button>
+                    <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-xs rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Board</button>
+                    <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-xs rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Calendar</button>
+                  </div>
+                  {taskView === 'list' && (
+                    <div className="space-y-2">
+                      {myTasks.map((t) => {
+                        const c = courses.find((x) => x.course.id === t.courseId);
+                        if (!c) return null;
+                        return (
+                          <TaskCard
+                            key={t.id}
+                            task={t}
+                            tasks={c.tasks}
+                            team={c.team}
+                            milestones={c.milestones}
+                            onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+                            onDelete={(id) => deleteTask(c.course.id, id)}
+                            onDuplicate={(id) => duplicateTask(c.course.id, id)}
+                            onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+                            onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                  {taskView === 'board' && (
+                    <div className="grid gap-4 md:grid-cols-3">
+                      {[
+                        { id: 'todo', label: 'To Do' },
+                        { id: 'inprogress', label: 'In Progress' },
+                        { id: 'done', label: 'Done' },
+                      ].map(({ id, label }) => (
+                        <div
+                          key={id}
+                          className={`rounded-xl border border-black/10 p-3 ${id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            const tid = e.dataTransfer.getData('text/task');
+                            const cid = e.dataTransfer.getData('text/course');
+                            if (tid && cid) updateTaskStatus(cid, tid, id);
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-sm font-medium text-black/70">{label} ({groupedTasks[id].length})</div>
+                          </div>
+                          <div className="space-y-2 min-h-[140px]">
+                            {groupedTasks[id].map((t) => {
+                              const c = courses.find((x) => x.course.id === t.courseId);
+                              if (!c) return null;
+                              return (
+                                <TaskCard
+                                  key={t.id}
+                                  task={t}
+                                  tasks={c.tasks}
+                                  team={c.team}
+                                  milestones={c.milestones}
+                                  onUpdate={(tid, patch) => updateTask(c.course.id, tid, patch)}
+                                  onDelete={(tid) => deleteTask(c.course.id, tid)}
+                                  onDuplicate={(tid) => duplicateTask(c.course.id, tid)}
+                                  onAddLink={(tid, url) => patchTaskLinks(c.course.id, tid, 'add', url)}
+                                  onRemoveLink={(tid, idx) => patchTaskLinks(c.course.id, tid, 'remove', idx)}
+                                  dragHandlers={{
+                                    draggable: true,
+                                    onDragStart: (e) => {
+                                      e.dataTransfer.setData('text/task', t.id);
+                                      e.dataTransfer.setData('text/course', t.courseId);
+                                    },
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {taskView === 'calendar' && (
+                    <CalendarView
+                      monthDate={calMonth}
+                      tasks={myTasks}
+                      milestones={[]}
+                      team={[]}
+                      onPrev={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
+                      onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
+                      onToday={() => setCalMonth(new Date())}
+                      schedule={loadGlobalSchedule()}
+                      // open TaskModal when clicking a calendar event
+                      onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
+                    />
+                  )}
+                </>
+              )}
+            </SectionCard>
+          )}
+        </div>
         {editing && (() => {
           const c = courses.find((x) => x.course.id === editing.courseId);
           const task = c?.tasks.find((t) => t.id === editing.taskId);
@@ -1636,6 +1780,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           return (
             <TaskModal
               task={task}
+              courseId={c.course.id}
+              courses={myCoursesAll}
+              onChangeCourse={(toId) => changeTaskCourse(c.course.id, task.id, toId)}
               tasks={c.tasks}
               team={c.team}
               milestones={c.milestones}
@@ -2121,7 +2268,7 @@ export default function PMApp() {
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
     const handleChange = (s) => { saveTemplate(s); saveTemplateRemote(s).catch(()=>{}); };
-    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} />;
+    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} onOpenUser={openUser} />;
   } else {
     // open selected course
     const courses = loadCourses();
@@ -2135,7 +2282,7 @@ export default function PMApp() {
       else all.push(s);
       saveCourses(all);
     };
-    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} />;
+    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} onOpenUser={openUser} />;
   }
   return (
     <SoundContext.Provider value={soundEnabled}>
