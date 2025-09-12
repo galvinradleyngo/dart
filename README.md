@@ -1,26 +1,20 @@
-# DART — GitHub Pages Starter
+# DART — Design & Development Accountability Tracker
 
-This ZIP is preconfigured for `https://galvinradleyngo.github.io/dart/`.
+Vite + React app for tracking course development tasks. The project is preconfigured for deployment to GitHub Pages at `https://galvinradleyngo.github.io/dart/`.
 
-- `vite.config.js` has `base: '/dart/'`
-- `public/404.html` handles deep-link refresh on Pages
-- GitHub Actions workflow builds and deploys automatically
+## Local Development
 
-## Using this
-1. Upload all files to your `galvinradleyngo/dart` repo (commit to `main`).
-2. In **Settings → Pages**, choose **Source: GitHub Actions**.
-3. Replace `src/App.jsx` with your full app code from ChatGPT canvas (the placeholder just shows a stub).
-
-## Local dev
 ```bash
-npm i
+npm install
 npm run dev
 ```
 
 ## Testing
 
+Run the unit tests with:
+
 ```bash
 npm test
 ```
 
-The test script uses Node's built-in test runner (`node --test`), which requires Node.js 18 or newer.
+Vitest and React Testing Library power the test suite.
