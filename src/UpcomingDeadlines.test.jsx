@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UserDashboard, UPCOMING_DAYS } from './App.jsx';
 import { fmt } from './utils.js';
@@ -38,8 +38,24 @@ describe('Upcoming Deadlines window', () => {
 
     render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
 
-    expect(await screen.findByText('Today Task')).toBeInTheDocument();
-    expect(await screen.findByText('Future Task')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Today Task in Course 1' })
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Future Task in Course 1' })
+    ).toBeInTheDocument();
     expect(screen.queryByText('Outside Task')).toBeNull();
+
+    const checkbox = await screen.findByRole('checkbox', {
+      name: 'Today Task in Course 1',
+    });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Today Task in Course 1' })
+    );
+    expect(await screen.findByText('Delete')).toBeInTheDocument();
   });
 });
