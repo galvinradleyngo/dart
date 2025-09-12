@@ -1539,7 +1539,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             </button>
           ))}
         </div>
-        <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2">
           {activeTab === 'deadlines' && (
             <SectionCard title="Upcoming Deadlines">
               {upcoming.every((d) => d.tasks.length === 0) ? (
@@ -1704,7 +1704,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     </div>
                   )}
                   {taskView === 'board' && (
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-3">
                       {[
                         { id: 'todo', label: 'To Do' },
                         { id: 'inprogress', label: 'In Progress' },
