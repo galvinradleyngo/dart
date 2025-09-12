@@ -1805,7 +1805,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 function computeTotals(state) {
   const tasks = state.tasks || []; const total = tasks.length; const done = tasks.filter((t)=>t.status==="done").length; const inprog = tasks.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const pct = total ? Math.round((done/total)*100) : 0; const nextDue = tasks.filter((t)=>t.status!=="done" && t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate))[0]?.dueDate || null; return { total, done, inprog, todo, pct, nextDue };
 }
-function CoursesHub({
+export function CoursesHub({
   onOpenCourse,
   onEditTemplate,
   onAddCourse,
