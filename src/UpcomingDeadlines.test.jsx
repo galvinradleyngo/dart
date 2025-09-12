@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { UserDashboard } from './App.jsx';
+import { UserDashboard, UPCOMING_DAYS } from './App.jsx';
 import { fmt } from './utils.js';
 
 vi.mock('./firebase.js', () => ({ db: {} }));
@@ -15,12 +15,13 @@ describe('Upcoming Deadlines window', () => {
     localStorage.clear();
   });
 
-  it('shows tasks due today and 14 days out', async () => {
+  it('shows tasks due within the upcoming window', async () => {
     const today = new Date();
+    // window spans today through UPCOMING_DAYS - 1
     const day14 = new Date();
-    day14.setDate(today.getDate() + 14);
+    day14.setDate(today.getDate() + (UPCOMING_DAYS - 1));
     const day15 = new Date();
-    day15.setDate(today.getDate() + 15);
+    day15.setDate(today.getDate() + UPCOMING_DAYS);
 
     const courses = [{
       course: { id: 'c1', name: 'Course 1' },
