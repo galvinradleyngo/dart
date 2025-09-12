@@ -1272,6 +1272,8 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
 // =====================================================
 // User Dashboard (NEW)
 // =====================================================
+const UPCOMING_DAYS = 15;
+
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
@@ -1445,7 +1447,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const upcoming = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    return [...Array(15)].map((_, i) => {
+    return [...Array(UPCOMING_DAYS)].map((_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const ds = fmt(d);
