@@ -698,12 +698,24 @@ const tasksDone = useMemo(() => {
             <div className="relative sm:hidden">
               <button
                 onClick={() => setActionsOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-              >
-                <MoreHorizontal size={16} /> Menu
-              </button>
-              {actionsOpen && (
-                <div className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2">
+<button
+  onClick={() => setActionsOpen((v) => !v)}
+  className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+  aria-label="Toggle actions menu"
+  aria-expanded={actionsOpen}
+  aria-controls="actions-menu"
+>
+  <MoreHorizontal size={16} />
+</button>
+{actionsOpen && (
+  <div
+    id="actions-menu"
+    className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
+  >
+    <ActionButtons />
+  </div>
+)}
+
                   <ActionButtons />
                 </div>
               )}
@@ -1054,7 +1066,9 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
   const update = (id, patch) => { onUpdate?.(id, patch); playSound(); };
   const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
   const handleTouchMove = (e) => {
-    if (touchStartX !== null) e.preventDefault();
+    if (touchStartX === null) return;
+    const dx = e.touches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 10) e.preventDefault();
   };
   const handleTouchEnd = (e) => {
     if (touchStartX === null) return;
@@ -1320,7 +1334,10 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   const statusList = ['todo', 'inprogress', 'done'];
   const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
   const handleTouchMove = (id) => (e) => {
-    if (touchStartRef.current[id] != null) e.preventDefault();
+    const start = touchStartRef.current[id];
+    if (start == null) return;
+    const dx = e.touches[0].clientX - start;
+    if (Math.abs(dx) > 10) e.preventDefault();
   };
   const handleTouchEnd = (id) => (e) => {
     const start = touchStartRef.current[id];
