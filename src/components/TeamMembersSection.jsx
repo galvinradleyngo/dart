@@ -2,7 +2,7 @@ import React from "react";
 import { Users, UserPlus, Trash2 } from "lucide-react";
 import { rolePalette, roleColor } from "../utils.js";
 
-const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-[10px]" }) => (
+const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-sm" }) => (
   <span
     className={`inline-flex items-center justify-center rounded-full font-medium ${className}`}
     style={avatar ? { background: roleColor(roleType) } : { background: roleColor(roleType), color: "#fff" }}
@@ -48,7 +48,7 @@ function TeamMemberCard({
             ))}
           </select>
           {(member.roleType === "LD" || member.roleType === "SME") && (
-            <label className="text-xs inline-flex items-center gap-1 cursor-pointer">
+            <label className="text-sm inline-flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={courseWide.includes(member.id)}
