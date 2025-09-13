@@ -575,7 +575,7 @@ const tasksDone = useMemo(() => {
         Save
       </button>
       <span className="text-xs text-black/60">
-        {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Unsaved"}
+        {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
       </span>
       <button
         onClick={() => {
@@ -1625,7 +1625,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               Save
             </button>
             <span className="text-xs text-black/60">
-              {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Unsaved"}
+              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
           </div>
         </div>
