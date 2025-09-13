@@ -564,7 +564,7 @@ const tasksDone = useMemo(() => {
 
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
-  const [actionsOpen, setActionsOpen] = useState(false); // Mobile actions dropdown state
+  const [actionsOpen, setActionsOpen] = useState(false); // State for mobile actions dropdown
 
   const ActionButtons = () => (
     <>
