@@ -15,6 +15,7 @@ import {
   RefreshCcw,
   UserPlus,
   Copy as CopyIcon,
+  MoreHorizontal,
   Link2,
   GitBranch,
   Minus,
@@ -563,6 +564,90 @@ const tasksDone = useMemo(() => {
 
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
+  const [actionsOpen, setActionsOpen] = useState(false);
+
+  const ActionButtons = () => (
+    <>
+      <button
+        onClick={handleSave}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        Save
+      </button>
+      <span className="text-xs text-black/60">
+        {saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Unsaved"}
+      </span>
+      <button
+        onClick={() => {
+          if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed()));
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <RefreshCcw size={16} /> Reset
+      </button>
+      <button
+        onClick={async () => {
+          saveTemplate(state);
+          await saveTemplateRemote(state).catch(() => {});
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <CopyIcon size={16} /> Save as Template
+      </button>
+      <button
+        onClick={async () => {
+          const tpl = (await loadTemplateRemote()) || loadTemplate();
+          if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
+          else alert("No template saved yet.");
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <RefreshCcw size={16} /> Reset to Template
+      </button>
+      <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
+        <Upload size={16} /> Import
+        <input
+          type="file"
+          accept="application/json"
+          className="hidden"
+          onChange={(e) =>
+            e.target.files?.[0] &&
+            (() => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                try {
+                  const incoming = remapSeed(JSON.parse(reader.result));
+                  setState((s) => ({ ...incoming, schedule: loadGlobalSchedule() }));
+                } catch {
+                  alert("Invalid JSON");
+                }
+              };
+              reader.readAsText(e.target.files[0]);
+            })()
+          }
+        />
+      </label>
+      <button
+        onClick={() => {
+          const { schedule, ...rest } = state;
+          const toSave = { ...rest, schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] } };
+          const blob = new Blob([JSON.stringify(toSave, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `course-pm-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <Download size={16} /> Export
+      </button>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
       {/* Header */}
@@ -575,24 +660,29 @@ const tasksDone = useMemo(() => {
           {/* DART banner title */}
           <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
-          <div className="w-full flex flex-wrap items-center gap-2 justify-end sm:w-auto">
-            <button
-              onClick={handleSave}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-            >
-              Save
-            </button>
-            <span className="text-xs text-black/60">
-              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
-            </span>
-            <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
-            <button onClick={async () => { saveTemplate(state); await saveTemplateRemote(state).catch(()=>{}); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
-            <button onClick={async () => { const tpl = (await loadTemplateRemote()) || loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
-            <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
-              <Upload size={16}/> Import
-              <input type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && ((() => { const reader = new FileReader(); reader.onload = () => { try { const incoming = remapSeed(JSON.parse(reader.result)); setState((s)=>({ ...incoming, schedule: loadGlobalSchedule() })); } catch { alert("Invalid JSON"); } }; reader.readAsText(e.target.files[0]); })())} />
-            </label>
-            <button onClick={() => { const { schedule, ...rest } = state; const toSave = { ...rest, schedule: { workweek: [1,2,3,4,5], holidays: [] } }; const blob = new Blob([JSON.stringify(toSave, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `course-pm-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Download size={16}/> Export</button>
+          <div className="w-full flex justify-end sm:w-auto">
+            <div className="hidden sm:flex flex-wrap items-center gap-2">
+              <ActionButtons />
+            </div>
+            <div className="relative sm:hidden">
+              <button
+                onClick={() => setActionsOpen((v) => !v)}
+                className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                aria-label="Toggle actions menu"
+                aria-expanded={actionsOpen}
+                aria-controls="actions-menu"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {actionsOpen && (
+                <div
+                  id="actions-menu"
+                  className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
+                >
+                  <ActionButtons />
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {/* Secondary row: course title and template pill */}
