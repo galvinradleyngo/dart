@@ -1534,12 +1534,17 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-4 flex gap-2">
-          {[['deadlines','Deadlines'],['courses','Courses'],['milestones','Milestones'],['tasks','Tasks']].map(([id,label]) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
+        <main className="max-w-7xl mx-auto px-4 py-6">
+          {user && (
+            <h1 className="text-lg font-semibold mb-4">
+              Welcome, {user.name}!
+            </h1>
+          )}
+          <div className="mb-4 flex gap-2">
+            {[['deadlines','Deadlines'],['courses','Courses'],['milestones','Milestones'],['tasks','Tasks']].map(([id,label]) => (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
               className={`px-3 py-1.5 text-sm rounded border ${activeTab===id?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}
             >
               {label}
@@ -2026,52 +2031,6 @@ export function CoursesHub({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Global schedule controls */}
-        <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
-              <Calendar size={18}/> Workweek & Holidays
-              <span className="text-[11px] font-normal text-indigo-700">(Global)</span>
-            </h2>
-          </div>
-          <div className="rounded-xl border border-indigo-200 bg-white p-3 text-xs">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="font-medium">Workweek:</div>
-              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => toggleWorkday(idx)}
-                  className={`px-2 py-1 rounded-full border ${
-                    schedule.workweek.includes(idx)
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-white text-slate-700 border-black/10"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <div className="ml-2 font-medium">Holidays:</div>
-              <AddHoliday onAdd={addHoliday} />
-              <div className="flex flex-wrap gap-2">
-                {schedule.holidays.map((h) => (
-                  <span
-                    key={h}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200"
-                  >
-                    {h}
-                    <button
-                      className="text-rose-500 hover:text-rose-700"
-                      onClick={() => removeHoliday(h)}
-                      title="Remove"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* Team member management */}
         <section>
@@ -2174,6 +2133,54 @@ export function CoursesHub({
                 ))}
             </div>
           )}
+        </section>
+
+
+        {/* Global schedule controls */}
+        <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
+              <Calendar size={18}/> Workweek & Holidays
+              <span className="text-[11px] font-normal text-indigo-700">(Global)</span>
+            </h2>
+          </div>
+          <div className="rounded-xl border border-indigo-200 bg-white p-3 text-xs">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="font-medium">Workweek:</div>
+              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => toggleWorkday(idx)}
+                  className={`px-2 py-1 rounded-full border ${
+                    schedule.workweek.includes(idx)
+                      ? "bg-slate-900 text-white border-slate-900"
+                      : "bg-white text-slate-700 border-black/10"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="ml-2 font-medium">Holidays:</div>
+              <AddHoliday onAdd={addHoliday} />
+              <div className="flex flex-wrap gap-2">
+                {schedule.holidays.map((h) => (
+                  <span
+                    key={h}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200"
+                  >
+                    {h}
+                    <button
+                      className="text-rose-500 hover:text-rose-700"
+                      onClick={() => removeHoliday(h)}
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
 
         <section>
