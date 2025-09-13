@@ -84,11 +84,11 @@ export default function MilestoneCard({
           <div className="flex items-center gap-1">
             {onDuplicateMilestone && (
               <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDuplicateMilestone(milestone.id);
-              }}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDuplicateMilestone(milestone.id);
+                }}
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 title="Duplicate Milestone"
               >
                 <CopyIcon size={16} />
@@ -96,11 +96,11 @@ export default function MilestoneCard({
             )}
             {onDeleteMilestone && (
               <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteMilestone(milestone.id);
-              }}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteMilestone(milestone.id);
+                }}
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 title="Remove Milestone"
               >
                 <Trash2 size={16} />

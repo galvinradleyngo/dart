@@ -331,7 +331,7 @@ function InlineText({ value, onChange, className = "", placeholder = "Untitled",
     </AnimatePresence>
   );
 }
-const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-[10px]" }) => (
+const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-sm" }) => (
   <span
     className={`inline-flex items-center justify-center rounded-full font-medium ${className}`}
     style={avatar ? { background: roleColor(roleType) } : { background: roleColor(roleType), color: "#fff" }}
@@ -341,24 +341,24 @@ const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-[10px]" }) =
   </span>
 );
 function DuePill({ date, status }) {
-  if (!date) return <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-slate-100 text-slate-500 border border-slate-200">—</span>;
+  if (!date) return <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-slate-100 text-slate-500 border border-slate-200">—</span>;
   const today = new Date(todayStr()); const d = new Date(date); const diffDays = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
   let classes = "bg-sky-100 text-sky-800 border-sky-200"; if (status !== "done" && diffDays < 0) classes = "bg-red-100 text-red-800 border-red-200"; else if (status !== "done" && diffDays <= 2) classes = "bg-amber-100 text-amber-800 border-amber-200";
-  return <span className={`inline-block px-2 py-0.5 text-xs rounded-full border font-semibold ${classes}`}>{date}</span>;
+  return <span className={`inline-block px-2 py-0.5 text-sm rounded-full border font-semibold ${classes}`}>{date}</span>;
 }
 function LinksEditor({ links = [], onAdd, onRemove }) {
   const [val, setVal] = useState(""); const add = () => { const url = val.trim(); if (!url) return; try { const u = new URL(url); onAdd?.(u.toString()); setVal(""); } catch {} };
   return (
     <div className="mt-1">
-      <div className="flex flex-wrap gap-1 mb-1">{links.map((l, i) => (<a key={i} href={l} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border border-black/10 bg-white hover:bg-slate-50"><Link2 size={12}/> {(()=>{try{return new URL(l).hostname;}catch{return l;}})()}<button type="button" className="ml-1 text-slate-400 hover:text-rose-600" onClick={(e)=>{e.preventDefault(); onRemove?.(i);}}>×</button></a>))}</div>
-      <div className="flex items-center gap-1"><input value={val} onChange={(e)=>setVal(e.target.value)} onKeyDown={(e)=>{ if(e.key==='Enter') add(); }} placeholder="Paste link & press Enter" className="w-full border rounded px-2 py-1 text-xs" /><button onClick={add} className="px-2 py-1 text-xs rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>
+      <div className="flex flex-wrap gap-1 mb-1">{links.map((l, i) => (<a key={i} href={l} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border border-black/10 bg-white hover:bg-slate-50"><Link2 size={12}/> {(()=>{try{return new URL(l).hostname;}catch{return l;}})()}<button type="button" className="ml-1 text-slate-400 hover:text-rose-600" onClick={(e)=>{e.preventDefault(); onRemove?.(i);}}>×</button></a>))}</div>
+      <div className="flex items-center gap-1"><input value={val} onChange={(e)=>setVal(e.target.value)} onKeyDown={(e)=>{ if(e.key==='Enter') add(); }} placeholder="Paste link & press Enter" className="w-full border rounded px-2 py-1 text-sm" /><button onClick={add} className="px-2 py-1 text-sm rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>
     </div>
   );
 }
 function DocumentInput({ onAdd }) {
   const [val, setVal] = useState(""); const add = () => { const url = val.trim(); if (!url) return; try { const u = new URL(url); onAdd?.(u.toString()); setVal(""); } catch {} };
   return (
-    <div className="flex items-center gap-2 text-xs w-full"><span className="font-medium">Document:</span><input type="url" value={val} onChange={(e)=>setVal(e.target.value)} onKeyDown={(e)=>{ if(e.key==='Enter') add(); }} placeholder="Paste link and press Enter" className="flex-1 border rounded px-1.5 py-1" /><button onClick={add} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>
+    <div className="flex items-center gap-2 text-sm w-full"><span className="font-medium">Document:</span><input type="url" value={val} onChange={(e)=>setVal(e.target.value)} onKeyDown={(e)=>{ if(e.key==='Enter') add(); }} placeholder="Paste link and press Enter" className="flex-1 border rounded px-1.5 py-1" /><button onClick={add} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>
   );
 }
 function LinkChips({ links = [], onRemove }) { return (<div className="mt-1 flex flex-wrap gap-1">{links.map((l, i) => (<a key={i} href={l} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text:[11px] border border-black/10 bg-white hover:bg-slate-50"><Link2 size={12}/> {(()=>{try{return new URL(l).hostname;}catch{return l;}})()}<button type="button" className="ml-1 text-slate-400 hover:text-rose-600" onClick={(e)=>{e.preventDefault(); onRemove?.(i);}}>×</button></a>))}</div>); }
@@ -375,12 +375,12 @@ function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onTo
   return (
     <div className="border border-black/10 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between p-3 bg-white border-b border-black/10"><div className="font-medium">{monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}</div><div className="flex items-center gap-2"><button onClick={onPrev} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Prev</button><button onClick={onToday} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Today</button><button onClick={onNext} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Next</button></div></div>
-      <div className="grid grid-cols-7 text-xs bg-slate-50 border-b border-black/10">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i)=>(<div key={i} className="p-2 text-center font-medium text-slate-700">{d}</div>))}</div>
+      <div className="grid grid-cols-7 text-sm bg-slate-50 border-b border-black/10">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i)=>(<div key={i} className="p-2 text-center font-medium text-slate-700">{d}</div>))}</div>
       <div className="grid grid-cols-7">
         {days.map((d, idx) => { const key = fmt(d); const inMonth = d.getMonth() === month; const isHolidayDay = holidaySet.has(key); const isWork = workSet.has(d.getDay()); const items = tasksByDue[key] || []; const isToday = key === todayStr(); return (
           <div key={idx} className={`min-h-[96px] p-2 border-b border-r border-black/5 ${inMonth?"bg-white":"bg-slate-50"} ${isToday?"ring-2 ring-indigo-500":""}`}>
-            <div className="flex items-center justify-between"><div className={`text-xs ${inMonth?"text-slate-700":"text-slate-400"} ${isToday?"px-1 rounded bg-indigo-600 text-white":""}`}>{d.getDate()}</div>{!isWork && <span className="text-[10px] px-1 rounded bg-slate-100 text-slate-600 border border-slate-200">Off</span>}{isHolidayDay && <span className="text-[10px] px-1 rounded bg-rose-100 text-rose-700 border border-rose-200">Holiday</span>}</div>
-            <div className="mt-1 space-y-1">{items.slice(0,3).map((t)=>(<div key={t.id} className="text-[11px] truncate px-2 py-1 rounded border border-black/10 bg-sky-50 text-sky-800 cursor-pointer" onClick={()=>onTaskClick?.(t)}>{t.title}</div>))}{items.length>3 && <div className="text-[10px] text-slate-500">+{items.length-3} more…</div>}</div>
+            <div className="flex items-center justify-between"><div className={`text-sm ${inMonth?"text-slate-700":"text-slate-400"} ${isToday?"px-1 rounded bg-indigo-600 text-white":""}`}>{d.getDate()}</div>{!isWork && <span className="text-sm px-1 rounded bg-slate-100 text-slate-600 border border-slate-200">Off</span>}{isHolidayDay && <span className="text-sm px-1 rounded bg-rose-100 text-rose-700 border border-rose-200">Holiday</span>}</div>
+            <div className="mt-1 space-y-1">{items.slice(0,3).map((t)=>(<div key={t.id} className="text-sm truncate px-2 py-1 rounded border border-black/10 bg-sky-50 text-sky-800 cursor-pointer" onClick={()=>onTaskClick?.(t)}>{t.title}</div>))}{items.length>3 && <div className="text-sm text-slate-500">+{items.length-3} more…</div>}</div>
           </div>
         ); })}
       </div>
@@ -656,7 +656,7 @@ const tasksDone = useMemo(() => {
       >
         Save
       </button>
-      <span className="text-xs text-black/60">
+      <span className="text-sm text-black/60">
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
       </span>
       <button
@@ -778,11 +778,11 @@ const tasksDone = useMemo(() => {
         <div className="max-w-7xl mx-auto px-4 pb-3 -mt-2">
           <div className="flex items-center gap-2">
             <h1 className="text-base sm:text-lg font-semibold leading-tight"><InlineText value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
-            {isTemplateLabel && <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200">Course Template</span>}
+            {isTemplateLabel && <span className="text-sm px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200">Course Template</span>}
           </div>
           <p className="text-sm text-black/60"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
           {/* Course-wide LDs & SMEs */}
-          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          <div className="mt-2 flex flex-wrap gap-2 text-sm">
             {state.course.courseLDIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> LD</span>; })}
             {state.course.courseSMEIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> SME</span>; })}
           </div>
@@ -854,13 +854,13 @@ const tasksDone = useMemo(() => {
                   title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
                   aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
                   aria-expanded={!milestonesCollapsed}
-                  className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
                 >
                   {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                 </button>
             </div>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             Tap the Milestones bar to expand or collapse.
           </p>
           <motion.div
@@ -977,7 +977,7 @@ const tasksDone = useMemo(() => {
         </button>
       )}
 
-      <footer className="max-w-7xl mx-auto px-4 pb-10 text-xs text-black/50">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
+      <footer className="max-w-7xl mx-auto px-4 pb-10 text-sm text-black/50">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
     </div>
   );
 }
@@ -998,13 +998,13 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
       >
         <div className="text-center">
           <div className="text-base font-semibold leading-none">{display}</div>
-          <div className="text-[10px] text-black/60">
+          <div className="text-sm text-black/60">
             {mode === "percent" ? "Progress" : "Count"}
           </div>
         </div>
       </Ring>
       <div className="flex-1 min-w-0">
-        <div className="text-xs text-black/60 flex items-center gap-1">
+        <div className="text-sm text-black/60 flex items-center gap-1">
           {icon} <span>{title}</span>
         </div>
         <div className="text-sm font-medium truncate">{subtitle}</div>
@@ -1013,7 +1013,7 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
   );
 }
 function Toggle({ value, onChange, options }) { return (<div className="inline-flex rounded-2xl border border-black/10 bg-white p-1 shadow-sm">{options.map((o)=>(<button key={o.id} onClick={()=>onChange(o.id)} className={`px-3 py-1.5 text-sm rounded-xl ${value===o.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{o.label}</button>))}</div>); }
-function AddHoliday({ onAdd }) { const [d, setD] = useState(""); return (<div className="inline-flex items-center gap-1"><input type="date" value={d} onChange={(e)=>setD(e.target.value)} className="border rounded px-2 py-1" /><button onClick={()=>{ if(d){ onAdd(d); setD(""); } }} className="px-2 py-1 text-xs rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>); }
+function AddHoliday({ onAdd }) { const [d, setD] = useState(""); return (<div className="inline-flex items-center gap-1"><input type="date" value={d} onChange={(e)=>setD(e.target.value)} className="border rounded px-2 py-1" /><button onClick={()=>{ if(d){ onAdd(d); setD(""); } }} className="px-2 py-1 text-sm rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>); }
 
 function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onDuplicate }) {
   const taskAssignableMembers = team; // include all roles
@@ -1062,14 +1062,14 @@ function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAd
               <tr key={t.id} className="border-b border-black/5 hover:bg-slate-50 align-top">
                 <td className="py-2 pr-4">
                   <div className="font-medium"><InlineText value={t.title} onChange={(v) => onUpdate(t.id, { title: v })} /></div>
-                  <div className="text-xs text-black/60"><InlineText value={t.details} onChange={(v) => onUpdate(t.id, { details: v })} placeholder="Details…" multiline /></div>
-                  <div className="mt-1 text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v) => onUpdate(t.id, { note: v })} placeholder="Add a quick note…" multiline /></div>
+                  <div className="text-sm text-black/60"><InlineText value={t.details} onChange={(v) => onUpdate(t.id, { details: v })} placeholder="Details…" multiline /></div>
+                  <div className="mt-1 text-sm text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v) => onUpdate(t.id, { note: v })} placeholder="Add a quick note…" multiline /></div>
                   <LinksEditor links={t.links} onAdd={(url) => onAddLink(t.id, url)} onRemove={(i) => onRemoveLink(t.id, i)} />
                 </td>
                 <td className="py-2 pr-4"><select value={t.milestoneId} onChange={(e) => onUpdate(t.id, { milestoneId: e.target.value })} className="border rounded px-2 py-1">{milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}</select></td>
-                <td className="py-2 pr-4"><div className="flex items-center gap-2">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-xs text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e) => onUpdate(t.id, { assigneeId: e.target.value || null })} className="border rounded px-2 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m) => (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div></td>
+                <td className="py-2 pr-4"><div className="flex items-center gap-2">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-sm text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e) => onUpdate(t.id, { assigneeId: e.target.value || null })} className="border rounded px-2 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m) => (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div></td>
                 <td className="py-2 pr-4"><select value={t.status} onChange={(e) => onUpdate(t.id, { status: e.target.value })} className={`border rounded px-2 py-1 ${statusBg(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></td>
-                <td className="py-2 pr-4 hidden lg:table-cell">{t.status === "done" ? (<span className="text-xs text-slate-500">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e) => onUpdate(t.id, { startDate: e.target.value })} disabled={t.status === "todo"} className={`border rounded px-2 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} placeholder="—" />)}</td>
+                <td className="py-2 pr-4 hidden lg:table-cell">{t.status === "done" ? (<span className="text-sm text-slate-500">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e) => onUpdate(t.id, { startDate: e.target.value })} disabled={t.status === "todo"} className={`border rounded px-2 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} placeholder="—" />)}</td>
                 <td className="py-2 pr-4 hidden lg:table-cell"><input type="number" min={0} value={t.workDays ?? 0} onChange={(e) => onUpdate(t.id, { workDays: Number(e.target.value) })} className="w-24 border rounded px-2 py-1" /></td>
                 <td className="py-2 pr-4"><DuePill date={t.dueDate} status={t.status} /></td>
                 <td className="py-2 pr-4 hidden xl:table-cell">{t.status === "done" ? (t.completedDate || "—") : "—"}</td>
@@ -1086,7 +1086,7 @@ function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAd
 function statusBg(status) { if (status === "done") return "bg-emerald-50"; if (status === "inprogress") return "bg-emerald-50"; return "bg-white"; }
 
 function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState(false); const peers = tasks.filter((x)=>x.milestoneId===task.milestoneId && x.id!==task.id); const current = peers.find((p)=>p.id===task.depTaskId); return (
-  <div className="text-xs"><button onClick={()=>setOpen((v)=>!v)} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"><GitBranch size={12}/> {current ? `Depends on: ${current.title}` : "Add dependency"}</button>{open && (<div className="mt-1"><select value={task.depTaskId || ""} onChange={(e)=>{ const val = e.target.value || null; onUpdate(task.id,{ depTaskId:val }); setOpen(false); }} className="border rounded px-2 py-1"><option value="">— none —</option>{peers.map((p)=>(<option key={p.id} value={p.id}>{p.title}</option>))}</select></div>)}</div>
+  <div className="text-sm"><button onClick={()=>setOpen((v)=>!v)} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"><GitBranch size={12}/> {current ? `Depends on: ${current.title}` : "Add dependency"}</button>{open && (<div className="mt-1"><select value={task.depTaskId || ""} onChange={(e)=>{ const val = e.target.value || null; onUpdate(task.id,{ depTaskId:val }); setOpen(false); }} className="border rounded px-2 py-1"><option value="">— none —</option>{peers.map((p)=>(<option key={p.id} value={p.id}>{p.title}</option>))}</select></div>)}</div>
 ); }
 
 export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
@@ -1149,7 +1149,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
           <select
             value={t.milestoneId}
             onChange={(e) => update(t.id, { milestoneId: e.target.value })}
-            className="mb-1 text-xs border rounded px-1 py-0.5"
+            className="mb-1 text-sm border rounded px-1 py-0.5"
           >
             {milestones.map((m) => (
               <option key={m.id} value={m.id}>
@@ -1164,7 +1164,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
         <div className="flex items-center gap-1">
           <button
             onClick={() => setCollapsed((v) => !v)}
-            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
             title={collapsed ? "Expand" : "Collapse"}
           >
             {collapsed ? <Plus size={16} /> : <Minus size={16} />}
@@ -1172,7 +1172,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
             {onDuplicate && (
               <button
                 onClick={() => onDuplicate(t.id)}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 title="Duplicate"
               >
                 <CopyIcon size={16} />
@@ -1198,7 +1198,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                     setStatusOpen(false);
                   }}
                   onBlur={() => setStatusOpen(false)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
                   autoFocus
                 >
                   <option value="todo">To Do</option>
@@ -1212,7 +1212,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                   aria-expanded={statusOpen}
                   aria-label={`Status: ${statusLabel[t.status]}`}
                   onClick={() => setStatusOpen((v) => !v)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
                 >
                   {statusLabel[t.status]}
                 </button>
@@ -1222,7 +1222,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                 aria-label="Status"
                 value={t.status}
                 onChange={(e) => update(t.id, { status: e.target.value })}
-                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
                 <option value="inprogress">In Progress</option>
@@ -1230,11 +1230,11 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
               </select>
             )}
           </div>
-          <div className="text-xs text-black/60 mt-1 truncate">
+          <div className="text-sm text-black/60 mt-1 truncate">
               <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
             </div>
-            {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
-            <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+            {t.note && <div className="text-sm text-slate-600 mt-1 truncate">📝 {t.note}</div>}
+            <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
               <div className="flex items-center gap-2 min-w-0">
                 {a ? (
                   <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
@@ -1266,7 +1266,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                     setStatusOpen(false);
                   }}
                   onBlur={() => setStatusOpen(false)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
                   autoFocus
                 >
                   <option value="todo">To Do</option>
@@ -1280,7 +1280,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                   aria-expanded={statusOpen}
                   aria-label={`Status: ${statusLabel[t.status]}`}
                   onClick={() => setStatusOpen((v) => !v)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
                 >
                   {statusLabel[t.status]}
                 </button>
@@ -1290,7 +1290,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                 aria-label="Status"
                 value={t.status}
                 onChange={(e) => update(t.id, { status: e.target.value })}
-                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
                 <option value="inprogress">In Progress</option>
@@ -1298,7 +1298,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
               </select>
             )}
           </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <div className="flex items-center gap-1">
                 {a ? (
                   <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
@@ -1321,7 +1321,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
               <div className="flex items-center gap-2">
                 <span>Start</span>
                 {t.status === "done" ? (
-                  <span className="text-slate-500 text-xs">—</span>
+                  <span className="text-slate-500 text-sm">—</span>
                 ) : (
                   <input
                     type="date"
@@ -1348,7 +1348,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
                   <LinkChips links={t.links} onRemove={(i) => onRemoveLink?.(t.id, i)} />
                 )}
               </div>
-              <div className="basis-full text-xs text-slate-700">
+              <div className="basis-full text-sm text-slate-700">
                 <span className="font-medium mr-1">Note:</span>
                 <InlineText
                   value={t.note}
@@ -1384,7 +1384,7 @@ function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, miles
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-black">×</button>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
           {courses && onChangeCourse && (
             <select
               value={courseId}
@@ -1404,7 +1404,7 @@ function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, miles
           <div className="flex items-center gap-2"><span>Start</span>{task.status === "done" ? (<span className="text-slate-500">—</span>) : (<input type="date" value={task.startDate || ""} onChange={(e)=>onUpdate(task.id,{ startDate:e.target.value })} disabled={task.status === "todo"} className={`border rounded px-1.5 py-1 ${task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
           <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={task.workDays ?? 0} onChange={(e)=>onUpdate(task.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
           <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(task.id,url)} />{task.links && task.links.length>0 && (<LinkChips links={task.links} onRemove={(i)=>onRemoveLink(task.id,i)} />)}</div>
-          <div className="basis-full text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={task.note} onChange={(v)=>onUpdate(task.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
+          <div className="basis-full text-sm text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={task.note} onChange={(v)=>onUpdate(task.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
           <DepPicker task={task} tasks={tasks} onUpdate={onUpdate} />
           <div className="ml-auto flex items-center gap-2"><DuePill date={task.dueDate} status={task.status} />{task.status === "done" && <span className="text-slate-500">Completed: {task.completedDate || "—"}</span>}</div>
         </div>
@@ -1451,7 +1451,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
           aria-label="Status"
           value={task.status}
           onChange={(e) => onUpdate(task.id, { status: e.target.value })}
-          className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(task.status)}`}
+          className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(task.status)}`}
         >
           <option value="todo">To Do</option>
           <option value="inprogress">In Progress</option>
@@ -1469,7 +1469,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
           setStatusOpenId(null);
         }}
         onBlur={() => setStatusOpenId(null)}
-        className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(task.status)}`}
+        className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(task.status)}`}
         autoFocus
       >
         <option value="todo">To Do</option>
@@ -1483,7 +1483,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
         aria-expanded={open}
         aria-label={`Status: ${statusLabel[task.status]}`}
         onClick={() => setStatusOpenId(open ? null : task.id)}
-        className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(task.status)}`}
+        className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(task.status)}`}
       >
         {statusLabel[task.status]}
       </button>
@@ -1508,25 +1508,25 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
-                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete"><Trash2 size={16}/></button></div>
+                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete"><Trash2 size={16}/></button></div>
                   </div>
                   {collapsed ? (
                     <>
                       <div className="mt-1">{renderStatusControl(t)}</div>
-                      <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
-                      {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
-                      <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
+                      <div className="text-sm text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
+                      {t.note && <div className="text-sm text-slate-600 mt-1 truncate">📝 {t.note}</div>}
+                      <div className="mt-2 flex items-center justify-between text-sm"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
                   ) : (
                     <>
                       <div className="mt-1">{renderStatusControl(t)}</div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                         <select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
                         <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
-                        <div className="flex items-center gap-2"><span>Start</span>{t.status === "done" ? (<span className="text-slate-500 text-xs">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e)=>onUpdate(t.id,{ startDate:e.target.value })} disabled={t.status === "todo"} className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
+                        <div className="flex items-center gap-2"><span>Start</span>{t.status === "done" ? (<span className="text-slate-500 text-sm">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e)=>onUpdate(t.id,{ startDate:e.target.value })} disabled={t.status === "todo"} className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
                         <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
                         <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(t.id,url)} />{t.links && t.links.length>0 && (<LinkChips links={t.links} onRemove={(i)=>onRemoveLink(t.id,i)} />)}</div>
-                      <div className="basis-full text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v)=>onUpdate(t.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
+                      <div className="basis-full text-sm text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v)=>onUpdate(t.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
                       <DepPicker task={t} tasks={tasks} onUpdate={onUpdate} />
                       <div className="ml-auto flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div>
                     </div>
@@ -1817,7 +1817,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             )}
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
-              {user && <div className="text-xs text-black/60 truncate">{user.name}</div>}
+              {user && <div className="text-sm text-black/60 truncate">{user.name}</div>}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1831,7 +1831,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             >
               Save
             </button>
-            <span className="text-xs text-black/60">
+            <span className="text-sm text-black/60">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
           </div>
@@ -1866,7 +1866,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     .filter(({ tasks }) => tasks.length > 0)
                     .map(({ date, tasks }) => (
                       <li key={fmt(date)} className="rounded-xl border border-black/10 bg-white p-3">
-                        <div className="text-xs font-medium mb-1">
+                        <div className="text-sm font-medium mb-1">
                           {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
                         </div>
                         <ul className="space-y-1">
@@ -1880,7 +1880,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                             return (
                               <li
                                 key={t.id}
-                                className={`text-xs flex items-center gap-1 truncate rounded px-2 py-1 ${urgentClass}`}
+                                className={`text-sm flex items-center gap-1 truncate rounded px-2 py-1 ${urgentClass}`}
                               >
                                 <input
                                   type="checkbox"
@@ -1926,7 +1926,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         <div className="flex items-center justify-between">
                           <div className="min-w-0">
                             <div className="font-medium truncate">{c.course.name}</div>
-                            <div className="text-xs text-black/60 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
+                            <div className="text-sm text-black/60 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
                           </div>
                           <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
                         </div>
@@ -1991,11 +1991,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder="Search..."
-                      className="px-2 py-1 text-xs border rounded flex-1"
+                      className="px-2 py-1 text-sm border rounded flex-1"
                     />
-                    <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-xs rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>List</button>
-                    <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-xs rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Board</button>
-                    <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-xs rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Calendar</button>
+                    <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-sm rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>List</button>
+                    <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-sm rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Board</button>
+                    <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-sm rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Calendar</button>
                   </div>
                   {taskView === 'list' && (
                     <div className="space-y-2">
@@ -2312,7 +2312,7 @@ export function CoursesHub({
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-xs text-black/60 truncate">Courses Hub</div>
+              <div className="text-sm text-black/60 truncate">Courses Hub</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -2398,7 +2398,7 @@ export function CoursesHub({
                         <select
                           value={m.roleType}
                           onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
-                          className="mt-1 border rounded px-2 py-1 text-xs"
+                          className="mt-1 border rounded px-2 py-1 text-sm"
                         >
                           {Object.keys(rolePalette).map((r) => (
                             <option key={r} value={r}>
@@ -2409,13 +2409,13 @@ export function CoursesHub({
                         <div className="mt-2 flex gap-2">
                           <button
                             onClick={() => onOpenUser(m.id)}
-                            className="text-xs px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                            className="text-sm px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
                           >
                             Open
                           </button>
                           <button
                             onClick={() => removePerson(m.id)}
-                            className="text-xs px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                            className="text-sm px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
                           >
                             Remove
                           </button>
@@ -2430,7 +2430,7 @@ export function CoursesHub({
                         >
                           {m.name}
                         </button>
-                        <div className="text-xs text-black/60">{m.roleType}</div>
+                        <div className="text-sm text-black/60">{m.roleType}</div>
                       </>
                     )}
                   </div>
@@ -2445,10 +2445,10 @@ export function CoursesHub({
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
               <Calendar size={18}/> Workweek & Holidays
-              <span className="text-[11px] font-normal text-indigo-700">(Global)</span>
+              <span className="text-sm font-normal text-indigo-700">(Global)</span>
             </h2>
           </div>
-          <div className="rounded-xl border border-indigo-200 bg-white p-3 text-xs">
+          <div className="rounded-xl border border-indigo-200 bg-white p-3 text-sm">
             <div className="flex flex-wrap items-center gap-3">
               <div className="font-medium">Workweek:</div>
               {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
@@ -2513,16 +2513,16 @@ export function CoursesHub({
                     className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 truncate">{c.course.description}</div></div>
+                      <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-sm text-black/60 truncate">{c.course.description}</div></div>
                     </div>
                     <div className="flex items-center gap-4 mt-3">
                       <Ring className="w-14 h-14 xs:w-16 xs:h-16" stroke={10} progress={t.pct} color="#10b981">
                         <div className="text-center">
                           <div className="text-sm font-semibold">{t.pct}%</div>
-                          <div className="text-[10px] text-black/60">{t.done}/{t.total}</div>
+                          <div className="text-sm text-black/60">{t.done}/{t.total}</div>
                         </div>
                       </Ring>
-                      <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
+                      <div className="text-sm space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
                     </div>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                       <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
@@ -2664,7 +2664,7 @@ export default function PMApp() {
       >
         {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
       </button>
-      <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-xs">v{version}</div>
+      <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-sm">v{version}</div>
     </SoundContext.Provider>
   );
 }
