@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, Fragment, useContext, createContext, useCallback } from "react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
-import { useSwipeable } from "react-swipeable";
 import {
   Plus,
   Calendar,
@@ -1129,19 +1128,7 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     onUpdate?.(id, patch);
     playSound();
   };
-  const swipeHandlers = useSwipeable({
-    onSwipedLeft: () => {
-      const prevIdx = Math.max(statusList.indexOf(t.status) - 1, 0);
-      const prevStatus = statusList[prevIdx];
-      if (prevStatus !== t.status) update(t.id, { status: prevStatus });
-    },
-    onSwipedRight: () => {
-      const nextIdx = Math.min(statusList.indexOf(t.status) + 1, statusList.length - 1);
-      const nextStatus = statusList[nextIdx];
-      if (nextStatus !== t.status) update(t.id, { status: nextStatus });
-    },
-    trackTouch: true,
-  });
+  const [statusOpen, setStatusOpen] = useState(false);
   const a = team.find((m) => m.id === t.assigneeId);
   const statusPillClass = (status) => {
     if (status === "done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300";
@@ -1152,7 +1139,6 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     <motion.div
       data-testid="task-card"
       {...dragProps}
-      {...swipeHandlers}
       className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${dragProps.draggable ? "cursor-move" : ""}`}
       animate={controls}
       whileTap={{ scale: 0.98 }}
@@ -1203,13 +1189,37 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
         <>
           <div className="mt-1">
             {isMobile ? (
-              <span
-                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
-              >
-                {statusLabel[t.status]}
-              </span>
+              statusOpen ? (
+                <select
+                  aria-label="Status"
+                  value={t.status}
+                  onChange={(e) => {
+                    update(t.id, { status: e.target.value });
+                    setStatusOpen(false);
+                  }}
+                  onBlur={() => setStatusOpen(false)}
+                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                  autoFocus
+                >
+                  <option value="todo">To Do</option>
+                  <option value="inprogress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              ) : (
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={statusOpen}
+                  aria-label={`Status: ${statusLabel[t.status]}`}
+                  onClick={() => setStatusOpen((v) => !v)}
+                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                >
+                  {statusLabel[t.status]}
+                </button>
+              )
             ) : (
               <select
+                aria-label="Status"
                 value={t.status}
                 onChange={(e) => update(t.id, { status: e.target.value })}
                 className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
@@ -1247,13 +1257,37 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
         <>
           <div className="mt-1">
             {isMobile ? (
-              <span
-                className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
-              >
-                {statusLabel[t.status]}
-              </span>
+              statusOpen ? (
+                <select
+                  aria-label="Status"
+                  value={t.status}
+                  onChange={(e) => {
+                    update(t.id, { status: e.target.value });
+                    setStatusOpen(false);
+                  }}
+                  onBlur={() => setStatusOpen(false)}
+                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                  autoFocus
+                >
+                  <option value="todo">To Do</option>
+                  <option value="inprogress">In Progress</option>
+                  <option value="done">Done</option>
+                </select>
+              ) : (
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={statusOpen}
+                  aria-label={`Status: ${statusLabel[t.status]}`}
+                  onClick={() => setStatusOpen((v) => !v)}
+                  className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
+                >
+                  {statusLabel[t.status]}
+                </button>
+              )
             ) : (
               <select
+                aria-label="Status"
                 value={t.status}
                 onChange={(e) => update(t.id, { status: e.target.value })}
                 className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}
@@ -1382,23 +1416,18 @@ function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, miles
 
 export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
-  const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
+  const taskAssignableMembers = team;
+  const byCol = (id) =>
+    tasks
+      .filter((t) => t.status === id)
+      .sort((a, b) => {
+        const da = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        const db = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        return da - db;
+      });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
   const isMobile = useIsMobile();
-  const statusList = ['todo', 'inprogress', 'done'];
-  const swipeHandlers = (task) => ({
-    onSwipedLeft: () => {
-      const prevIdx = Math.max(statusList.indexOf(task.status) - 1, 0);
-      const prevStatus = statusList[prevIdx];
-      if (prevStatus !== task.status) onUpdate(task.id, { status: prevStatus });
-    },
-    onSwipedRight: () => {
-      const nextIdx = Math.min(statusList.indexOf(task.status) + 1, statusList.length - 1);
-      const nextStatus = statusList[nextIdx];
-      if (nextStatus !== task.status) onUpdate(task.id, { status: nextStatus });
-    },
-    trackTouch: true,
-  });
+  const [statusOpenId, setStatusOpenId] = React.useState(null);
   React.useEffect(() => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -1406,9 +1435,60 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
       return next;
     });
   }, [tasks]);
-  const isCollapsed = (id) => collapsedIds.has(id); const toggleCollapse = (id) => setCollapsedIds((prev)=>{ const n=new Set(prev); n.has(id)?n.delete(id):n.add(id); return n; });
+  const isCollapsed = (id) => collapsedIds.has(id);
+  const toggleCollapse = (id) =>
+    setCollapsedIds((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   const statusPillClass = (status) => { if(status==="done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300"; if(status==="inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300"; return "bg-slate-100 text-slate-700 border-slate-300"; };
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
+  const renderStatusControl = (task) => {
+    if (!isMobile) {
+      return (
+        <select
+          aria-label="Status"
+          value={task.status}
+          onChange={(e) => onUpdate(task.id, { status: e.target.value })}
+          className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(task.status)}`}
+        >
+          <option value="todo">To Do</option>
+          <option value="inprogress">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+      );
+    }
+    const open = statusOpenId === task.id;
+    return open ? (
+      <select
+        aria-label="Status"
+        value={task.status}
+        onChange={(e) => {
+          onUpdate(task.id, { status: e.target.value });
+          setStatusOpenId(null);
+        }}
+        onBlur={() => setStatusOpenId(null)}
+        className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(task.status)}`}
+        autoFocus
+      >
+        <option value="todo">To Do</option>
+        <option value="inprogress">In Progress</option>
+        <option value="done">Done</option>
+      </select>
+    ) : (
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Status: ${statusLabel[task.status]}`}
+        onClick={() => setStatusOpenId(open ? null : task.id)}
+        className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(task.status)}`}
+      >
+        {statusLabel[task.status]}
+      </button>
+    );
+  };
   return (
     <div>
       <div className="grid md:grid-cols-3 gap-3">
@@ -1419,7 +1499,6 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
                   <motion.div
                     key={t.id}
-                    {...swipeHandlers(t)}
                     data-testid="task-card"
                     className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
                     draggable={!isMobile}
@@ -1433,14 +1512,14 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   </div>
                   {collapsed ? (
                     <>
-                      <div className="mt-1">{isMobile ? (<span className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}>{statusLabel[t.status]}</span>) : (<select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>)}</div>
+                      <div className="mt-1">{renderStatusControl(t)}</div>
                       <div className="text-xs text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-[11px] text-slate-600 mt-1 truncate">📝 {t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-xs"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
                   ) : (
                     <>
-                      <div className="mt-1">{isMobile ? (<span className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}>{statusLabel[t.status]}</span>) : (<select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`px-2 py-1 rounded-full border font-semibold text-xs ${statusPillClass(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>)}</div>
+                      <div className="mt-1">{renderStatusControl(t)}</div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                         <select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
                         <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>

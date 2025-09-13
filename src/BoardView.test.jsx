@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 
 const sampleTask = { id: 't1', title: 'Sample Task', status: 'todo', milestoneId: 'm1', order: 0 };
 
-describe('BoardView swipe transitions', () => {
+describe('BoardView mobile status selection', () => {
   beforeAll(() => {
     window.matchMedia = window.matchMedia || (() => ({
       matches: true,
@@ -34,66 +34,40 @@ describe('BoardView swipe transitions', () => {
       />
     );
 
-  const swipe = (element, dx) => {
-    fireEvent.touchStart(element, { touches: [{ clientX: 0 }] });
-    fireEvent.touchEnd(element, { changedTouches: [{ clientX: dx }] });
+  const openSelect = () => {
+    fireEvent.click(screen.getByRole('button', { name: /status/i }));
+    return screen.getByLabelText('Status');
   };
 
-  it('swipe right from todo moves to inprogress', () => {
+  it('changes from todo to inprogress', () => {
     const onUpdate = vi.fn();
     renderBoard('todo', onUpdate);
-    const card = screen.getByTestId('task-card');
-    expect(card.hasAttribute('draggable')).toBe(false);
-    swipe(card, 100);
+    fireEvent.change(openSelect(), { target: { value: 'inprogress' } });
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'inprogress' });
   });
 
-  it('swipe left from todo stays at todo', () => {
-    const onUpdate = vi.fn();
-    renderBoard('todo', onUpdate);
-    const card = screen.getByTestId('task-card');
-    expect(card.hasAttribute('draggable')).toBe(false);
-    swipe(card, -100);
-    expect(onUpdate).not.toHaveBeenCalled();
-  });
-
-  it('swipe right from inprogress moves to done', () => {
+  it('changes from inprogress to done', () => {
     const onUpdate = vi.fn();
     renderBoard('inprogress', onUpdate);
-    const card = screen.getByTestId('task-card');
-    expect(card.hasAttribute('draggable')).toBe(false);
-    swipe(card, 100);
+    fireEvent.change(openSelect(), { target: { value: 'done' } });
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'done' });
   });
 
-  it('swipe left from inprogress moves to todo', () => {
+  it('changes from inprogress back to todo', () => {
     const onUpdate = vi.fn();
     renderBoard('inprogress', onUpdate);
-    const card = screen.getByTestId('task-card');
-    expect(card.hasAttribute('draggable')).toBe(false);
-    swipe(card, -100);
+    fireEvent.change(openSelect(), { target: { value: 'todo' } });
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'todo' });
   });
 
-  it('swipe left from done moves to inprogress', () => {
+  it('changes from done back to inprogress', () => {
     const onUpdate = vi.fn();
     renderBoard('done', onUpdate);
-    const card = screen.getByTestId('task-card');
-    expect(card.hasAttribute('draggable')).toBe(false);
-    swipe(card, -100);
+    fireEvent.change(openSelect(), { target: { value: 'inprogress' } });
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'inprogress' });
   });
 
-  it('swipe right from done stays at done', () => {
-    const onUpdate = vi.fn();
-    renderBoard('done', onUpdate);
-    const card = screen.getByTestId('task-card');
-    expect(card.hasAttribute('draggable')).toBe(false);
-    swipe(card, 100);
-    expect(onUpdate).not.toHaveBeenCalled();
-  });
-
-  it('replaces status dropdown with pill and updates text on swipe', async () => {
+  it('updates button text after selection', async () => {
     const Wrapper = () => {
       const [tasks, setTasks] = useState([{ ...sampleTask }]);
       return (
@@ -116,11 +90,12 @@ describe('BoardView swipe transitions', () => {
     };
     render(<Wrapper />);
     expect(screen.queryByRole('combobox')).toBeNull();
-    expect(screen.getByText('To Do')).toBeInTheDocument();
-    const card = screen.getByTestId('task-card');
-    expect(card.hasAttribute('draggable')).toBe(false);
-    fireEvent.touchStart(card, { touches: [{ clientX: 0 }] });
-    fireEvent.touchEnd(card, { changedTouches: [{ clientX: 100 }] });
-    await screen.findByText('In Progress');
+    const button = screen.getByRole('button', { name: /status/i });
+    expect(button).toHaveTextContent('To Do');
+    fireEvent.click(button);
+    fireEvent.change(screen.getByLabelText('Status'), {
+      target: { value: 'inprogress' },
+    });
+    await screen.findByRole('button', { name: /status: in progress/i });
   });
 });
