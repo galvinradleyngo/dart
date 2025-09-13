@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, Fragment, useContext, createContext, useCallback } from "react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
+import { useSwipeable, Swipeable } from "react-swipeable";
 import {
   Plus,
   Calendar,
@@ -23,6 +24,7 @@ import {
   ArrowLeft,
   Volume2,
   VolumeX,
+  MoreHorizontal,
 } from "lucide-react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
@@ -234,20 +236,101 @@ const remapSeed = (s) => {
 // =====================================================
 // Avatar, Ring, DuePill, Inputs, etc.
 // =====================================================
-function Ring({ size = 84, stroke = 10, progress = 0, trackOpacity = 0.15, color = "#111827", children }) {
-  const r = (size - stroke) / 2; const c = 2 * Math.PI * r; const pct = clamp(progress, 0, 100); const dash = (pct / 100) * c;
+function Ring({ className = "w-20 h-20", stroke = 10, progress = 0, trackOpacity = 0.15, color = "#111827", children }) {
+  const r = 50 - stroke / 2;
+  const c = 2 * Math.PI * r;
+  const pct = clamp(progress, 0, 100);
+  const dash = (pct / 100) * c;
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="rotate-[-90deg]"><circle cx={size/2} cy={size/2} r={r} stroke="currentColor" strokeWidth={stroke} className="text-black/10" style={{opacity:trackOpacity}} fill="none"/><circle cx={size/2} cy={size/2} r={r} stroke={color} strokeWidth={stroke} strokeDasharray={`${dash} ${c-dash}`} strokeLinecap="round" fill="none"/></svg>
+    <div className={`relative inline-flex items-center justify-center ${className}`}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 rotate-[-90deg]">
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          stroke="currentColor"
+          strokeWidth={stroke}
+          className="text-black/10"
+          style={{ opacity: trackOpacity }}
+          fill="none"
+        />
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          stroke={color}
+          strokeWidth={stroke}
+          strokeDasharray={`${dash} ${c - dash}`}
+          strokeLinecap="round"
+          fill="none"
+        />
+      </svg>
       <div className="absolute inset-0 grid place-items-center text-center select-none">{children}</div>
     </div>
   );
 }
 function InlineText({ value, onChange, className = "", placeholder = "Untitled", multiline = false }) {
-  const [editing, setEditing] = useState(false); const [draft, setDraft] = useState(value ?? ""); useEffect(() => setDraft(value ?? ""), [value]);
-  const commit = () => { setEditing(false); if (draft !== value) onChange?.(draft); };
-  if (!editing) return (<span className={`cursor-text hover:bg-black/5 rounded px-1 ${className}`} onClick={() => setEditing(true)} title="Click to edit">{value?.trim() ? value : <span className="text-black/40">{placeholder}</span>}</span>);
-  return multiline ? (<textarea autoFocus className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`} value={draft} onChange={(e)=>setDraft(e.target.value)} onBlur={commit} onKeyDown={(e)=>{ if(e.key==="Escape"){ setDraft(value??""); setEditing(false);} if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="enter") commit(); }} rows={3} />) : (<input autoFocus className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`} value={draft} onChange={(e)=>setDraft(e.target.value)} onBlur={commit} onKeyDown={(e)=> e.key==="Enter" ? commit() : (e.key==="Escape" && (setDraft(value??""), setEditing(false)))} />);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  useEffect(() => setDraft(value ?? ""), [value]);
+  const commit = () => {
+    setEditing(false);
+    if (draft !== value) onChange?.(draft);
+  };
+  return (
+    <AnimatePresence initial={false} mode="wait">
+      {!editing ? (
+        <motion.span
+          key="view"
+          className={`cursor-text hover:bg-black/5 rounded px-1 ${className}`}
+          onClick={() => setEditing(true)}
+          title="Click to edit"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          {value?.trim() ? value : <span className="text-black/40">{placeholder}</span>}
+        </motion.span>
+      ) : multiline ? (
+        <motion.textarea
+          key="edit"
+          autoFocus
+          className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setDraft(value ?? "");
+              setEditing(false);
+            }
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "enter") commit();
+          }}
+          rows={3}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        />
+      ) : (
+        <motion.input
+          key="edit"
+          autoFocus
+          className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) =>
+            e.key === "Enter"
+              ? commit()
+              : (e.key === "Escape" && (setDraft(value ?? ""), setEditing(false)))
+          }
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        />
+      )}
+    </AnimatePresence>
+  );
 }
 const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-[10px]" }) => (
   <span
@@ -327,6 +410,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(true);
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setState((s) => ({
@@ -561,7 +645,98 @@ const tasksDone = useMemo(() => {
   const [editing, setEditing] = useState(null);
   const editingTask = state.tasks.find((t) => t.id === editing?.taskId) || null;
 
+  const [actionsOpen, setActionsOpen] = useState(false);
+
   const memberById = (id) => team.find((m) => m.id === id) || null;
+
+  const ActionButtons = () => (
+    <>
+      <button
+        onClick={handleSave}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        Save
+      </button>
+      <span className="text-xs text-black/60">
+        {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
+      </span>
+      <button
+        onClick={() => {
+          if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed()));
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <RefreshCcw size={16} /> Reset
+      </button>
+      <button
+        onClick={async () => {
+          saveTemplate(state);
+          await saveTemplateRemote(state).catch(() => {});
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <CopyIcon size={16} /> Save as Template
+      </button>
+      <button
+        onClick={async () => {
+          const tpl = (await loadTemplateRemote()) || loadTemplate();
+          if (tpl)
+            setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
+          else alert("No template saved yet.");
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <RefreshCcw size={16} /> Reset to Template
+      </button>
+      <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
+        <Upload size={16} /> Import
+        <input
+          type="file"
+          accept="application/json"
+          className="hidden"
+          onChange={(e) =>
+            e.target.files?.[0] &&
+            (() => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                try {
+                  const incoming = remapSeed(JSON.parse(reader.result));
+                  setState((s) => ({
+                    ...incoming,
+                    schedule: loadGlobalSchedule(),
+                  }));
+                } catch {
+                  alert("Invalid JSON");
+                }
+              };
+              reader.readAsText(e.target.files[0]);
+            })()
+          }
+        />
+      </label>
+      <button
+        onClick={() => {
+          const { schedule, ...rest } = state;
+          const toSave = {
+            ...rest,
+            schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
+          };
+          const blob = new Blob([JSON.stringify(toSave, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `course-pm-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }}
+        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+      >
+        <Download size={16} /> Export
+      </button>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
@@ -575,24 +750,29 @@ const tasksDone = useMemo(() => {
           {/* DART banner title */}
           <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
-          <div className="w-full flex flex-wrap items-center gap-2 justify-end sm:w-auto">
-            <button
-              onClick={handleSave}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-            >
-              Save
-            </button>
-            <span className="text-xs text-black/60">
-              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
-            </span>
-            <button onClick={() => { if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed())); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset</button>
-            <button onClick={async () => { saveTemplate(state); await saveTemplateRemote(state).catch(()=>{}); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Save as Template</button>
-            <button onClick={async () => { const tpl = (await loadTemplateRemote()) || loadTemplate(); if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() }); else alert("No template saved yet."); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><RefreshCcw size={16}/> Reset to Template</button>
-            <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
-              <Upload size={16}/> Import
-              <input type="file" accept="application/json" className="hidden" onChange={(e) => e.target.files?.[0] && ((() => { const reader = new FileReader(); reader.onload = () => { try { const incoming = remapSeed(JSON.parse(reader.result)); setState((s)=>({ ...incoming, schedule: loadGlobalSchedule() })); } catch { alert("Invalid JSON"); } }; reader.readAsText(e.target.files[0]); })())} />
-            </label>
-            <button onClick={() => { const { schedule, ...rest } = state; const toSave = { ...rest, schedule: { workweek: [1,2,3,4,5], holidays: [] } }; const blob = new Blob([JSON.stringify(toSave, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `course-pm-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url); }} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Download size={16}/> Export</button>
+          <div className="w-full flex justify-end sm:w-auto">
+            <div className="hidden sm:flex flex-wrap items-center gap-2">
+              <ActionButtons />
+            </div>
+            <div className="relative sm:hidden">
+              <button
+                onClick={() => setActionsOpen((v) => !v)}
+                className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                aria-label="Toggle actions menu"
+                aria-expanded={actionsOpen}
+                aria-controls="actions-menu"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {actionsOpen && (
+                <div
+                  id="actions-menu"
+                  className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
+                >
+                  <ActionButtons />
+                </div>
+              )}
+            </div>
           </div>
         </div>
         {/* Secondary row: course title and template pill */}
@@ -788,6 +968,16 @@ const tasksDone = useMemo(() => {
       )}
       </main>
 
+      {isMobile && (
+        <button
+          onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)}
+          className="fixed bottom-6 right-6 z-50 inline-flex items-center justify-center w-14 h-14 rounded-full bg-black text-white shadow-lg sm:hidden"
+          aria-label="Add task"
+        >
+          <Plus size={24} />
+        </button>
+      )}
+
       <footer className="max-w-7xl mx-auto px-4 pb-10 text-xs text-black/50">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
     </div>
   );
@@ -797,11 +987,29 @@ const tasksDone = useMemo(() => {
 // Table + Board components
 // =====================================================
 function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }) {
-  const display = mode === "percent" ? `${value}%` : value; const pct = mode === "percent" ? value : undefined;
+  const display = mode === "percent" ? `${value}%` : value;
+  const pct = mode === "percent" ? value : undefined;
   return (
     <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm flex items-center gap-4">
-      <Ring size={82} stroke={10} progress={pct ?? 100} color={color}><div className="text-center"><div className="text-base font-semibold leading-none">{display}</div><div className="text-[10px] text-black/60">{mode === "percent" ? "Progress" : "Count"}</div></div></Ring>
-      <div className="flex-1 min-w-0"><div className="text-xs text-black/60 flex items-center gap-1">{icon} <span>{title}</span></div><div className="text-sm font-medium truncate">{subtitle}</div></div>
+      <Ring
+        className="w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24"
+        stroke={10}
+        progress={pct ?? 100}
+        color={color}
+      >
+        <div className="text-center">
+          <div className="text-base font-semibold leading-none">{display}</div>
+          <div className="text-[10px] text-black/60">
+            {mode === "percent" ? "Progress" : "Count"}
+          </div>
+        </div>
+      </Ring>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-black/60 flex items-center gap-1">
+          {icon} <span>{title}</span>
+        </div>
+        <div className="text-sm font-medium truncate">{subtitle}</div>
+      </div>
     </div>
   );
 }
@@ -810,32 +1018,67 @@ function AddHoliday({ onAdd }) { const [d, setD] = useState(""); return (<div cl
 
 function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onDuplicate }) {
   const taskAssignableMembers = team; // include all roles
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {tasks.map((t) => (
+          <TaskCard
+            key={t.id}
+            task={t}
+            tasks={allTasks}
+            team={team}
+            milestones={milestones}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onDuplicate={onDuplicate}
+            onAddLink={onAddLink}
+            onRemoveLink={onRemoveLink}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-black/60 border-b border-black/10"><th className="py-2 pr-4">Title & Details</th><th className="py-2 pr-4">Milestone</th><th className="py-2 pr-4">Assignee</th><th className="py-2 pr-4">Status</th><th className="py-2 pr-4">Start</th><th className="py-2 pr-4"># of Workdays</th><th className="py-2 pr-4">Due</th><th className="py-2 pr-4">Completed</th><th className="py-2 pr-4">Dependency</th><th className="py-2">Actions</th></tr>
+          <tr className="text-left text-black/60 border-b border-black/10">
+            <th className="py-2 pr-4">Title & Details</th>
+            <th className="py-2 pr-4">Milestone</th>
+            <th className="py-2 pr-4">Assignee</th>
+            <th className="py-2 pr-4">Status</th>
+            <th className="py-2 pr-4 hidden lg:table-cell">Start</th>
+            <th className="py-2 pr-4 hidden lg:table-cell"># of Workdays</th>
+            <th className="py-2 pr-4">Due</th>
+            <th className="py-2 pr-4 hidden xl:table-cell">Completed</th>
+            <th className="py-2 pr-4 hidden xl:table-cell">Dependency</th>
+            <th className="py-2">Actions</th>
+          </tr>
         </thead>
         <tbody>
-          {tasks.map((t) => { const assignee = team.find((m)=>m.id===t.assigneeId); return (
-            <tr key={t.id} className="border-b border-black/5 hover:bg-slate-50 align-top">
-              <td className="py-2 pr-4 min-w-[320px]">
-                <div className="font-medium"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div>
-                <div className="text-xs text-black/60"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" multiline /></div>
-                <div className="mt-1 text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v)=>onUpdate(t.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
-                <LinksEditor links={t.links} onAdd={(url)=>onAddLink(t.id,url)} onRemove={(i)=>onRemoveLink(t.id,i)} />
-              </td>
-              <td className="py-2 pr-4"><select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-2 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select></td>
-              <td className="py-2 pr-4"><div className="flex items-center gap-2">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-xs text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-2 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div></td>
-              <td className="py-2 pr-4"><select value={t.status} onChange={(e)=>onUpdate(t.id,{ status:e.target.value })} className={`border rounded px-2 py-1 ${statusBg(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></td>
-              <td className="py-2 pr-4">{t.status === "done" ? (<span className="text-xs text-slate-500">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e)=>onUpdate(t.id,{ startDate:e.target.value })} disabled={t.status === "todo"} className={`border rounded px-2 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} placeholder="—" />)}</td>
-              <td className="py-2 pr-4"><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-24 border rounded px-2 py-1" /></td>
-              <td className="py-2 pr-4"><DuePill date={t.dueDate} status={t.status} /></td>
-              <td className="py-2 pr-4">{t.status === "done" ? (t.completedDate || "—") : "—"}</td>
-              <td className="py-2 pr-4"><DepPicker task={t} tasks={allTasks} onUpdate={onUpdate} /></td>
-              <td className="py-2"><button onClick={() => onDuplicate(t.id)} className="text-black/60 hover:text-sky-600 mr-2" title="Duplicate"><CopyIcon size={16}/></button><button onClick={() => onDelete(t.id)} className="text-red-500/80 hover:text-red-600"><Trash2 size={16}/></button></td>
-            </tr>
-          ); })}
+          {tasks.map((t) => {
+            const assignee = team.find((m) => m.id === t.assigneeId);
+            return (
+              <tr key={t.id} className="border-b border-black/5 hover:bg-slate-50 align-top">
+                <td className="py-2 pr-4">
+                  <div className="font-medium"><InlineText value={t.title} onChange={(v) => onUpdate(t.id, { title: v })} /></div>
+                  <div className="text-xs text-black/60"><InlineText value={t.details} onChange={(v) => onUpdate(t.id, { details: v })} placeholder="Details…" multiline /></div>
+                  <div className="mt-1 text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v) => onUpdate(t.id, { note: v })} placeholder="Add a quick note…" multiline /></div>
+                  <LinksEditor links={t.links} onAdd={(url) => onAddLink(t.id, url)} onRemove={(i) => onRemoveLink(t.id, i)} />
+                </td>
+                <td className="py-2 pr-4"><select value={t.milestoneId} onChange={(e) => onUpdate(t.id, { milestoneId: e.target.value })} className="border rounded px-2 py-1">{milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}</select></td>
+                <td className="py-2 pr-4"><div className="flex items-center gap-2">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-xs text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e) => onUpdate(t.id, { assigneeId: e.target.value || null })} className="border rounded px-2 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m) => (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div></td>
+                <td className="py-2 pr-4"><select value={t.status} onChange={(e) => onUpdate(t.id, { status: e.target.value })} className={`border rounded px-2 py-1 ${statusBg(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></td>
+                <td className="py-2 pr-4 hidden lg:table-cell">{t.status === "done" ? (<span className="text-xs text-slate-500">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e) => onUpdate(t.id, { startDate: e.target.value })} disabled={t.status === "todo"} className={`border rounded px-2 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} placeholder="—" />)}</td>
+                <td className="py-2 pr-4 hidden lg:table-cell"><input type="number" min={0} value={t.workDays ?? 0} onChange={(e) => onUpdate(t.id, { workDays: Number(e.target.value) })} className="w-24 border rounded px-2 py-1" /></td>
+                <td className="py-2 pr-4"><DuePill date={t.dueDate} status={t.status} /></td>
+                <td className="py-2 pr-4 hidden xl:table-cell">{t.status === "done" ? (t.completedDate || "—") : "—"}</td>
+                <td className="py-2 pr-4 hidden xl:table-cell"><DepPicker task={t} tasks={allTasks} onUpdate={onUpdate} /></td>
+                <td className="py-2"><button onClick={() => onDuplicate(t.id)} className="text-black/60 hover:text-sky-600 mr-2" title="Duplicate"><CopyIcon size={16} /></button><button onClick={() => onDelete(t.id)} className="text-red-500/80 hover:text-red-600"><Trash2 size={16} /></button></td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -849,7 +1092,6 @@ function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState
 
 export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
-  const [touchStartX, setTouchStartX] = useState(null);
   const isMobile = useIsMobile();
   const dragProps = isMobile ? {} : dragHandlers;
   const statusList = ['todo', 'inprogress', 'done'];
@@ -883,27 +1125,23 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
       osc.stop(ctx.currentTime + 0.2);
     } catch {}
   };
-  const update = (id, patch) => { onUpdate?.(id, patch); playSound(); };
-  const handleTouchStart = (e) => setTouchStartX(e.touches[0].clientX);
-  const handleTouchMove = (e) => {
-    if (touchStartX !== null) e.preventDefault();
+  const update = (id, patch) => {
+    onUpdate?.(id, patch);
+    playSound();
   };
-  const handleTouchEnd = (e) => {
-    if (touchStartX === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const threshold = 50;
-    const curIdx = statusList.indexOf(t.status);
-    if (dx > threshold) {
-      const nextIdx = Math.min(curIdx + 1, statusList.length - 1);
-      const nextStatus = statusList[nextIdx];
-      if (nextStatus !== t.status) update(t.id, { status: nextStatus });
-    } else if (dx < -threshold) {
-      const prevIdx = Math.max(curIdx - 1, 0);
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => {
+      const prevIdx = Math.max(statusList.indexOf(t.status) - 1, 0);
       const prevStatus = statusList[prevIdx];
       if (prevStatus !== t.status) update(t.id, { status: prevStatus });
-    }
-    setTouchStartX(null);
-  };
+    },
+    onSwipedRight: () => {
+      const nextIdx = Math.min(statusList.indexOf(t.status) + 1, statusList.length - 1);
+      const nextStatus = statusList[nextIdx];
+      if (nextStatus !== t.status) update(t.id, { status: nextStatus });
+    },
+    trackTouch: true,
+  });
   const a = team.find((m) => m.id === t.assigneeId);
   const statusPillClass = (status) => {
     if (status === "done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300";
@@ -914,11 +1152,10 @@ export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUp
     <motion.div
       data-testid="task-card"
       {...dragProps}
+      {...swipeHandlers}
       className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${dragProps.draggable ? "cursor-move" : ""}`}
       animate={controls}
-      onTouchStart={isMobile ? handleTouchStart : undefined}
-      onTouchMove={isMobile ? handleTouchMove : undefined}
-      onTouchEnd={isMobile ? handleTouchEnd : undefined}
+      whileTap={{ scale: 0.98 }}
       style={isMobile ? { touchAction: 'pan-y' } : undefined}
     >
       <div className="flex items-start justify-between gap-2">
@@ -1148,31 +1385,20 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   const taskAssignableMembers = team; const byCol = (id) => tasks.filter((t)=>t.status===id).sort((a,b)=>{ const da=a.dueDate?new Date(a.dueDate).getTime():Number.POSITIVE_INFINITY; const db=b.dueDate?new Date(b.dueDate).getTime():Number.POSITIVE_INFINITY; return da-db; });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
   const isMobile = useIsMobile();
-  const touchStartRef = React.useRef({});
   const statusList = ['todo', 'inprogress', 'done'];
-  const handleTouchStart = (id) => (e) => { touchStartRef.current[id] = e.touches[0].clientX; };
-  const handleTouchMove = (id) => (e) => {
-    if (touchStartRef.current[id] != null) e.preventDefault();
-  };
-  const handleTouchEnd = (id) => (e) => {
-    const start = touchStartRef.current[id];
-    if (start == null) return;
-    const dx = e.changedTouches[0].clientX - start;
-    const threshold = 50;
-    const task = tasks.find((t) => t.id === id);
-    if (!task) return;
-    const curIdx = statusList.indexOf(task.status);
-    if (dx > threshold) {
-      const nextIdx = Math.min(curIdx + 1, statusList.length - 1);
-      const nextStatus = statusList[nextIdx];
-      if (nextStatus !== task.status) onUpdate(id, { status: nextStatus });
-    } else if (dx < -threshold) {
-      const prevIdx = Math.max(curIdx - 1, 0);
+  const swipeHandlers = (task) => ({
+    onSwipedLeft: () => {
+      const prevIdx = Math.max(statusList.indexOf(task.status) - 1, 0);
       const prevStatus = statusList[prevIdx];
-      if (prevStatus !== task.status) onUpdate(id, { status: prevStatus });
-    }
-    delete touchStartRef.current[id];
-  };
+      if (prevStatus !== task.status) onUpdate(task.id, { status: prevStatus });
+    },
+    onSwipedRight: () => {
+      const nextIdx = Math.min(statusList.indexOf(task.status) + 1, statusList.length - 1);
+      const nextStatus = statusList[nextIdx];
+      if (nextStatus !== task.status) onUpdate(task.id, { status: nextStatus });
+    },
+    trackTouch: true,
+  });
   React.useEffect(() => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -1191,17 +1417,15 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
             <div className="space-y-2 min-h-[140px]">
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
-                <motion.div
-                  key={t.id}
-                  data-testid="task-card"
-                  className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
-                  draggable={!isMobile}
-                  onDragStart={!isMobile ? onDragStart(t.id) : undefined}
-                  onTouchStart={isMobile ? handleTouchStart(t.id) : undefined}
-                  onTouchMove={isMobile ? handleTouchMove(t.id) : undefined}
-                  onTouchEnd={isMobile ? handleTouchEnd(t.id) : undefined}
-                  style={isMobile ? { touchAction: 'pan-y' } : undefined}
-                >
+                <Swipeable key={t.id} {...swipeHandlers(t)}>
+                  <motion.div
+                    data-testid="task-card"
+                    className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
+                    draggable={!isMobile}
+                    onDragStart={!isMobile ? onDragStart(t.id) : undefined}
+                    style={isMobile ? { touchAction: 'pan-y' } : undefined}
+                    whileTap={{ scale: 0.98 }}
+                  >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
                     <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete"><Trash2 size={16}/></button></div>
@@ -1222,13 +1446,14 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                         <div className="flex items-center gap-2"><span>Start</span>{t.status === "done" ? (<span className="text-slate-500 text-xs">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e)=>onUpdate(t.id,{ startDate:e.target.value })} disabled={t.status === "todo"} className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
                         <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
                         <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(t.id,url)} />{t.links && t.links.length>0 && (<LinkChips links={t.links} onRemove={(i)=>onRemoveLink(t.id,i)} />)}</div>
-                        <div className="basis-full text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v)=>onUpdate(t.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
-                        <DepPicker task={t} tasks={tasks} onUpdate={onUpdate} />
-                        <div className="ml-auto flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div>
-                      </div>
-                    </>
-                  )}
-                </motion.div>
+                      <div className="basis-full text-xs text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v)=>onUpdate(t.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
+                      <DepPicker task={t} tasks={tasks} onUpdate={onUpdate} />
+                      <div className="ml-auto flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div>
+                    </div>
+                  </>
+                )}
+                  </motion.div>
+                </Swipeable>
               ); })}
             </div>
           </div>
@@ -2212,7 +2437,12 @@ export function CoursesHub({
                       <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-xs text-black/60 truncate">{c.course.description}</div></div>
                     </div>
                     <div className="flex items-center gap-4 mt-3">
-                      <Ring size={72} stroke={10} progress={t.pct} color="#10b981"><div className="text-center"><div className="text-sm font-semibold">{t.pct}%</div><div className="text-[10px] text-black/60">{t.done}/{t.total}</div></div></Ring>
+                      <Ring className="w-14 h-14 xs:w-16 xs:h-16" stroke={10} progress={t.pct} color="#10b981">
+                        <div className="text-center">
+                          <div className="text-sm font-semibold">{t.pct}%</div>
+                          <div className="text-[10px] text-black/60">{t.done}/{t.total}</div>
+                        </div>
+                      </Ring>
                       <div className="text-xs space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
                     </div>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
