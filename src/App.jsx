@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef, Fragment, useContext, createContext, useCallback } from "react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
-import { useSwipeable, Swipeable } from "react-swipeable";
+import { useSwipeable } from "react-swipeable";
 import {
   Plus,
   Calendar,
@@ -757,26 +757,21 @@ const tasksDone = useMemo(() => {
             <div className="relative sm:hidden">
               <button
                 onClick={() => setActionsOpen((v) => !v)}
-<div className="relative sm:hidden">
-  <button
-    onClick={() => setActionsOpen((v) => !v)}
-    className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-    aria-label="Toggle actions menu"
-    aria-expanded={actionsOpen}
-    aria-controls="actions-menu"
-  >
-    <MoreHorizontal size={16} />
-  </button>
-  {actionsOpen && (
-    <div
-      id="actions-menu"
-      className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
-    >
-      <ActionButtons />
-    </div>
-  )}
-</div>
-
+                className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                aria-label="Toggle actions menu"
+                aria-expanded={actionsOpen}
+                aria-controls="actions-menu"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {actionsOpen && (
+                <div
+                  id="actions-menu"
+                  className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
+                >
+                  <ActionButtons />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1422,8 +1417,9 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
             <div className="space-y-2 min-h-[140px]">
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
-                <Swipeable key={t.id} {...swipeHandlers(t)}>
                   <motion.div
+                    key={t.id}
+                    {...swipeHandlers(t)}
                     data-testid="task-card"
                     className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
                     draggable={!isMobile}
@@ -1458,7 +1454,6 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   </>
                 )}
                   </motion.div>
-                </Swipeable>
               ); })}
             </div>
           </div>
