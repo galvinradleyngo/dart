@@ -757,26 +757,21 @@ const tasksDone = useMemo(() => {
             <div className="relative sm:hidden">
               <button
                 onClick={() => setActionsOpen((v) => !v)}
-<div className="relative sm:hidden">
-  <button
-    onClick={() => setActionsOpen((v) => !v)}
-    className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
-    aria-label="Toggle actions menu"
-    aria-expanded={actionsOpen}
-    aria-controls="actions-menu"
-  >
-    <MoreHorizontal size={16} />
-  </button>
-  {actionsOpen && (
-    <div
-      id="actions-menu"
-      className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
-    >
-      <ActionButtons />
-    </div>
-  )}
-</div>
-
+                className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                aria-label="Toggle actions menu"
+                aria-expanded={actionsOpen}
+                aria-controls="actions-menu"
+              >
+                <MoreHorizontal size={16} />
+              </button>
+              {actionsOpen && (
+                <div
+                  id="actions-menu"
+                  className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
+                >
+                  <ActionButtons />
+                </div>
+              )}
             </div>
           </div>
         </div>
