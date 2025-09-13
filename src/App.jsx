@@ -775,9 +775,6 @@ const tasksDone = useMemo(() => {
   </div>
 )}
 
-                  <ActionButtons />
-                </div>
-              )}
             </div>
           </div>
         </div>
