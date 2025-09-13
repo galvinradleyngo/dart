@@ -10,5 +10,5 @@ body {
 }
 
 @media (max-width: 640px) {
-  html { font-size: 18px; }
+  html { font-size: clamp(16px, 4vw, 18px); }
 }
