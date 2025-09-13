@@ -673,7 +673,7 @@ const tasksDone = useMemo(() => {
             </div>
             <div className="relative sm:hidden">
               <button
-                onClick={() => setActionsOpen(v => !v)}
+                onClick={() => setActionsOpen((v) => !v)}
                 className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
                 aria-label="Toggle actions menu"
                 aria-expanded={actionsOpen}
