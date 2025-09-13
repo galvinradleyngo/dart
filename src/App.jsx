@@ -597,7 +597,8 @@ const tasksDone = useMemo(() => {
       <button
         onClick={async () => {
           const tpl = (await loadTemplateRemote()) || loadTemplate();
-          if (tpl) setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
+          if (tpl)
+            setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
           else alert("No template saved yet.");
         }}
         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
@@ -617,7 +618,10 @@ const tasksDone = useMemo(() => {
               reader.onload = () => {
                 try {
                   const incoming = remapSeed(JSON.parse(reader.result));
-                  setState((s) => ({ ...incoming, schedule: loadGlobalSchedule() }));
+                  setState((s) => ({
+                    ...incoming,
+                    schedule: loadGlobalSchedule(),
+                  }));
                 } catch {
                   alert("Invalid JSON");
                 }
@@ -630,7 +634,10 @@ const tasksDone = useMemo(() => {
       <button
         onClick={() => {
           const { schedule, ...rest } = state;
-          const toSave = { ...rest, schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] } };
+          const toSave = {
+            ...rest,
+            schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
+          };
           const blob = new Blob([JSON.stringify(toSave, null, 2)], {
             type: "application/json",
           });
