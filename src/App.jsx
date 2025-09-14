@@ -15,8 +15,6 @@ import {
   RefreshCcw,
   UserPlus,
   Copy as CopyIcon,
-  Link2,
-  GitBranch,
   Minus,
   ChevronDown,
   ChevronUp,
@@ -30,6 +28,15 @@ import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
 import TeamMembersSection from "./components/TeamMembersSection.jsx";
 import SectionCard from "./components/SectionCard.jsx";
+import Avatar from "./components/Avatar.jsx";
+import InlineText from "./components/InlineText.jsx";
+import DuePill from "./components/DuePill.jsx";
+import { LinksEditor, LinkChips } from "./components/LinksEditor.jsx";
+import DocumentInput from "./components/DocumentInput.jsx";
+import AddHoliday from "./components/AddHoliday.jsx";
+import DepPicker from "./components/DepPicker.jsx";
+import CalendarView from "./components/CalendarView.jsx";
+import TaskModal from "./components/TaskModal.jsx";
 import pkg from "../package.json";
 import {
   uid,
@@ -265,125 +272,6 @@ function Ring({ className = "w-20 h-20", stroke = 10, progress = 0, trackOpacity
         />
       </svg>
       <div className="absolute inset-0 grid place-items-center text-center select-none">{children}</div>
-    </div>
-  );
-}
-function InlineText({ value, onChange, className = "", placeholder = "Untitled", multiline = false }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(value ?? "");
-  useEffect(() => setDraft(value ?? ""), [value]);
-  const commit = () => {
-    setEditing(false);
-    if (draft !== value) onChange?.(draft);
-  };
-  return (
-    <AnimatePresence initial={false} mode="wait">
-      {!editing ? (
-        <motion.span
-          key="view"
-          className={`cursor-text hover:bg-black/5 rounded px-1 ${className}`}
-          onClick={() => setEditing(true)}
-          title="Click to edit"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          {value?.trim() ? value : <span className="text-black/40">{placeholder}</span>}
-        </motion.span>
-      ) : multiline ? (
-        <motion.textarea
-          key="edit"
-          autoFocus
-          className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setDraft(value ?? "");
-              setEditing(false);
-            }
-            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "enter") commit();
-          }}
-          rows={3}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        />
-      ) : (
-        <motion.input
-          key="edit"
-          autoFocus
-          className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) =>
-            e.key === "Enter"
-              ? commit()
-              : (e.key === "Escape" && (setDraft(value ?? ""), setEditing(false)))
-          }
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        />
-      )}
-    </AnimatePresence>
-  );
-}
-const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-sm" }) => (
-  <span
-    className={`inline-flex items-center justify-center rounded-full font-medium ${className}`}
-    style={avatar ? { background: roleColor(roleType) } : { background: roleColor(roleType), color: "#fff" }}
-    title={name}
-  >
-    {avatar || name.split(" ").map((w) => w[0]).join("")}
-  </span>
-);
-function DuePill({ date, status }) {
-  if (!date) return <span className="inline-block px-2 py-0.5 text-sm rounded-full bg-slate-100 text-slate-500 border border-slate-200">—</span>;
-  const today = new Date(todayStr()); const d = new Date(date); const diffDays = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
-  let classes = "bg-sky-100 text-sky-800 border-sky-200"; if (status !== "done" && diffDays < 0) classes = "bg-red-100 text-red-800 border-red-200"; else if (status !== "done" && diffDays <= 2) classes = "bg-amber-100 text-amber-800 border-amber-200";
-  return <span className={`inline-block px-2 py-0.5 text-sm rounded-full border font-semibold ${classes}`}>{date}</span>;
-}
-function LinksEditor({ links = [], onAdd, onRemove }) {
-  const [val, setVal] = useState(""); const add = () => { const url = val.trim(); if (!url) return; try { const u = new URL(url); onAdd?.(u.toString()); setVal(""); } catch {} };
-  return (
-    <div className="mt-1">
-      <div className="flex flex-wrap gap-1 mb-1">{links.map((l, i) => (<a key={i} href={l} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border border-black/10 bg-white hover:bg-slate-50"><Link2 size={12}/> {(()=>{try{return new URL(l).hostname;}catch{return l;}})()}<button type="button" className="ml-1 text-slate-400 hover:text-rose-600" onClick={(e)=>{e.preventDefault(); onRemove?.(i);}}>×</button></a>))}</div>
-      <div className="flex items-center gap-1"><input value={val} onChange={(e)=>setVal(e.target.value)} onKeyDown={(e)=>{ if(e.key==='Enter') add(); }} placeholder="Paste link & press Enter" className="w-full border rounded px-2 py-1 text-sm" /><button onClick={add} className="px-2 py-1 text-sm rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>
-    </div>
-  );
-}
-function DocumentInput({ onAdd }) {
-  const [val, setVal] = useState(""); const add = () => { const url = val.trim(); if (!url) return; try { const u = new URL(url); onAdd?.(u.toString()); setVal(""); } catch {} };
-  return (
-    <div className="flex items-center gap-2 text-sm w-full"><span className="font-medium">Document:</span><input type="url" value={val} onChange={(e)=>setVal(e.target.value)} onKeyDown={(e)=>{ if(e.key==='Enter') add(); }} placeholder="Paste link and press Enter" className="flex-1 border rounded px-1.5 py-1" /><button onClick={add} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>
-  );
-}
-function LinkChips({ links = [], onRemove }) { return (<div className="mt-1 flex flex-wrap gap-1">{links.map((l, i) => (<a key={i} href={l} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text:[11px] border border-black/10 bg-white hover:bg-slate-50"><Link2 size={12}/> {(()=>{try{return new URL(l).hostname;}catch{return l;}})()}<button type="button" className="ml-1 text-slate-400 hover:text-rose-600" onClick={(e)=>{e.preventDefault(); onRemove?.(i);}}>×</button></a>))}</div>); }
-
-// =====================================================
-// Calendar View
-// =====================================================
-function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onToday, schedule, onTaskClick }) {
-  const year = monthDate.getFullYear(); const month = monthDate.getMonth(); const first = new Date(year, month, 1);
-  const startDay = new Date(year, month, 1 - first.getDay());
-  const days = Array.from({ length: 42 }, (_, i) => new Date(startDay.getFullYear(), startDay.getMonth(), startDay.getDate() + i));
-  const tasksByDue = tasks.reduce((acc, t) => { if (t.dueDate) (acc[t.dueDate] ||= []).push(t); return acc; }, {});
-  const holidaySet = new Set(schedule.holidays); const workSet = new Set(schedule.workweek);
-  return (
-    <div className="border border-black/10 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between p-3 bg-white border-b border-black/10"><div className="font-medium">{monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}</div><div className="flex items-center gap-2"><button onClick={onPrev} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Prev</button><button onClick={onToday} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Today</button><button onClick={onNext} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">Next</button></div></div>
-      <div className="grid grid-cols-7 text-sm bg-slate-50 border-b border-black/10">{["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d,i)=>(<div key={i} className="p-2 text-center font-medium text-slate-700">{d}</div>))}</div>
-      <div className="grid grid-cols-7">
-        {days.map((d, idx) => { const key = fmt(d); const inMonth = d.getMonth() === month; const isHolidayDay = holidaySet.has(key); const isWork = workSet.has(d.getDay()); const items = tasksByDue[key] || []; const isToday = key === todayStr(); return (
-          <div key={idx} className={`min-h-[96px] p-2 border-b border-r border-black/5 ${inMonth?"bg-white":"bg-slate-50"} ${isToday?"ring-2 ring-indigo-500":""}`}>
-            <div className="flex items-center justify-between"><div className={`text-sm ${inMonth?"text-slate-700":"text-slate-400"} ${isToday?"px-1 rounded bg-indigo-600 text-white":""}`}>{d.getDate()}</div>{!isWork && <span className="text-sm px-1 rounded bg-slate-100 text-slate-600 border border-slate-200">Off</span>}{isHolidayDay && <span className="text-sm px-1 rounded bg-rose-100 text-rose-700 border border-rose-200">Holiday</span>}</div>
-            <div className="mt-1 space-y-1">{items.slice(0,3).map((t)=>(<div key={t.id} className="text-sm truncate px-2 py-1 rounded border border-black/10 bg-sky-50 text-sky-800 cursor-pointer" onClick={()=>onTaskClick?.(t)}>{t.title}</div>))}{items.length>3 && <div className="text-sm text-slate-500">+{items.length-3} more…</div>}</div>
-          </div>
-        ); })}
-      </div>
     </div>
   );
 }
@@ -1013,8 +901,6 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
   );
 }
 function Toggle({ value, onChange, options }) { return (<div className="inline-flex rounded-2xl border border-black/10 bg-white p-1 shadow-sm">{options.map((o)=>(<button key={o.id} onClick={()=>onChange(o.id)} className={`px-3 py-1.5 text-sm rounded-xl ${value===o.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{o.label}</button>))}</div>); }
-function AddHoliday({ onAdd }) { const [d, setD] = useState(""); return (<div className="inline-flex items-center gap-1"><input type="date" value={d} onChange={(e)=>setD(e.target.value)} className="border rounded px-2 py-1" /><button onClick={()=>{ if(d){ onAdd(d); setD(""); } }} className="px-2 py-1 text-sm rounded border border-black/10 bg-white hover:bg-slate-50">Add</button></div>); }
-
 function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onDuplicate }) {
   const taskAssignableMembers = team; // include all roles
   const isMobile = useIsMobile();
@@ -1074,7 +960,7 @@ function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAd
                 <td className="py-2 pr-4"><DuePill date={t.dueDate} status={t.status} /></td>
                 <td className="py-2 pr-4 hidden xl:table-cell">{t.status === "done" ? (t.completedDate || "—") : "—"}</td>
                 <td className="py-2 pr-4 hidden xl:table-cell"><DepPicker task={t} tasks={allTasks} onUpdate={onUpdate} /></td>
-                <td className="py-2"><button onClick={() => onDuplicate(t.id)} className="text-black/60 hover:text-sky-600 mr-2" title="Duplicate"><CopyIcon size={16} /></button><button onClick={() => onDelete(t.id)} className="text-red-500/80 hover:text-red-600"><Trash2 size={16} /></button></td>
+                <td className="py-2"><button onClick={() => onDuplicate(t.id)} className="text-black/60 hover:text-sky-600 mr-2" title="Duplicate" aria-label="Duplicate"><CopyIcon size={16} /></button><button onClick={() => onDelete(t.id)} className="text-red-500/80 hover:text-red-600" title="Delete" aria-label="Delete"><Trash2 size={16} /></button></td>
               </tr>
             );
           })}
@@ -1084,335 +970,6 @@ function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAd
   );
 }
 function statusBg(status) { if (status === "done") return "bg-emerald-50"; if (status === "inprogress") return "bg-emerald-50"; return "bg-white"; }
-
-function DepPicker({ task, tasks, onUpdate }) { const [open, setOpen] = useState(false); const peers = tasks.filter((x)=>x.milestoneId===task.milestoneId && x.id!==task.id); const current = peers.find((p)=>p.id===task.depTaskId); return (
-  <div className="text-sm"><button onClick={()=>setOpen((v)=>!v)} className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"><GitBranch size={12}/> {current ? `Depends on: ${current.title}` : "Add dependency"}</button>{open && (<div className="mt-1"><select value={task.depTaskId || ""} onChange={(e)=>{ const val = e.target.value || null; onUpdate(task.id,{ depTaskId:val }); setOpen(false); }} className="border rounded px-2 py-1"><option value="">— none —</option>{peers.map((p)=>(<option key={p.id} value={p.id}>{p.title}</option>))}</select></div>)}</div>
-); }
-
-export function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
-  const [collapsed, setCollapsed] = useState(true);
-  const isMobile = useIsMobile();
-  const dragProps = isMobile ? {} : dragHandlers;
-  const statusList = ['todo', 'inprogress', 'done'];
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
-  const soundEnabled = useContext(SoundContext);
-  const audioCtxRef = useRef(null);
-  const controls = useAnimation();
-  const statusColors = { todo: '#ffffff', inprogress: '#ecfdf5', done: '#d1fae5' };
-  useEffect(() => { controls.set({ backgroundColor: statusColors[t.status], scale: 1 }); }, []);
-  useEffect(() => {
-    controls.start({
-      backgroundColor: statusColors[t.status],
-      scale: [1.02, 1],
-      transition: { duration: 0.2 }
-    });
-  }, [t.status, controls]);
-  const playSound = () => {
-    if (!soundEnabled) return;
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      const ctx = audioCtxRef.current || new Ctx();
-      audioCtxRef.current = ctx;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = 440;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2);
-      osc.stop(ctx.currentTime + 0.2);
-    } catch {}
-  };
-  const update = (id, patch) => {
-    onUpdate?.(id, patch);
-    playSound();
-  };
-  const [statusOpen, setStatusOpen] = useState(false);
-  const a = team.find((m) => m.id === t.assigneeId);
-  const statusPillClass = (status) => {
-    if (status === "done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300";
-    if (status === "inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300";
-    return "bg-slate-100 text-slate-700 border-slate-300";
-  };
-  return (
-    <motion.div
-      data-testid="task-card"
-      {...dragProps}
-      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm ${dragProps.draggable ? "cursor-move" : ""}`}
-      animate={controls}
-      whileTap={{ scale: 0.98 }}
-      style={isMobile ? { touchAction: 'pan-y' } : undefined}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <select
-            value={t.milestoneId}
-            onChange={(e) => update(t.id, { milestoneId: e.target.value })}
-            className="mb-1 text-sm border rounded px-1 py-0.5"
-          >
-            {milestones.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.title}
-              </option>
-            ))}
-          </select>
-          <div className="text-sm sm:text-base font-semibold leading-tight truncate">
-            <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setCollapsed((v) => !v)}
-            className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
-            title={collapsed ? "Expand" : "Collapse"}
-          >
-            {collapsed ? <Plus size={16} /> : <Minus size={16} />}
-          </button>
-            {onDuplicate && (
-              <button
-                onClick={() => onDuplicate(t.id)}
-                className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
-                title="Duplicate"
-              >
-                <CopyIcon size={16} />
-              </button>
-            )}
-            {onDelete && (
-              <button onClick={() => onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete">
-                <Trash2 size={16} />
-              </button>
-            )}
-        </div>
-      </div>
-      {collapsed ? (
-        <>
-          <div className="mt-1">
-            {isMobile ? (
-              statusOpen ? (
-                <select
-                  aria-label="Status"
-                  value={t.status}
-                  onChange={(e) => {
-                    update(t.id, { status: e.target.value });
-                    setStatusOpen(false);
-                  }}
-                  onBlur={() => setStatusOpen(false)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
-                  autoFocus
-                >
-                  <option value="todo">To Do</option>
-                  <option value="inprogress">In Progress</option>
-                  <option value="done">Done</option>
-                </select>
-              ) : (
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={statusOpen}
-                  aria-label={`Status: ${statusLabel[t.status]}`}
-                  onClick={() => setStatusOpen((v) => !v)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
-                >
-                  {statusLabel[t.status]}
-                </button>
-              )
-            ) : (
-              <select
-                aria-label="Status"
-                value={t.status}
-                onChange={(e) => update(t.id, { status: e.target.value })}
-                className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
-              >
-                <option value="todo">To Do</option>
-                <option value="inprogress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-            )}
-          </div>
-          <div className="text-sm text-black/60 mt-1 truncate">
-              <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
-            </div>
-            {t.note && <div className="text-sm text-slate-600 mt-1 truncate">📝 {t.note}</div>}
-            <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
-              <div className="flex items-center gap-2 min-w-0">
-                {a ? (
-                  <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
-                ) : (
-                  <span className="text-black/40">—</span>
-                )}
-                <span className="truncate">
-                  {a ? `${a.name} (${a.roleType})` : "Unassigned"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <DuePill date={t.dueDate} status={t.status} />
-                {t.status === "done" && (
-                  <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>
-                )}
-              </div>
-            </div>
-        </>
-      ) : (
-        <>
-          <div className="mt-1">
-            {isMobile ? (
-              statusOpen ? (
-                <select
-                  aria-label="Status"
-                  value={t.status}
-                  onChange={(e) => {
-                    update(t.id, { status: e.target.value });
-                    setStatusOpen(false);
-                  }}
-                  onBlur={() => setStatusOpen(false)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
-                  autoFocus
-                >
-                  <option value="todo">To Do</option>
-                  <option value="inprogress">In Progress</option>
-                  <option value="done">Done</option>
-                </select>
-              ) : (
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={statusOpen}
-                  aria-label={`Status: ${statusLabel[t.status]}`}
-                  onClick={() => setStatusOpen((v) => !v)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
-                >
-                  {statusLabel[t.status]}
-                </button>
-              )
-            ) : (
-              <select
-                aria-label="Status"
-                value={t.status}
-                onChange={(e) => update(t.id, { status: e.target.value })}
-                className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
-              >
-                <option value="todo">To Do</option>
-                <option value="inprogress">In Progress</option>
-                <option value="done">Done</option>
-              </select>
-            )}
-          </div>
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-              <div className="flex items-center gap-1">
-                {a ? (
-                  <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
-                ) : (
-                  <span className="text-black/40">—</span>
-                )}
-                <select
-                  value={t.assigneeId || ""}
-                  onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
-                  className="border rounded px-1.5 py-1"
-                >
-                  <option value="">Unassigned</option>
-                  {team.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.roleType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Start</span>
-                {t.status === "done" ? (
-                  <span className="text-slate-500 text-sm">—</span>
-                ) : (
-                  <input
-                    type="date"
-                    value={t.startDate || ""}
-                    onChange={(e) => update(t.id, { startDate: e.target.value })}
-                    disabled={t.status === "todo"}
-                    className={`border rounded px-1.5 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`}
-                  />
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span># of Workdays</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={t.workDays ?? 0}
-                  onChange={(e) => update(t.id, { workDays: Number(e.target.value) })}
-                  className="w-20 border rounded px-1.5 py-1"
-                />
-              </div>
-              <div className="basis-full w-full">
-                <DocumentInput onAdd={(url) => onAddLink?.(t.id, url)} />
-                {t.links && t.links.length > 0 && (
-                  <LinkChips links={t.links} onRemove={(i) => onRemoveLink?.(t.id, i)} />
-                )}
-              </div>
-              <div className="basis-full text-sm text-slate-700">
-                <span className="font-medium mr-1">Note:</span>
-                <InlineText
-                  value={t.note}
-                  onChange={(v) => update(t.id, { note: v })}
-                  placeholder="Add a quick note…"
-                  multiline
-                />
-              </div>
-              <DepPicker task={t} tasks={tasks} onUpdate={update} />
-              <div className="ml-auto flex items-center gap-2">
-                <DuePill date={t.dueDate} status={t.status} />
-                {t.status === "done" && (
-                  <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-      </motion.div>
-    );
-  }
-
-function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
-  if (!task) return null;
-  const assignee = team.find((m) => m.id === task.assigneeId);
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl p-4 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="font-semibold"><InlineText value={task.title} onChange={(v)=>onUpdate(task.id,{ title:v })} /></div>
-            <div className="text-sm text-black/60"><InlineText value={task.details} onChange={(v)=>onUpdate(task.id,{ details:v })} placeholder="Details…" multiline /></div>
-          </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-black">×</button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-          {courses && onChangeCourse && (
-            <select
-              value={courseId}
-              onChange={(e) => onChangeCourse(e.target.value)}
-              className="border rounded px-1.5 py-1"
-            >
-              {courses.map((c) => (
-                <option key={c.course.id} value={c.course.id}>
-                  {c.course.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <select value={task.milestoneId} onChange={(e)=>onUpdate(task.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
-          <div className="flex items-center gap-1">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-black/40">—</span>}<select value={task.assigneeId || ""} onChange={(e)=>onUpdate(task.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{team.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
-          <select value={task.status} onChange={(e)=>onUpdate(task.id,{ status:e.target.value })} className={`border rounded px-1.5 py-1 ${statusBg(task.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select>
-          <div className="flex items-center gap-2"><span>Start</span>{task.status === "done" ? (<span className="text-slate-500">—</span>) : (<input type="date" value={task.startDate || ""} onChange={(e)=>onUpdate(task.id,{ startDate:e.target.value })} disabled={task.status === "todo"} className={`border rounded px-1.5 py-1 ${task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} />)}</div>
-          <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={task.workDays ?? 0} onChange={(e)=>onUpdate(task.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
-          <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(task.id,url)} />{task.links && task.links.length>0 && (<LinkChips links={task.links} onRemove={(i)=>onRemoveLink(task.id,i)} />)}</div>
-          <div className="basis-full text-sm text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={task.note} onChange={(v)=>onUpdate(task.id,{ note:v })} placeholder="Add a quick note…" multiline /></div>
-          <DepPicker task={task} tasks={tasks} onUpdate={onUpdate} />
-          <div className="ml-auto flex items-center gap-2"><DuePill date={task.dueDate} status={task.status} />{task.status === "done" && <span className="text-slate-500">Completed: {task.completedDate || "—"}</span>}</div>
-        </div>
-        {onDelete && <div className="mt-4 flex justify-end"><button onClick={()=>{ onDelete(task.id); onClose(); }} className="text-rose-600 hover:text-rose-700 text-sm">Delete</button></div>}
-      </div>
-    </div>
-  );
-}
 
 export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
@@ -1508,7 +1065,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
-                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete"><Trash2 size={16}/></button></div>
+                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete" aria-label="Delete"><Trash2 size={16}/></button></div>
                   </div>
                   {collapsed ? (
                     <>
@@ -2476,7 +2033,8 @@ export function CoursesHub({
                     <button
                       className="text-rose-500 hover:text-rose-700"
                       onClick={() => removeHoliday(h)}
-                      title="Remove"
+                      title="Remove holiday"
+                      aria-label="Remove holiday"
                     >
                       ×
                     </button>
