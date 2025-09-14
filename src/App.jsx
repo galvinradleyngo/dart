@@ -743,7 +743,7 @@ const tasksDone = useMemo(() => {
                   title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
                   aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
                   aria-expanded={!milestonesCollapsed}
-                  className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+                  className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
                 >
                   {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
                 </button>
