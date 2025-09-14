@@ -1,0 +1,28 @@
+import React, { useState } from "react";
+
+export default function AddHoliday({ onAdd }) {
+  const [d, setD] = useState("");
+  return (
+    <div className="inline-flex items-center gap-1">
+      <label htmlFor="holiday-date" className="sr-only">Holiday date</label>
+      <input
+        id="holiday-date"
+        type="date"
+        value={d}
+        onChange={(e) => setD(e.target.value)}
+        className="border rounded px-2 py-1"
+      />
+      <button
+        onClick={() => {
+          if (d) {
+            onAdd(d);
+            setD("");
+          }
+        }}
+        className="px-2 py-1 text-sm rounded border border-black/10 bg-white hover:bg-slate-50"
+      >
+        Add
+      </button>
+    </div>
+  );
+}
