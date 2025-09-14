@@ -701,7 +701,7 @@ const tasksDone = useMemo(() => {
           courseSMEIds={state.course.courseSMEIds}
         />
         {/* Milestones */}
-          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm text-base sm:text-sm">
             <div
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
               onClick={() => setMilestonesCollapsed(v => !v)}
