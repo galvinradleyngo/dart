@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, useAnimation } from "framer-motion";
 import { Plus, Minus, Trash2, Copy as CopyIcon } from "lucide-react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
@@ -8,7 +8,6 @@ import DuePill from "./components/DuePill.jsx";
 import DocumentInput from "./components/DocumentInput.jsx";
 import DepPicker from "./components/DepPicker.jsx";
 import { LinkChips } from "./components/LinksEditor.jsx";
-import { SoundContext } from "./SoundContext.js";
 
 export default function TaskCard({
   task: t,
@@ -26,8 +25,6 @@ export default function TaskCard({
   const isMobile = useIsMobile();
   const dragProps = isMobile ? {} : dragHandlers;
   const statusLabel = { todo: "To Do", inprogress: "In Progress", done: "Done" };
-  const soundEnabled = useContext(SoundContext);
-  const audioCtxRef = useRef(null);
   const controls = useAnimation();
   const statusColors = { todo: "#ffffff", inprogress: "#ecfdf5", done: "#d1fae5" };
 
@@ -43,27 +40,8 @@ export default function TaskCard({
     });
   }, [t.status, controls]);
 
-  const playSound = () => {
-    if (!soundEnabled) return;
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      const ctx = audioCtxRef.current || new Ctx();
-      audioCtxRef.current = ctx;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 440;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2);
-      osc.stop(ctx.currentTime + 0.2);
-    } catch {}
-  };
-
   const update = (id, patch) => {
     onUpdate?.(id, patch);
-    playSound();
   };
 
   const [statusOpen, setStatusOpen] = useState(false);
