@@ -53,7 +53,7 @@ export function LinksEditor({ links = [], onAdd, onRemove }) {
             if (e.key === "Enter") add();
           }}
           placeholder="Paste link & press Enter"
-          className="w-full border rounded px-2 py-1 text-sm"
+          className="w-full text-sm"
         />
         <button
           onClick={add}

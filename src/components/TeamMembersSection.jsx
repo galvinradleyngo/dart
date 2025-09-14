@@ -30,7 +30,7 @@ function TeamMemberCard({
           <select
             value={member.roleType}
             onChange={(e) => onUpdate(member.id, { roleType: e.target.value })}
-            className="border rounded px-2 py-1 text-sm"
+            className="text-sm"
           >
             {Object.keys(rolePalette).map((r) => (
               <option key={r} value={r}>
@@ -89,7 +89,7 @@ export default function TeamMembersSection({
                 e.target.value = "";
               }
             }}
-            className="text-sm border rounded px-2 py-1"
+            className="text-sm"
           >
             <option value="">Add existing...</option>
             {people
