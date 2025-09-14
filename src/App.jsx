@@ -38,6 +38,7 @@ import AddHoliday from "./components/AddHoliday.jsx";
 import DepPicker from "./components/DepPicker.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import TaskModal from "./components/TaskModal.jsx";
+// Global sound toggle context
 import { SoundContext } from "./SoundContext.js";
 
 import pkg from "../package.json";
