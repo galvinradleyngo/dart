@@ -1,16 +1,7 @@
 import React from "react";
 import { Users, UserPlus, Trash2 } from "lucide-react";
-import { rolePalette, roleColor } from "../utils.js";
-
-const Avatar = ({ name, roleType, avatar, className = "w-6 h-6 text-sm" }) => (
-  <span
-    className={`inline-flex items-center justify-center rounded-full font-medium ${className}`}
-    style={avatar ? { background: roleColor(roleType) } : { background: roleColor(roleType), color: "#fff" }}
-    title={name}
-  >
-    {avatar || name.split(" ").map((w) => w[0]).join("")}
-  </span>
-);
+import { rolePalette } from "../utils.js";
+import Avatar from "./Avatar.jsx";
 
 function TeamMemberCard({
   member,
@@ -60,6 +51,7 @@ function TeamMemberCard({
           <button
             className="text-black/40 hover:text-red-500"
             title="Remove member"
+            aria-label="Remove member"
             onClick={() => onDelete(member.id)}
           >
             <Trash2 size={16} />

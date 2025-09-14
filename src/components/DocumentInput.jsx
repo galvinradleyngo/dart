@@ -1,0 +1,38 @@
+import React, { useState } from "react";
+
+export default function DocumentInput({ onAdd }) {
+  const [val, setVal] = useState("");
+  const add = () => {
+    const url = val.trim();
+    if (!url) return;
+    try {
+      const u = new URL(url);
+      onAdd?.(u.toString());
+      setVal("");
+    } catch {}
+  };
+  return (
+    <div className="flex items-center gap-2 text-sm w-full">
+      <label htmlFor="document-url" className="font-medium">
+        Document:
+      </label>
+      <input
+        id="document-url"
+        type="url"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") add();
+        }}
+        placeholder="Paste link and press Enter"
+        className="flex-1 border rounded px-1.5 py-1"
+      />
+      <button
+        onClick={add}
+        className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+      >
+        Add
+      </button>
+    </div>
+  );
+}
