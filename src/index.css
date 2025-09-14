@@ -6,7 +6,7 @@ html, body, #root {
   height: 100%;
 }
 body {
-  @apply bg-slate-50 text-slate-900;
+  @apply bg-slate-50 text-slate-900 font-sans;
 }
 
 @media (max-width: 640px) {
