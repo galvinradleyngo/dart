@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef, Fragment, useContext, createContext, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef, Fragment, useCallback } from "react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import {
@@ -37,6 +37,8 @@ import AddHoliday from "./components/AddHoliday.jsx";
 import DepPicker from "./components/DepPicker.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import TaskModal from "./components/TaskModal.jsx";
+import TaskCard from "./TaskCard.jsx";
+import { SoundContext } from "./sound-context.js";
 import pkg from "../package.json";
 import {
   uid,
@@ -62,7 +64,6 @@ import {
  * • Header/banner shows **DART: Design and Development Accountability and Responsibility Tracker**
  */
 
-const SoundContext = createContext(true);
 
 // Predefined emoji choices for user avatars
 const AVATAR_CHOICES = [
