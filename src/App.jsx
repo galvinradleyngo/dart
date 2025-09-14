@@ -35,6 +35,7 @@ import DocumentInput from "./components/DocumentInput.jsx";
 import AddHoliday from "./components/AddHoliday.jsx";
 import DepPicker from "./components/DepPicker.jsx";
 import CalendarView from "./components/CalendarView.jsx";
+// Modal dialog for creating or editing tasks
 import TaskModal from "./components/TaskModal.jsx";
 
 import pkg from "../package.json";
