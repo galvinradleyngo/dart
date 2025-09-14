@@ -1,4 +1,5 @@
 import React from "react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { fmt, todayStr } from "../utils.js";
 
 export default function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onToday, schedule, onTaskClick }) {
@@ -22,14 +23,26 @@ export default function CalendarView({ monthDate, tasks, milestones, team, onPre
           {monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={onPrev} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">
-            Prev
+          <button
+            onClick={onPrev}
+            className="p-2 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <button onClick={onToday} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">
-            Today
+          <button
+            onClick={onToday}
+            className="p-2 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
+            aria-label="Jump to today"
+          >
+            <Calendar className="w-4 h-4" />
           </button>
-          <button onClick={onNext} className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50">
-            Next
+          <button
+            onClick={onNext}
+            className="p-2 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
+            aria-label="Next month"
+          >
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
