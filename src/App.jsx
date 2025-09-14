@@ -1057,7 +1057,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   <motion.div
                     key={t.id}
                     data-testid="task-card"
-                    className={`rounded-lg border border-black/10 p-3 shadow-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
+                    className={`rounded-lg border border-black/10 p-3 shadow-sm text-base sm:text-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
                     draggable={!isMobile}
                     onDragStart={!isMobile ? onDragStart(t.id) : undefined}
                     style={isMobile ? { touchAction: 'pan-y' } : undefined}
@@ -1065,7 +1065,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
-                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-11 h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete" aria-label="Delete"><Trash2 size={16}/></button></div>
+                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={16}/> : <Minus size={16}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate"><CopyIcon size={16}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete" aria-label="Delete"><Trash2 size={16}/></button></div>
                   </div>
                   {collapsed ? (
                     <>
