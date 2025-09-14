@@ -23,7 +23,6 @@ export default function DepPicker({ task, tasks, onUpdate }) {
               onUpdate(task.id, { depTaskId: val });
               setOpen(false);
             }}
-            className="border rounded px-2 py-1"
           >
             <option value="">— none —</option>
             {peers.map((p) => (

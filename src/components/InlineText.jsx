@@ -27,7 +27,7 @@ export default function InlineText({ value, onChange, className = "", placeholde
         <motion.textarea
           key="edit"
           autoFocus
-          className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`}
+          className={`w-full outline-none ${className}`}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -46,7 +46,7 @@ export default function InlineText({ value, onChange, className = "", placeholde
         <motion.input
           key="edit"
           autoFocus
-          className={`w-full rounded border border-black/10 bg-white px-2 py-1 outline-none ${className}`}
+          className={`w-full outline-none ${className}`}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}

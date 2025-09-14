@@ -72,7 +72,6 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             <select
               value={courseId}
               onChange={(e) => onChangeCourse(e.target.value)}
-              className="border rounded px-1.5 py-1"
             >
               {courses.map((c) => (
                 <option key={c.course.id} value={c.course.id}>
@@ -84,7 +83,6 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
           <select
             value={task.milestoneId}
             onChange={(e) => onUpdate(task.id, { milestoneId: e.target.value })}
-            className="border rounded px-1.5 py-1"
           >
             {milestones.map((m) => (
               <option key={m.id} value={m.id}>
@@ -101,7 +99,6 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             <select
               value={task.assigneeId || ""}
               onChange={(e) => onUpdate(task.id, { assigneeId: e.target.value || null })}
-              className="border rounded px-1.5 py-1"
             >
               <option value="">Unassigned</option>
               {team.map((m) => (
@@ -114,7 +111,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
           <select
             value={task.status}
             onChange={(e) => onUpdate(task.id, { status: e.target.value })}
-            className={`border rounded px-1.5 py-1 ${statusBg(task.status)}`}
+            className={statusBg(task.status)}
           >
             <option value="todo">To Do</option>
             <option value="inprogress">In Progress</option>
@@ -130,7 +127,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
                 value={task.startDate || ""}
                 onChange={(e) => onUpdate(task.id, { startDate: e.target.value })}
                 disabled={task.status === "todo"}
-                className={`border rounded px-1.5 py-1 ${task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`}
+                className={task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}
               />
             )}
           </div>
@@ -141,7 +138,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
               min={0}
               value={task.workDays ?? 0}
               onChange={(e) => onUpdate(task.id, { workDays: Number(e.target.value) })}
-              className="w-20 border rounded px-1.5 py-1"
+              className="w-20"
             />
           </div>
           <div className="basis-full w-full">

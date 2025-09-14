@@ -10,7 +10,6 @@ export default function AddHoliday({ onAdd }) {
         type="date"
         value={d}
         onChange={(e) => setD(e.target.value)}
-        className="border rounded px-2 py-1"
       />
       <button
         onClick={() => {
