@@ -16,7 +16,7 @@
   --gradient: linear-gradient(135deg,#0ea5e9,#22c55e);
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
 a{color:#93c5fd}
 button{cursor:pointer}
 button:focus, input:focus, select:focus, textarea:focus{outline:2px solid var(--ring);outline-offset:2px}
