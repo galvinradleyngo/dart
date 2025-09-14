@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import InlineText from "./InlineText.jsx";
 import Avatar from "./Avatar.jsx";
 import DocumentInput from "./DocumentInput.jsx";
@@ -14,6 +14,19 @@ function statusBg(status) {
 
 export default function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
   const dialogRef = useRef(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (task) {
+      setOpen(true);
+    }
+  }, [task]);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    setTimeout(onClose, 200);
+  }, [onClose]);
+
   useEffect(() => {
     if (!task) return;
     const el = dialogRef.current;
@@ -32,21 +45,25 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
           first.focus();
         }
       } else if (e.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
     el.addEventListener('keydown', handleKeyDown);
     return () => el.removeEventListener('keydown', handleKeyDown);
-  }, [task, onClose]);
+  }, [task, handleClose]);
+
   if (!task) return null;
   const assignee = team.find((m) => m.id === task.assigneeId);
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
+    <div
+      className={`fixed inset-0 bg-black/40 flex items-center justify-center z-50 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
+      onClick={handleClose}
+    >
       <div
         role="dialog"
         aria-modal="true"
         ref={dialogRef}
-        className="bg-white rounded-xl p-4 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className={`bg-white rounded-xl p-4 w-full max-w-lg max-h-[90vh] overflow-y-auto transform transition-all duration-200 ${open ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-2">
@@ -63,7 +80,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
               />
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-black" aria-label="Close">
+          <button onClick={handleClose} className="text-slate-500 hover:text-black" aria-label="Close">
             ×
           </button>
         </div>
@@ -169,7 +186,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             <button
               onClick={() => {
                 onDelete(task.id);
-                onClose();
+                handleClose();
               }}
               className="text-rose-600 hover:text-rose-700 text-sm"
             >
