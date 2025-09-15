@@ -1128,7 +1128,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
   const [taskView, setTaskView] = useState('board');
   const [saveState, setSaveState] = useState('saved');
-  const [query, setQuery] = useState('');
+  const [taskQuery, setTaskQuery] = useState('');
+  const [courseQuery, setCourseQuery] = useState('');
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('userTab') || 'deadlines');
   useEffect(() => { localStorage.setItem('userTab', activeTab); }, [activeTab]);
 
@@ -1319,9 +1320,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const myCourses = useMemo(
     () =>
       myCoursesAll.filter((c) =>
-        c.course.name.toLowerCase().includes(query.toLowerCase())
+        c.course.name.toLowerCase().includes(courseQuery.toLowerCase())
       ),
-    [myCoursesAll, query]
+    [myCoursesAll, courseQuery]
   );
   const myTasks = useMemo(() => {
     const arr = [];
@@ -1334,8 +1335,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return arr
       .filter(
         (t) =>
-          t.title.toLowerCase().includes(query.toLowerCase()) ||
-          t.courseName.toLowerCase().includes(query.toLowerCase())
+          t.title.toLowerCase().includes(taskQuery.toLowerCase()) ||
+          t.courseName.toLowerCase().includes(taskQuery.toLowerCase())
       )
       .sort((a, b) => {
         const nameCmp = a.courseName.localeCompare(b.courseName);
@@ -1344,7 +1345,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
         return da - db;
       });
-  }, [courses, userId, query]);
+  }, [courses, userId, taskQuery]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
@@ -1544,14 +1545,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'tasks' && (
             <SectionCard title="My Tasks" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-black/60">No tasks assigned.</div>
+                <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-2">
                     <input
                       type="text"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
+                      value={taskQuery}
+                      onChange={(e) => setTaskQuery(e.target.value)}
                       placeholder="Search..."
                       className="px-2 py-1 text-sm border rounded flex-1"
                     />
