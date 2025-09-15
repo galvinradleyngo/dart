@@ -1413,7 +1413,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             </button>
           ))}
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {activeTab === 'deadlines' && (
             <SectionCard title="Upcoming Deadlines">
               {upcoming.every((d) => d.tasks.length === 0) ? (
@@ -1423,7 +1423,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                   {upcoming
                     .filter(({ tasks }) => tasks.length > 0)
                     .map(({ date, tasks }) => (
-                      <li key={fmt(date)} className="rounded-xl border border-black/10 bg-white p-3">
+                      <li key={fmt(date)} className="rounded-xl border border-black/10 bg-white p-3 w-full">
                         <div className="text-sm font-medium mb-1">
                           {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
                         </div>
@@ -1438,7 +1438,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                             return (
                               <li
                                 key={t.id}
-                                className={`text-sm flex items-center gap-1 truncate rounded px-2 py-1 ${urgentClass}`}
+                                className={`text-sm flex items-center gap-1 truncate w-full rounded px-2 py-1 ${urgentClass}`}
                               >
                                 <input
                                   type="checkbox"
