@@ -1,5 +1,4 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Copy as CopyIcon, Trash2, ChevronDown, Download } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 
 export default function MilestoneCard({
@@ -44,9 +43,9 @@ export default function MilestoneCard({
 
     return (
       <details className="group rounded-xl border border-black/10 bg-white">
-        <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+        <summary className="cursor-pointer select-none p-4 flex flex-wrap items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-2 flex-1">
-          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+          <span className="w-4 h-4 transition-transform group-open:rotate-180">▼</span>
           <div className="flex-1">
             {onUpdateMilestone ? (
               editingTitle ? (
@@ -88,7 +87,7 @@ export default function MilestoneCard({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             {onDuplicateMilestone && (
               <button
                 onClick={(e) => {
@@ -99,7 +98,7 @@ export default function MilestoneCard({
                 title="Duplicate Milestone"
                 aria-label="Duplicate Milestone"
               >
-                <CopyIcon size={16} />
+                Copy
               </button>
             )}
             {onSaveAsTemplate && (
@@ -112,7 +111,7 @@ export default function MilestoneCard({
                 title="Save as Milestone Template"
                 aria-label="Save as Milestone Template"
               >
-                <Download size={16} />
+                Save
               </button>
             )}
             {onDeleteMilestone && (
@@ -125,7 +124,7 @@ export default function MilestoneCard({
                 title="Remove Milestone"
                 aria-label="Remove Milestone"
               >
-                <Trash2 size={16} />
+                Delete
               </button>
             )}
           </div>

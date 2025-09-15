@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useIsMobile } from './hooks/use-is-mobile.js';
 import { motion, useAnimation } from 'framer-motion';
-import { Plus, Minus, Copy as CopyIcon, Trash2 } from 'lucide-react';
 import InlineText from './components/InlineText.jsx';
 import Avatar from './components/Avatar.jsx';
 import DuePill from './components/DuePill.jsx';
@@ -76,7 +75,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       whileTap={{ scale: 0.98 }}
       style={isMobile ? { touchAction: 'pan-y' } : undefined}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <select
             aria-label="Milestone"
@@ -94,13 +93,13 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
           <button
             onClick={() => setCollapsed((v) => !v)}
             className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
-            {collapsed ? <Plus size={14} /> : <Minus size={14} />}
+            {collapsed ? '+' : '-'}
           </button>
           {onDuplicate && (
             <button
@@ -108,12 +107,12 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
               title="Duplicate"
             >
-              <CopyIcon size={14} />
+              Copy
             </button>
           )}
           {onDelete && (
             <button onClick={() => onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete">
-              <Trash2 size={14} />
+              Delete
             </button>
           )}
         </div>

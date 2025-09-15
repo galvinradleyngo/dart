@@ -1,28 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, Fragment, useCallback } from "react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
-import {
-  Plus,
-  Calendar,
-  ClipboardList,
-  ListChecks,
-  Download,
-  Upload,
-  Filter,
-  Trash2,
-  Clock3,
-  AlertTriangle,
-  RefreshCcw,
-  UserPlus,
-  Copy as CopyIcon,
-  Minus,
-  ChevronDown,
-  ChevronUp,
-  ArrowLeft,
-  Volume2,
-  VolumeX,
-  MoreHorizontal,
-} from "lucide-react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
@@ -594,7 +572,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         }}
         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
       >
-        <RefreshCcw size={16} /> Reset
+        Reset
       </button>
       <button
         onClick={async () => {
@@ -603,7 +581,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         }}
         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
       >
-        <CopyIcon size={16} /> Save as Template
+        Save as Template
       </button>
       <button
         onClick={async () => {
@@ -614,10 +592,10 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         }}
         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
       >
-        <RefreshCcw size={16} /> Reset to Template
+        Reset to Template
       </button>
       <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
-        <Upload size={16} /> Import
+        Import
         <input
           type="file"
           accept="application/json"
@@ -661,7 +639,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         }}
         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
       >
-        <Download size={16} /> Export
+        Export
       </button>
     </>
   );
@@ -672,7 +650,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
           {onBack && (
-            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"><ArrowLeft size={16}/> Back to 📚︎ Courses</button>
+            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800">Back to 📚︎ Courses</button>
           )}
           <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${state.course.accent} shadow-sm`} />
           {/* DART banner title */}
@@ -690,7 +668,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                 aria-expanded={actionsOpen}
                 aria-controls="actions-menu"
               >
-                <MoreHorizontal size={16} />
+                Menu
               </button>
               {actionsOpen && (
                 <div
@@ -721,10 +699,10 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
         {/* Dashboard Rings */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DashboardRing title="Course Progress" value={totals.pct} subtitle={`${totals.done}/${totals.total} done`} color="#10b981" icon={<ListChecks size={16}/>} />
-          <DashboardRing title="In Progress" value={totals.inprog} subtitle="tasks" color="#6366f1" icon={<Clock3 size={16}/>} mode="count" />
-          <DashboardRing title="To Do" value={totals.todo} subtitle="tasks" color="#0ea5e9" icon={<ClipboardList size={16}/>} mode="count" />
-          <DashboardRing title="Overdue" value={totals.overdue} subtitle="needs attention" color="#ef4444" icon={<AlertTriangle size={16}/>} mode="count" />
+          <DashboardRing title="Course Progress" value={totals.pct} subtitle={`${totals.done}/${totals.total} done`} color="#10b981" />
+          <DashboardRing title="In Progress" value={totals.inprog} subtitle="tasks" color="#6366f1" mode="count" />
+          <DashboardRing title="To Do" value={totals.todo} subtitle="tasks" color="#0ea5e9" mode="count" />
+          <DashboardRing title="Overdue" value={totals.overdue} subtitle="needs attention" color="#ef4444" mode="count" />
         </section>
 
         {/* Team Members FIRST */}
@@ -747,7 +725,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
               onClick={() => setMilestonesCollapsed(v => !v)}
             >
               <h2 className="font-semibold flex items-center gap-2">
-                <Calendar size={18} /> Milestones
+                Milestones
               </h2>
               <div
                 className="flex flex-wrap items-center gap-2 w-full sm:w-auto"
@@ -755,7 +733,6 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
               >
               {!milestonesCollapsed && (
                 <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm w-full sm:w-auto">
-                  <Filter size={16} className="text-black/50"/>
                   <select
                     value={milestoneFilter}
                     onChange={e => setMilestoneFilter(e.target.value)}
@@ -791,7 +768,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                           title="Delete template"
                           aria-label="Delete template"
                         >
-                          <Trash2 size={16} />
+                          Delete
                         </button>
                       )}
                     </div>
@@ -800,7 +777,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                     onClick={() => { addMilestone(selectedMilestoneTemplate); setSelectedMilestoneTemplate(""); }}
                     className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 w-full sm:w-auto"
                   >
-                    <Plus size={16}/> Add Milestone
+                    Add Milestone
                   </button>
                 </div>
               )}
@@ -811,7 +788,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                   aria-expanded={!milestonesCollapsed}
                   className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
                 >
-                  {milestonesCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                  {milestonesCollapsed ? '▼' : '▲'}
                 </button>
             </div>
           </div>
@@ -881,7 +858,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
             <h2 className="font-semibold flex items-center gap-2">☑ Tasks</h2>
-            <div className="flex items-center gap-2"><Toggle value={view} onChange={setView} options={[{ id: "list", label: "☰ List" }, { id: "board", label: "⎘ Board" }, { id: "calendar", label: "📅︎ Calendar" }]} /><button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90"><Plus size={16}/> Add Task</button></div>
+            <div className="flex items-center gap-2"><Toggle value={view} onChange={setView} options={[{ id: "list", label: "☰ List" }, { id: "board", label: "⎘ Board" }, { id: "calendar", label: "📅︎ Calendar" }]} /><button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90">Add Task</button></div>
           </div>
             {view === "list" ? (
               <TaskChecklist
@@ -928,7 +905,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
           className="fixed bottom-6 right-6 z-50 inline-flex items-center justify-center w-14 h-14 rounded-full bg-black text-white shadow-lg sm:hidden"
           aria-label="Add task"
         >
-          <Plus size={24} />
+          +
         </button>
       )}
 
@@ -1063,7 +1040,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
-                    <div className="flex items-center gap-1"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus size={14}/> : <Minus size={14}/>}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate"><CopyIcon size={14}/></button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete" aria-label="Delete"><Trash2 size={14}/></button></div>
+                    <div className="flex items-center gap-1 flex-wrap"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? '+' : '-'}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate">Copy</button><button onClick={()=>onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete" aria-label="Delete">Delete</button></div>
                   </div>
                   {collapsed ? (
                     <>
@@ -1383,7 +1360,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 onClick={onBack}
                 className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"
               >
-                <ArrowLeft size={16} /> Back to 📚︎ Courses
+                Back to 📚︎ Courses
               </button>
             )}
             <div className="min-w-0">
@@ -1534,7 +1511,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
                       <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                         <div className="flex items-center gap-2">
-                          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                          <span className="w-4 h-4 transition-transform group-open:rotate-180">▼</span>
                           <div className="font-medium">{c.course.name}</div>
                         </div>
                       </summary>
@@ -1569,7 +1546,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'board' && (
-            <SectionCard title="☑ My Tasks – Board View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> New Task</button>}>
+            <SectionCard title="☑ My Tasks – Board View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
               {myTasks.length === 0 ? (
                 <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
               ) : (
@@ -1638,7 +1615,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'calendar' && (
-            <SectionCard title="☑ My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> New Task</button>}>
+            <SectionCard title="☑ My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
               {myTasks.length === 0 ? (
                 <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
               ) : (
@@ -1918,19 +1895,19 @@ export function CoursesHub({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Edit Template</button>
+            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Edit Template</button>
             <button
               onClick={undo}
               disabled={!history.length}
               className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <RefreshCcw size={16}/> Undo
+              Undo
             </button>
             <button
               onClick={handleAddCourse}
               className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
             >
-              <Plus size={16}/> Add Course
+              Add Course
             </button>
           </div>
         </div>
@@ -1947,7 +1924,7 @@ export function CoursesHub({
                 onClick={addPerson}
                 className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
               >
-                <UserPlus size={16}/> Add Member
+                Add Member
               </button>
               <button
                 onClick={() => setMembersEditing(v => !v)}
@@ -2046,7 +2023,7 @@ export function CoursesHub({
         <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
-              <Calendar size={18}/> Workweek & Holidays
+              Workweek & Holidays
               <span className="text-sm font-normal text-indigo-700">(Global)</span>
             </h2>
           </div>
@@ -2096,7 +2073,7 @@ export function CoursesHub({
             <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
               <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
-              <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"><Plus size={16}/> Add Course</button>
+              <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow">Add Course</button>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -2129,8 +2106,8 @@ export function CoursesHub({
                     </div>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                       <button onClick={(e)=>{ e.stopPropagation(); open(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
-                      <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><CopyIcon size={16}/> Duplicate</button>
-                      <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 size={16}/> Delete</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); duplicateCourse(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Duplicate</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); if(confirm('Delete this course?')) removeCourse(c.id); }} className="w-full sm:w-auto inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm bg-white border border-black/10 text-rose-600 shadow-sm hover:bg-rose-50">Delete</button>
                     </div>
                   </motion.div>
                 );
@@ -2290,7 +2267,7 @@ export default function PMApp() {
         className="fixed bottom-2 left-2 z-50 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white text-slate-600 shadow"
         title={soundEnabled ? "Mute sounds" : "Unmute sounds"}
       >
-        {soundEnabled ? <Volume2 className="icon" /> : <VolumeX className="icon" />}
+        {soundEnabled ? '🔊' : '🔇'}
       </button>
       <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-sm">v{version}</div>
     </SoundContext.Provider>

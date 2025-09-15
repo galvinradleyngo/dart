@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { Link2 } from "lucide-react";
 
 export function LinksEditor({ links = [], onAdd, onRemove }) {
   const [val, setVal] = useState("");
@@ -23,7 +22,7 @@ export function LinksEditor({ links = [], onAdd, onRemove }) {
             rel="noreferrer"
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border border-black/10 bg-white hover:bg-slate-50"
           >
-            <Link2 size={12} />
+            🔗
             {(() => {
               try {
                 return new URL(l).hostname;
@@ -77,7 +76,7 @@ export function LinkChips({ links = [], onRemove }) {
           rel="noreferrer"
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border border-black/10 bg-white hover:bg-slate-50"
         >
-          <Link2 size={12} />
+          🔗
           {(() => {
             try {
               return new URL(l).hostname;
