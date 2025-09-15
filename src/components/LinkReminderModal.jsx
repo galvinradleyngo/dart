@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check, X } from "lucide-react";
 
 export default function LinkReminderModal({ onOkay, onNoLink }) {
   return (
@@ -9,14 +10,16 @@ export default function LinkReminderModal({ onOkay, onNoLink }) {
           <button
             onClick={onOkay}
             className="px-4 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50"
+            aria-label="Okay"
           >
-            Okay
+            <Check className="icon" />
           </button>
           <button
             onClick={onNoLink}
             className="px-4 py-2 rounded border border-slate-300 bg-white hover:bg-slate-50"
+            aria-label="No link"
           >
-            No link
+            <X className="icon" />
           </button>
         </div>
       </div>

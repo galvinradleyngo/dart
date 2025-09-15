@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link2, X } from "lucide-react";
+import { Link2, X, Plus } from "lucide-react";
 
 export function LinksEditor({ links = [], onAdd, onRemove }) {
   const [val, setVal] = useState("");
@@ -57,8 +57,9 @@ export function LinksEditor({ links = [], onAdd, onRemove }) {
         <button
           onClick={add}
           className="px-2 py-1 text-sm rounded border border-black/10 bg-white hover:bg-slate-50"
+          aria-label="Add link"
         >
-          Add
+          <Plus className="icon" />
         </button>
       </div>
     </div>
