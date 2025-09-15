@@ -250,14 +250,42 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               </select>
             )}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-          <div className="flex items-start gap-1">
-            {a ? (
-              <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
+          <div className="mt-2 flex flex-col gap-2 text-sm">
+            {milestoneEdit ? (
+              <select
+                aria-label="Milestone"
+                value={t.milestoneId || ''}
+                onChange={(e) => {
+                  update(t.id, { milestoneId: e.target.value });
+                  setMilestoneEdit(false);
+                }}
+                className="text-xs text-slate-500 border rounded px-1 py-0.5"
+              >
+                {milestones.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title}
+                  </option>
+                ))}
+              </select>
             ) : (
-              <span className="text-black/40 text-sm">—</span>
+              <div className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                <span className="truncate">{milestone ? milestone.title : '—'}</span>
+                <button
+                  type="button"
+                  onClick={() => setMilestoneEdit(true)}
+                  className="text-slate-400 hover:text-slate-600"
+                  aria-label="Edit Milestone"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </div>
             )}
-            <div className="flex flex-col min-w-0">
+            <div className="flex items-start gap-1">
+              {a ? (
+                <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
+              ) : (
+                <span className="text-black/40 text-sm">—</span>
+              )}
               <select
                 aria-label="Assignee"
                 value={t.assigneeId || ''}
@@ -271,67 +299,39 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   </option>
                 ))}
               </select>
-              {milestoneEdit ? (
-                <select
-                  aria-label="Milestone"
-                  value={t.milestoneId || ''}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
+                <span>Start</span>
+                <input
+                  type="date"
+                  value={t.startDate || ''}
                   onChange={(e) => {
-                    update(t.id, { milestoneId: e.target.value });
-                    setMilestoneEdit(false);
+                    const patch = { startDate: e.target.value };
+                    if (t.status === 'todo') patch.status = 'inprogress';
+                    update(t.id, patch);
                   }}
-                  className="text-xs text-slate-500 border rounded px-1 py-0.5 mt-1"
-                >
-                  {milestones.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1 truncate">
-                  <span className="truncate">{milestone ? milestone.title : '—'}</span>
-                  <button
-                    type="button"
-                    onClick={() => setMilestoneEdit(true)}
-                    className="text-slate-400 hover:text-slate-600"
-                    aria-label="Edit Milestone"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
+                  className="w-20 border rounded px-1.5 py-1"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span># of Workdays</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={t.workDays ?? 0}
+                  onChange={(e) => update(t.id, { workDays: Number(e.target.value) })}
+                  className="w-20 border rounded px-1.5 py-1"
+                />
+              </div>
             </div>
-          </div>
-            <div className="flex items-center gap-2">
-              <span>Start</span>
-              <input
-                type="date"
-                value={t.startDate || ''}
-                onChange={(e) => {
-                  const patch = { startDate: e.target.value };
-                  if (t.status === 'todo') patch.status = 'inprogress';
-                  update(t.id, patch);
-                }}
-                className="w-20 border rounded px-1.5 py-1"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <span># of Workdays</span>
-              <input
-                type="number"
-                min={0}
-                value={t.workDays ?? 0}
-                onChange={(e) => update(t.id, { workDays: Number(e.target.value) })}
-                className="w-20 border rounded px-1.5 py-1"
-              />
-            </div>
-            <div className="basis-full w-full">
+            <div className="w-fit">
               <DocumentInput onAdd={(url) => onAddLink?.(t.id, url)} />
               {t.links && t.links.length > 0 && (
                 <LinkChips links={t.links} onRemove={(i) => onRemoveLink?.(t.id, i)} />
               )}
             </div>
-            <div className="basis-full text-sm text-slate-700">
+            <div className="text-sm text-slate-700">
               <span className="font-medium mr-1">Note:</span>
               <InlineText
                 value={t.note}
