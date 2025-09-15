@@ -75,8 +75,8 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       whileTap={{ scale: 0.98 }}
       style={isMobile ? { touchAction: 'pan-y' } : undefined}
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
           <select
             aria-label="Milestone"
             value={t.milestoneId}
@@ -93,7 +93,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => setCollapsed((v) => !v)}
             className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -106,13 +106,19 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               onClick={() => onDuplicate(t.id)}
               className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
               title="Duplicate"
+              aria-label="Duplicate"
             >
-              Copy
+              ⧉
             </button>
           )}
           {onDelete && (
-            <button onClick={() => onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete">
-              Delete
+            <button
+              onClick={() => onDelete(t.id)}
+              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              title="Delete"
+              aria-label="Delete"
+            >
+              🗑️
             </button>
           )}
         </div>
