@@ -9,6 +9,7 @@ import DocumentInput from './components/DocumentInput.jsx';
 import DepPicker from './components/DepPicker.jsx';
 import LinkReminderModal from './components/LinkReminderModal.jsx';
 import { SoundContext } from './sound-context.js';
+import { Plus, Minus, Copy, Trash2, Pencil, StickyNote } from 'lucide-react';
 
 export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -92,7 +93,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
-            {collapsed ? '+' : '-'}
+            {collapsed ? <Plus className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
           </button>
           {onDuplicate && (
             <button
@@ -101,7 +102,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               title="Duplicate"
               aria-label="Duplicate"
             >
-              ⧉
+              <Copy className="w-4 h-4" />
             </button>
           )}
           {onDelete && (
@@ -111,7 +112,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               title="Delete"
               aria-label="Delete"
             >
-              🗑️
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -164,13 +165,17 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
           <div className="text-sm text-black/60 mt-1 truncate">
             <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
           </div>
-          {t.note && <div className="text-sm text-slate-600 mt-1 truncate">📝 {t.note}</div>}
+          {t.note && (
+            <div className="text-sm text-slate-600 mt-1 flex items-center gap-1 truncate">
+              <StickyNote className="w-4 h-4 flex-shrink-0" /> {t.note}
+            </div>
+          )}
             <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
               <div className="flex items-start gap-2 min-w-0">
                 {a ? (
                   <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
                 ) : (
-                  <span className="text-black/40">—</span>
+                  <span className="text-black/40 text-sm">—</span>
                 )}
                 <div className="flex flex-col min-w-0">
                   <select
@@ -249,7 +254,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             {a ? (
               <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
             ) : (
-              <span className="text-black/40">—</span>
+              <span className="text-black/40 text-sm">—</span>
             )}
             <div className="flex flex-col min-w-0">
               <select
@@ -290,7 +295,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                     className="text-slate-400 hover:text-slate-600"
                     aria-label="Edit Milestone"
                   >
-                    ✎
+                    <Pencil className="w-4 h-4" />
                   </button>
                 </div>
               )}
