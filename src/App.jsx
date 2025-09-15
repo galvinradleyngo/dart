@@ -1339,8 +1339,16 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const arr = [];
     courses.forEach((c) => {
       c.tasks.forEach((t) => {
-        if (t.assigneeId === userId)
-          arr.push({ ...t, courseId: c.course.id, courseName: c.course.name });
+        if (t.assigneeId === userId) {
+          const milestoneName =
+            c.milestones.find((m) => m.id === t.milestoneId)?.title || "";
+          arr.push({
+            ...t,
+            courseId: c.course.id,
+            courseName: c.course.name,
+            milestoneName,
+          });
+        }
       });
     });
     return arr
@@ -1459,7 +1467,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                 <input
                                   type="checkbox"
                                   className="rounded border-slate-300"
-                                  aria-label={`${t.title} in ${t.courseName}`}
+                                  aria-label={`${t.title} for ${t.milestoneName} in ${t.courseName}`}
                                   checked={t.status === 'done'}
                                   onChange={(e) =>
                                     updateTaskStatus(
@@ -1468,13 +1476,21 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                       e.target.checked ? 'done' : 'todo'
                                     )
                                   }
-                                  />
+                                />
                                 <button
                                   onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
                                   className="truncate text-left flex-1"
-                                  title={`${t.title} – ${t.courseName}`}
+                                  title={`${t.title} – ${t.milestoneName} in ${t.courseName}`}
                                 >
-                                  {t.title} <span className="text-black/60">in {t.courseName}</span>
+                                  {t.title}{' '}
+                                  <span className="text-black/60">
+                                    for{' '}
+                                    <span className="inline-block rounded px-1 bg-slate-200 text-black/70">
+                                      {t.milestoneName}
+                                    </span>{' '}
+                                    in{' '}
+                                    <span className="text-indigo-700">{t.courseName}</span>
+                                  </span>
                                 </button>
                               </li>
                             );
@@ -1532,21 +1548,27 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         </div>
                       </summary>
                       <div className="p-4 space-y-2">
-                        {c.milestones.map((m) => (
-                          <MilestoneCard
-                            key={m.id}
-                            milestone={m}
-                            tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
-                            tasksAll={c.tasks}
-                            team={c.team}
-                            milestones={c.milestones}
-                            onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-                            onDelete={(id) => deleteTask(c.course.id, id)}
-                            onDuplicate={(id) => duplicateTask(c.course.id, id)}
-                            onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-                            onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
-                          />
-                        ))}
+                        {[...c.milestones]
+                          .sort(
+                            (a, b) =>
+                              c.tasks.filter((t) => t.milestoneId === b.id).length -
+                              c.tasks.filter((t) => t.milestoneId === a.id).length
+                          )
+                          .map((m) => (
+                            <MilestoneCard
+                              key={m.id}
+                              milestone={m}
+                              tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
+                              tasksAll={c.tasks}
+                              team={c.team}
+                              milestones={c.milestones}
+                              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
+                              onDelete={(id) => deleteTask(c.course.id, id)}
+                              onDuplicate={(id) => duplicateTask(c.course.id, id)}
+                              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
+                              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+                            />
+                          ))}
                       </div>
                     </details>
                   ))}
