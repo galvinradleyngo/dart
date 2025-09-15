@@ -324,6 +324,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const isMobile = useIsMobile();
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(isMobile);
+  const [tasksCollapsed, setTasksCollapsed] = useState(true);
   const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
@@ -938,32 +939,87 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         {/* Tasks */}
         <section className="-mx-4 sm:mx-0 bg-white shadow-sm sm:rounded-2xl sm:border border-black/10 p-0 sm:p-4">
           <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
-            <h2 className="font-semibold flex items-center gap-2">☑ Tasks</h2>
-            <div className="flex items-center gap-2"><Toggle value={view} onChange={setView} options={[{ id: "list", label: "☰ List" }, { id: "board", label: "⎘ Board" }, { id: "calendar", label: "📅︎ Calendar" }]} /><button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90">Add Task</button></div>
-          </div>
-            {view === "list" ? (
-              <TaskChecklist
-                tasks={filteredTasks}
-                team={team}
-                milestones={milestones}
-                onUpdate={(id, patch) => updateTask(id, patch)}
-                onEdit={(id) => setEditing({ courseId: state.course.id, taskId: id })}
+            <h2 className="font-semibold flex items-center gap-2">☑ Course Tasks</h2>
+            <div className="flex items-center gap-2">
+              <Toggle
+                value={view}
+                onChange={setView}
+                options={[
+                  { id: "list", label: "☰ List" },
+                  { id: "board", label: "⎘ Board" },
+                  { id: "calendar", label: "📅︎ Calendar" },
+                ]}
               />
-            ) : view === "board" ? (
-              <BoardView tasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
-            ) : (
-              <CalendarView
-                monthDate={calMonth}
-                tasks={filteredTasks}
-              milestones={milestones}
-              team={team}
-              onPrev={() => gotoMonth(-1)}
-              onNext={() => gotoMonth(1)}
-              onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
-              schedule={state.schedule}
-              onTaskClick={(t) => setEditing({ courseId: state.course.id, taskId: t.id })}
-            />
-          )}
+              <button
+                onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)}
+                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90"
+              >
+                Add Task
+              </button>
+              <button
+                onClick={() => setTasksCollapsed((v) => !v)}
+                title={tasksCollapsed ? "Expand Course Tasks" : "Collapse Course Tasks"}
+                aria-label={tasksCollapsed ? "Expand course tasks" : "Collapse course tasks"}
+                aria-expanded={!tasksCollapsed}
+                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+              >
+                {tasksCollapsed ? (
+                  <ChevronDown className="icon" />
+                ) : (
+                  <ChevronUp className="icon" />
+                )}
+              </button>
+            </div>
+          </div>
+          <motion.div
+            initial={false}
+            animate={tasksCollapsed ? "collapsed" : "open"}
+            variants={{
+              open: { height: "auto", opacity: 1 },
+              collapsed: { height: 0, opacity: 0 },
+            }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+            aria-hidden={tasksCollapsed}
+          >
+            <div>
+              {view === "list" ? (
+                <TaskChecklist
+                  tasks={filteredTasks}
+                  team={team}
+                  milestones={milestones}
+                  onUpdate={(id, patch) => updateTask(id, patch)}
+                  onEdit={(id) => setEditing({ courseId: state.course.id, taskId: id })}
+                />
+              ) : view === "board" ? (
+                <BoardView
+                  tasks={filteredTasks}
+                  team={team}
+                  milestones={milestones}
+                  onUpdate={updateTask}
+                  onDelete={deleteTask}
+                  onDragStart={onDragStart}
+                  onDragOverCol={onDragOverCol}
+                  onDropToCol={onDropToCol}
+                  onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                  onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                  onDuplicate={duplicateTask}
+                />
+              ) : (
+                <CalendarView
+                  monthDate={calMonth}
+                  tasks={filteredTasks}
+                  milestones={milestones}
+                  team={team}
+                  onPrev={() => gotoMonth(-1)}
+                  onNext={() => gotoMonth(1)}
+                  onToday={() => setCalMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
+                  schedule={state.schedule}
+                  onTaskClick={(t) => setEditing({ courseId: state.course.id, taskId: t.id })}
+                />
+              )}
+            </div>
+          </motion.div>
         </section>
       {editingTask && (
         <TaskModal
