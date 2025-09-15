@@ -337,7 +337,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
     }
   }, [state, onStateChange]);
 
-const handleSave = async () => {
+const handleSave = useCallback(async () => {
   setSaveState('saving');
   const all = loadCourses();
   const idx = all.findIndex(
@@ -349,7 +349,13 @@ const handleSave = async () => {
   await saveCoursesRemote(all);
   onStateChange?.(state);
   setSaveState('saved');
-};
+}, [state, onStateChange]);
+
+useEffect(() => {
+  if (saveState !== 'unsaved') return;
+  const t = setTimeout(handleSave, 1500);
+  return () => clearTimeout(t);
+}, [saveState, handleSave]);
 
   // Listen for global schedule changes from other tabs
   useEffect(() => {
@@ -2067,7 +2073,7 @@ export function CoursesHub({
               <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow">Add Course</button>
             </div>
           ) : (
-            <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {courses.map((c) => {
                 const t = computeTotals(c);
                 return (
