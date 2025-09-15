@@ -136,17 +136,15 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
           </select>
           <div className="flex items-center gap-2">
             <span>Start</span>
-            {task.status === "done" ? (
-              <span className="text-slate-500">—</span>
-            ) : (
-              <input
-                type="date"
-                value={task.startDate || ""}
-                onChange={(e) => onUpdate(task.id, { startDate: e.target.value })}
-                disabled={task.status === "todo"}
-                className={task.status === "todo" ? "bg-slate-50 text-slate-500" : ""}
-              />
-            )}
+            <input
+              type="date"
+              value={task.startDate || ""}
+              onChange={(e) => {
+                const patch = { startDate: e.target.value };
+                if (task.status === 'todo') patch.status = 'inprogress';
+                onUpdate(task.id, patch);
+              }}
+            />
           </div>
           <div className="flex items-center gap-2">
             <span># of Workdays</span>

@@ -98,4 +98,28 @@ describe('BoardView mobile status selection', () => {
     });
     await screen.findByRole('button', { name: /status: in progress/i });
   });
+
+  it('allows editing start date when status is todo', () => {
+    const onUpdate = vi.fn();
+    const { container } = render(
+      <BoardView
+        tasks={[{ ...sampleTask }]}
+        team={[]}
+        milestones={[]}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onDragStart={() => () => {}}
+        onDragOverCol={() => {}}
+        onDropToCol={() => () => {}}
+        onAddLink={() => {}}
+        onRemoveLink={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByTitle(/expand/i));
+    const input = container.querySelector('input[type="date"]');
+    expect(input).not.toBeDisabled();
+    fireEvent.change(input, { target: { value: '2024-02-02' } });
+    expect(onUpdate).toHaveBeenCalledWith('t1', { startDate: '2024-02-02', status: 'inprogress' });
+  });
 });

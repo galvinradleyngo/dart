@@ -99,6 +99,24 @@ describe('TaskCard', () => {
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { assigneeId: 'u2' });
   });
 
+  it('allows editing start date when status is todo', () => {
+    const onUpdate = vi.fn();
+    const { container } = render(
+      <TaskCard
+        task={sampleTask}
+        milestones={milestones}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByTitle(/expand/i));
+    const input = container.querySelector('input[type="date"]');
+    expect(input).not.toBeDisabled();
+    fireEvent.change(input, { target: { value: '2024-01-01' } });
+    expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { startDate: '2024-01-01', status: 'inprogress' });
+  });
+
   describe('mobile status selection', () => {
     beforeAll(() => {
       window.matchMedia = window.matchMedia || (() => ({
