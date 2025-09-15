@@ -1,0 +1,20 @@
+[
+  {
+    "id": "default-module-1",
+    "title": "Module 1 – Canvas Setup",
+    "goal": "Prepare Canvas module shell",
+    "tasks": [
+      { "title": "Create module structure", "details": "", "workDays": 1 },
+      { "title": "Upload syllabus", "details": "", "workDays": 1 }
+    ]
+  },
+  {
+    "id": "default-module-2",
+    "title": "Module 2 – Content Draft",
+    "goal": "Draft learning content",
+    "tasks": [
+      { "title": "Outline lesson", "details": "", "workDays": 2 },
+      { "title": "Prepare assessments", "details": "", "workDays": 2 }
+    ]
+  }
+]

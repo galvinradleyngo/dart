@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Copy as CopyIcon, Trash2, ChevronDown } from 'lucide-react';
+import { Copy as CopyIcon, Trash2, ChevronDown, Download } from 'lucide-react';
 import TaskCard from './TaskCard.jsx';
 
 export default function MilestoneCard({
@@ -16,6 +16,7 @@ export default function MilestoneCard({
   onAddLink,
   onRemoveLink,
   onUpdateMilestone,
+  onSaveAsTemplate,
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(milestone.title);
@@ -99,6 +100,19 @@ export default function MilestoneCard({
                 aria-label="Duplicate Milestone"
               >
                 <CopyIcon size={16} />
+              </button>
+            )}
+            {onSaveAsTemplate && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaveAsTemplate(milestone.id);
+                }}
+                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                title="Save as Milestone Template"
+                aria-label="Save as Milestone Template"
+              >
+                <Download size={16} />
               </button>
             )}
             {onDeleteMilestone && (
