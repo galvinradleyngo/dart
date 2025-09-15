@@ -472,7 +472,49 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
       return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] };
     });
   const deleteMilestone  = (id) => setState((s)=>({ ...s, milestones: s.milestones.filter((m)=>m.id!==id), tasks: s.tasks.map((t)=>(t.milestoneId===id?{...t, milestoneId: s.milestones[0]?.id}:t)) }));
-  const duplicateMilestone = (id) => setState((s)=>{ const src = s.milestones.find((m)=>m.id===id); if(!src) return s; const newMs = { id: uid(), title: `${src.title} (copy)`, start: src.start, goal: src.goal }; const related = s.tasks.filter((t)=>t.milestoneId===id); const nextOrder = s.tasks.length; const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null); const clonedTasks = related.map((t,i)=>({ ...t, id: uid(), order: nextOrder+i, milestoneId: newMs.id, status: "todo", startDate: "", dueDate: "", completedDate: "", assigneeId: ld, depTaskId: null })); return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] }; });
+  const duplicateMilestone = (id) =>
+    setState((s) => {
+      const src = s.milestones.find((m) => m.id === id);
+      if (!src) return s;
+
+      const newMilestoneId = uid();
+      const newMs = {
+        id: newMilestoneId,
+        title: `${src.title} (copy)`,
+        start: src.start,
+        goal: src.goal,
+      };
+
+      const related = s.tasks.filter((t) => t.milestoneId === id);
+      const sortedRelated = [...related].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const nextOrder = s.tasks.length;
+      const idMap = new Map();
+
+      const clonedTasks = sortedRelated.map((task, index) => {
+        const newTaskId = uid();
+        idMap.set(task.id, newTaskId);
+
+        return {
+          ...task,
+          id: newTaskId,
+          order: nextOrder + index,
+          milestoneId: newMilestoneId,
+          links: Array.isArray(task.links) ? [...task.links] : [],
+        };
+      }).map((task, index) => {
+        const sourceDep = sortedRelated[index].depTaskId;
+        if (sourceDep && idMap.has(sourceDep)) {
+          return { ...task, depTaskId: idMap.get(sourceDep) };
+        }
+        return task;
+      });
+
+      return {
+        ...s,
+        milestones: [...s.milestones, newMs],
+        tasks: [...s.tasks, ...clonedTasks],
+      };
+    });
   const saveMilestoneTemplate = (id) => {
     const src = state.milestones.find((m) => m.id === id);
     if (!src) return;
