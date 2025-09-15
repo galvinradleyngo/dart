@@ -5,6 +5,7 @@ import DocumentInput from "./DocumentInput.jsx";
 import { LinkChips } from "./LinksEditor.jsx";
 import DepPicker from "./DepPicker.jsx";
 import DuePill from "./DuePill.jsx";
+import { X } from "lucide-react";
 
 function statusBg(status) {
   if (status === "done") return "bg-emerald-50";
@@ -80,8 +81,8 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
               />
             </div>
           </div>
-          <button onClick={handleClose} className="text-slate-500 hover:text-black" aria-label="Close">
-            ×
+          <button onClick={handleClose} aria-label="Close">
+            <X className="icon text-slate-500 hover:text-black" />
           </button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
