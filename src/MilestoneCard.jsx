@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import TaskCard from './TaskCard.jsx';
-import { Copy, Save, Trash } from 'lucide-react';
+import { Copy, Save, Trash, ChevronDown } from 'lucide-react';
 
 export default function MilestoneCard({
   milestone,
@@ -46,7 +46,7 @@ export default function MilestoneCard({
       <details className="group rounded-xl border border-black/10 bg-white">
         <summary className="cursor-pointer select-none p-4 flex flex-wrap items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
         <div className="flex items-center gap-2 flex-1">
-          <span className="w-4 h-4 transition-transform group-open:rotate-180">▼</span>
+          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
           <div className="flex-1">
             {onUpdateMilestone ? (
               editingTitle ? (
