@@ -63,7 +63,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     if (status === 'inprogress') return 'bg-emerald-100 text-emerald-900 border-emerald-300';
     return 'bg-slate-100 text-slate-700 border-slate-300';
   };
-  const statusPillBase = 'min-w-[8rem] px-2 pr-6 py-1 rounded-full border font-semibold text-sm';
+  const statusPillBase = 'min-w-[10rem] px-3 pr-10 py-1 rounded-full border font-semibold text-sm';
   const handleStatusChange = (value) => {
     if (value === 'done' && (!t.links || t.links.length === 0)) {
       setCollapsed(false);
