@@ -17,17 +17,17 @@ export default function DocumentInput({ onAdd }) {
       <label htmlFor="document-url" className="font-medium">
         Document:
       </label>
-      <input
-        id="document-url"
-        type="url"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") add();
-        }}
-        placeholder="Paste link and press Enter"
-        className="flex-1"
-      />
+        <input
+          id="document-url"
+          type="url"
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") add();
+          }}
+          placeholder="Paste link and press Enter"
+          className="flex-1 max-w-[180px]"
+        />
       <button
         onClick={add}
         className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"

@@ -652,7 +652,9 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
       <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
           {onBack && (
-            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800">Back to 📚︎ Courses</button>
+            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800">
+              Back to <BookOpen className="w-4 h-4" /> Courses
+            </button>
           )}
           <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${state.course.accent} shadow-sm`} />
           {/* DART banner title */}
@@ -867,8 +869,19 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         {/* Tasks */}
         <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
-            <h2 className="font-semibold flex items-center gap-2">☑ Tasks</h2>
-            <div className="flex items-center gap-2"><Toggle value={view} onChange={setView} options={[{ id: "list", label: "☰ List" }, { id: "board", label: "⎘ Board" }, { id: "calendar", label: "📅︎ Calendar" }]} /><button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90">Add Task</button></div>
+            <h2 className="font-semibold flex items-center gap-2"><CheckSquare className="w-4 h-4" /> Tasks</h2>
+            <div className="flex items-center gap-2">
+              <Toggle
+                value={view}
+                onChange={setView}
+                options={[
+                  { id: "list", label: (<span className="inline-flex items-center"><List className="w-4 h-4 mr-1" />List</span>) },
+                  { id: "board", label: (<span className="inline-flex items-center"><Kanban className="w-4 h-4 mr-1" />Board</span>) },
+                  { id: "calendar", label: (<span className="inline-flex items-center"><Calendar className="w-4 h-4 mr-1" />Calendar</span>) }
+                ]}
+              />
+              <button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90">Add Task</button>
+            </div>
           </div>
             {view === "list" ? (
               <TaskChecklist
@@ -1097,7 +1110,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, []);
 
   const [saveState, setSaveState] = useState('saved');
-  const [taskQuery, setTaskQuery] = useState('');
   const [courseQuery, setCourseQuery] = useState('');
   const [activeTab, setActiveTab] = useState(() => {
     const stored = localStorage.getItem('userTab');
@@ -1319,11 +1331,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       });
     });
     return arr
-      .filter(
-        (t) =>
-          t.title.toLowerCase().includes(taskQuery.toLowerCase()) ||
-          t.courseName.toLowerCase().includes(taskQuery.toLowerCase())
-      )
       .sort((a, b) => {
         const nameCmp = a.courseName.localeCompare(b.courseName);
         if (nameCmp !== 0) return nameCmp;
@@ -1331,7 +1338,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
         return da - db;
       });
-  }, [courses, userId, taskQuery]);
+  }, [courses, userId]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
@@ -1361,11 +1368,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 onClick={onBack}
                 className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"
               >
-                Back to 📚︎ Courses
+                Back to <BookOpen className="w-4 h-4" /> Courses
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-[14px] font-semibold truncate">🏠︎ User Dashboard</h1>
+              <h1 className="text-sm sm:text-[14px] font-semibold truncate inline-flex items-center gap-1">
+                <Home className="w-4 h-4" /> User Dashboard
+              </h1>
               {user && <div className="text-sm text-black/60 truncate">{user.name}</div>}
             </div>
           </div>
@@ -1374,8 +1383,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
-            <button className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50" title="Settings" aria-label="Settings">⚙︎</button>
-            <button className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50" title="Help" aria-label="Help">❓︎</button>
             <button
               onClick={handleSave}
               className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
@@ -1397,11 +1404,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
           <div className="mb-4 flex flex-wrap gap-2">
             {[
-              ['deadlines','🏠︎ Home'],
-              ['courses','📚︎ Courses'],
-              ['milestones','Milestones'],
-              ['board','⎘ Board View'],
-              ['calendar','📅︎ Calendar View']
+              ['deadlines', (<span className="inline-flex items-center"><Home className="w-4 h-4 mr-1" />Home</span>)],
+              ['courses', (<span className="inline-flex items-center"><BookOpen className="w-4 h-4 mr-1" />Courses</span>)],
+              ['milestones', 'Milestones'],
+              ['board', (<span className="inline-flex items-center"><Kanban className="w-4 h-4 mr-1" />Board View</span>)],
+              ['calendar', (<span className="inline-flex items-center"><Calendar className="w-4 h-4 mr-1" />Calendar View</span>)]
             ].map(([id,label]) => (
               <button
                 key={id}
@@ -1471,7 +1478,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'courses' && (
-            <SectionCard title="📚︎ My Courses">
+            <SectionCard title={<span className="inline-flex items-center"><BookOpen className="w-4 h-4 mr-1" />My Courses</span>}>
               {myCourses.length === 0 ? (
                 <div className="text-sm text-black/60">No courses</div>
               ) : (
@@ -1545,20 +1552,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'board' && (
-            <SectionCard title="☑ My Tasks – Board View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
+            <SectionCard title={<span className="inline-flex items-center"><CheckSquare className="w-4 h-4 mr-1" />My Tasks – Board View</span>} actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
+                <div className="text-sm text-black/60">No tasks assigned.</div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={taskQuery}
-                      onChange={(e) => setTaskQuery(e.target.value)}
-                      placeholder="Search..."
-                      className="px-2 py-1 text-sm border rounded flex-1"
-                    />
-                  </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {[
                       { id: 'todo', label: 'To Do' },
@@ -1614,20 +1612,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'calendar' && (
-            <SectionCard title="☑ My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
+            <SectionCard title={<span className="inline-flex items-center"><CheckSquare className="w-4 h-4 mr-1" />My Tasks – Calendar View</span>} actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
+                <div className="text-sm text-black/60">No tasks assigned.</div>
               ) : (
                 <>
-                  <div className="flex items-center gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={taskQuery}
-                      onChange={(e) => setTaskQuery(e.target.value)}
-                      placeholder="Search..."
-                      className="px-2 py-1 text-sm border rounded flex-1"
-                    />
-                  </div>
                   <CalendarView
                     monthDate={calMonth}
                     tasks={myTasks}
@@ -1879,7 +1868,7 @@ export function CoursesHub({
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-[14px] font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-sm text-black/60 truncate">📚︎ Courses Hub</div>
+              <div className="text-sm text-black/60 truncate inline-flex items-center"><BookOpen className="w-4 h-4 mr-1" />Courses Hub</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -2055,7 +2044,7 @@ export function CoursesHub({
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-2">📚︎ All Courses</h2>
+          <h2 className="text-lg font-semibold mb-2 inline-flex items-center"><BookOpen className="w-5 h-5 mr-1" />All Courses</h2>
           {courses.length === 0 ? (
             <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
