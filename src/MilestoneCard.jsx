@@ -108,7 +108,7 @@ export default function MilestoneCard({
                   e.stopPropagation();
                   onSaveAsTemplate(milestone.id);
                 }}
-                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-green-50 text-green-600 hover:bg-green-100"
                 title="Save as Milestone Template"
                 aria-label="Save as Milestone Template"
               >
