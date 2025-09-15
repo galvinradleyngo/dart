@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link2, X } from "lucide-react";
 
 export function LinksEditor({ links = [], onAdd, onRemove }) {
   const [val, setVal] = useState("");
@@ -22,7 +23,7 @@ export function LinksEditor({ links = [], onAdd, onRemove }) {
             rel="noreferrer"
             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border border-black/10 bg-white hover:bg-slate-50"
           >
-            🔗
+            <Link2 className="icon" />
             {(() => {
               try {
                 return new URL(l).hostname;
@@ -32,14 +33,13 @@ export function LinksEditor({ links = [], onAdd, onRemove }) {
             })()}
             <button
               type="button"
-              className="ml-1 text-slate-400 hover:text-rose-600"
               onClick={(e) => {
                 e.preventDefault();
                 onRemove?.(i);
               }}
               aria-label="Remove link"
             >
-              ×
+              <X className="icon ml-1 text-slate-400 hover:text-rose-600" />
             </button>
           </a>
         ))}
@@ -76,7 +76,7 @@ export function LinkChips({ links = [], onRemove }) {
           rel="noreferrer"
           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border border-black/10 bg-white hover:bg-slate-50"
         >
-          🔗
+          <Link2 className="icon" />
           {(() => {
             try {
               return new URL(l).hostname;
@@ -86,14 +86,13 @@ export function LinkChips({ links = [], onRemove }) {
           })()}
           <button
             type="button"
-            className="ml-1 text-slate-400 hover:text-rose-600"
             onClick={(e) => {
               e.preventDefault();
               onRemove?.(i);
             }}
             aria-label="Remove link"
           >
-            ×
+            <X className="icon ml-1 text-slate-400 hover:text-rose-600" />
           </button>
         </a>
       ))}

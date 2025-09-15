@@ -22,6 +22,7 @@ import { applyLinkPatch } from "./linkUtils.js";
 import { SoundContext } from "./sound-context.js";
 import pkg from "../package.json";
 import defaultMilestoneTemplates from "../scripts/defaultMilestoneTemplates.json";
+import { X } from "lucide-react";
 import {
   uid,
   todayStr,
@@ -2053,12 +2054,11 @@ export function CoursesHub({
                   >
                     {h}
                     <button
-                      className="text-rose-500 hover:text-rose-700"
                       onClick={() => removeHoliday(h)}
                       title="Remove holiday"
                       aria-label="Remove holiday"
                     >
-                      ×
+                      <X className="icon text-rose-500 hover:text-rose-700" />
                     </button>
                   </span>
                 ))}
