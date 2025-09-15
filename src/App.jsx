@@ -2290,7 +2290,7 @@ export default function PMApp() {
         className="fixed bottom-2 left-2 z-50 inline-flex items-center justify-center w-8 h-8 rounded-full border border-black/10 bg-white text-slate-600 shadow"
         title={soundEnabled ? "Mute sounds" : "Unmute sounds"}
       >
-        {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+        {soundEnabled ? <Volume2 className="icon" /> : <VolumeX className="icon" />}
       </button>
       <div className="fixed bottom-2 right-2 z-50 px-2 py-1 rounded bg-black/70 text-white text-sm">v{version}</div>
     </SoundContext.Provider>

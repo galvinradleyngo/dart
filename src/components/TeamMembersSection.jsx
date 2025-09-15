@@ -54,7 +54,7 @@ function TeamMemberCard({
             aria-label="Remove member"
             onClick={() => onDelete(member.id)}
           >
-            <Trash2 size={16} />
+            <Trash2 className="icon" />
           </button>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function TeamMembersSection({
             onClick={onAddMember}
             className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
           >
-            <UserPlus size={16} /> Add Member
+            <UserPlus className="icon" /> Add Member
           </button>
         </div>
       </div>
