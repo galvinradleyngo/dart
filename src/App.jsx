@@ -31,12 +31,13 @@ import SectionCard from "./components/SectionCard.jsx";
 import Avatar from "./components/Avatar.jsx";
 import InlineText from "./components/InlineText.jsx";
 import DuePill from "./components/DuePill.jsx";
-import { LinksEditor, LinkChips } from "./components/LinksEditor.jsx";
+import { LinkChips } from "./components/LinksEditor.jsx";
 import DocumentInput from "./components/DocumentInput.jsx";
 import AddHoliday from "./components/AddHoliday.jsx";
 import DepPicker from "./components/DepPicker.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import TaskModal from "./components/TaskModal.jsx";
+import TaskChecklist from "./components/TaskChecklist.jsx";
 import TaskCard from "./TaskCard.jsx";
 import LinkReminderModal from "./components/LinkReminderModal.jsx";
 import { applyLinkPatch } from "./linkUtils.js";
@@ -296,7 +297,6 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   });
   const [view, setView] = useState("board");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
-  const [listTab, setListTab] = useState("active");
   const isMobile = useIsMobile();
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(isMobile);
   const [saveState, setSaveState] = useState('saved');
@@ -364,35 +364,7 @@ const handleSave = async () => {
   useEffect(() => { try { const flag = localStorage.getItem("healthPM:template:captured"); if (!flag) { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(state)); localStorage.setItem("healthPM:template:captured","1"); } } catch {} }, []);
 
   const team = state.team; const milestones = state.milestones; const tasksRaw = state.tasks;
-  const dueKey = (t) => (t.dueDate ? new Date(t.dueDate).getTime() : Number.POSITIVE_INFINITY);
-
-  const sortByDep = (arr) => {
-    const ordered = [...arr].sort(
-      (a, b) => dueKey(a) - dueKey(b) || (a.title || "").localeCompare(b.title || "")
-    );
-    const map = new Map(ordered.map((t) => [t.id, t]));
-    const visited = new Set();
-    const stack = new Set();
-    const res = [];
-    const visit = (task) => {
-      if (visited.has(task.id)) return;
-      if (stack.has(task.id)) {
-        stack.delete(task.id);
-        visited.add(task.id);
-        res.push(task);
-        return;
-      }
-      stack.add(task.id);
-      if (task.depTaskId && map.has(task.depTaskId)) visit(map.get(task.depTaskId));
-      stack.delete(task.id);
-      visited.add(task.id);
-      res.push(task);
-    };
-    ordered.forEach(visit);
-    return res;
-  };
-
-const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
+  const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
 const groupedTasks = useMemo(() => {
   return filteredTasks.reduce((acc, t) => {
     (acc[t.milestoneId] ||= []).push(t);
@@ -400,14 +372,6 @@ const groupedTasks = useMemo(() => {
   }, {});
 }, [filteredTasks]);
 const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones : milestones.filter((m) => m.id === milestoneFilter)), [milestones, milestoneFilter]);
-const tasksActive = useMemo(() => {
-  const arr = filteredTasks.filter((t) => t.status !== "done");
-  return sortByDep(arr);
-}, [filteredTasks]);
-const tasksDone = useMemo(() => {
-  const arr = filteredTasks.filter((t) => t.status === "done");
-  return sortByDep(arr);
-}, [filteredTasks]);
 
   const totals = useMemo(() => {
     const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
@@ -826,21 +790,20 @@ const tasksDone = useMemo(() => {
             <h2 className="font-semibold flex items-center gap-2"><ListChecks size={18}/> Tasks</h2>
             <div className="flex items-center gap-2"><Toggle value={view} onChange={setView} options={[{ id: "list", label: "List" }, { id: "board", label: "Board" }, { id: "calendar", label: "Calendar" }]} /><button onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)} className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90"><Plus size={16}/> Add Task</button></div>
           </div>
-          {view === "list" ? (
-            <div>
-              <div className="mb-2 inline-flex rounded-xl border border-black/10 bg-white p-1 shadow-sm text-sm">{[{id:"active",label:"Active"},{id:"done",label:"Done"}].map(t => (<button key={t.id} onClick={()=>setListTab(t.id)} className={`px-3 py-1.5 rounded-lg ${listTab===t.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{t.label}</button>))}</div>
-              {listTab === "active" ? (
-                <TaskTable tasks={tasksActive} allTasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
-              ) : (
-                <TaskTable tasks={tasksDone} allTasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
-              )}
-            </div>
-          ) : view === "board" ? (
-            <BoardView tasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
-          ) : (
-            <CalendarView
-              monthDate={calMonth}
-              tasks={filteredTasks}
+            {view === "list" ? (
+              <TaskChecklist
+                tasks={filteredTasks}
+                team={team}
+                milestones={milestones}
+                onUpdate={(id, patch) => updateTask(id, patch)}
+                onEdit={(id) => setEditing({ courseId: state.course.id, taskId: id })}
+              />
+            ) : view === "board" ? (
+              <BoardView tasks={filteredTasks} team={team} milestones={milestones} onUpdate={updateTask} onDelete={deleteTask} onDragStart={onDragStart} onDragOverCol={onDragOverCol} onDropToCol={onDropToCol} onAddLink={(id, url)=>patchTaskLinks(id,'add',url)} onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)} onDuplicate={duplicateTask} />
+            ) : (
+              <CalendarView
+                monthDate={calMonth}
+                tasks={filteredTasks}
               milestones={milestones}
               team={team}
               onPrev={() => gotoMonth(-1)}
@@ -912,75 +875,6 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
   );
 }
 function Toggle({ value, onChange, options }) { return (<div className="inline-flex rounded-2xl border border-black/10 bg-white p-1 shadow-sm">{options.map((o)=>(<button key={o.id} onClick={()=>onChange(o.id)} className={`px-3 py-1.5 text-sm rounded-xl ${value===o.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{o.label}</button>))}</div>); }
-function TaskTable({ tasks, allTasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onDuplicate }) {
-  const taskAssignableMembers = team; // include all roles
-  const isMobile = useIsMobile();
-  if (isMobile) {
-    return (
-      <div className="space-y-3">
-        {tasks.map((t) => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            tasks={allTasks}
-            team={team}
-            milestones={milestones}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-            onDuplicate={onDuplicate}
-            onAddLink={onAddLink}
-            onRemoveLink={onRemoveLink}
-          />
-        ))}
-      </div>
-    );
-  }
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-black/60 border-b border-black/10">
-            <th className="py-2 pr-4">Title & Details</th>
-            <th className="py-2 pr-4">Milestone</th>
-            <th className="py-2 pr-4">Assignee</th>
-            <th className="py-2 pr-4">Status</th>
-            <th className="py-2 pr-4 hidden lg:table-cell">Start</th>
-            <th className="py-2 pr-4 hidden lg:table-cell"># of Workdays</th>
-            <th className="py-2 pr-4">Due</th>
-            <th className="py-2 pr-4 hidden xl:table-cell">Completed</th>
-            <th className="py-2 pr-4 hidden xl:table-cell">Dependency</th>
-            <th className="py-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((t) => {
-            const assignee = team.find((m) => m.id === t.assigneeId);
-            return (
-              <tr key={t.id} className="border-b border-black/5 hover:bg-slate-50 align-top">
-                <td className="py-2 pr-4">
-                  <div className="font-medium"><InlineText value={t.title} onChange={(v) => onUpdate(t.id, { title: v })} /></div>
-                  <div className="text-sm text-black/60"><InlineText value={t.details} onChange={(v) => onUpdate(t.id, { details: v })} placeholder="Details…" multiline /></div>
-                  <div className="mt-1 text-sm text-slate-700"><span className="font-medium mr-1">Note:</span><InlineText value={t.note} onChange={(v) => onUpdate(t.id, { note: v })} placeholder="Add a quick note…" multiline /></div>
-                  <LinksEditor links={t.links} onAdd={(url) => onAddLink(t.id, url)} onRemove={(i) => onRemoveLink(t.id, i)} />
-                </td>
-                <td className="py-2 pr-4"><select value={t.milestoneId} onChange={(e) => onUpdate(t.id, { milestoneId: e.target.value })} className="border rounded px-2 py-1">{milestones.map((m) => (<option key={m.id} value={m.id}>{m.title}</option>))}</select></td>
-                <td className="py-2 pr-4"><div className="flex items-center gap-2">{assignee ? <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} /> : <span className="text-sm text-black/40">—</span>}<select value={t.assigneeId || ""} onChange={(e) => onUpdate(t.id, { assigneeId: e.target.value || null })} className="border rounded px-2 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m) => (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div></td>
-                <td className="py-2 pr-4"><select value={t.status} onChange={(e) => onUpdate(t.id, { status: e.target.value })} className={`border rounded px-2 py-1 ${statusBg(t.status)}`}><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></td>
-                <td className="py-2 pr-4 hidden lg:table-cell">{t.status === "done" ? (<span className="text-sm text-slate-500">—</span>) : (<input type="date" value={t.startDate || ""} onChange={(e) => onUpdate(t.id, { startDate: e.target.value })} disabled={t.status === "todo"} className={`border rounded px-2 py-1 ${t.status === "todo" ? "bg-slate-50 text-slate-500" : ""}`} placeholder="—" />)}</td>
-                <td className="py-2 pr-4 hidden lg:table-cell"><input type="number" min={0} value={t.workDays ?? 0} onChange={(e) => onUpdate(t.id, { workDays: Number(e.target.value) })} className="w-24 border rounded px-2 py-1" /></td>
-                <td className="py-2 pr-4"><DuePill date={t.dueDate} status={t.status} /></td>
-                <td className="py-2 pr-4 hidden xl:table-cell">{t.status === "done" ? (t.completedDate || "—") : "—"}</td>
-                <td className="py-2 pr-4 hidden xl:table-cell"><DepPicker task={t} tasks={allTasks} onUpdate={onUpdate} /></td>
-                <td className="py-2"><button onClick={() => onDuplicate(t.id)} className="text-black/60 hover:text-sky-600 mr-2" title="Duplicate" aria-label="Duplicate"><CopyIcon size={16} /></button><button onClick={() => onDelete(t.id)} className="text-red-500/80 hover:text-red-600" title="Delete" aria-label="Delete"><Trash2 size={16} /></button></td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-function statusBg(status) { if (status === "done") return "bg-emerald-50"; if (status === "inprogress") return "bg-emerald-50"; return "bg-white"; }
 
 export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
