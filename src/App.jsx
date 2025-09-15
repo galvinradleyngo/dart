@@ -1467,7 +1467,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                 <input
                                   type="checkbox"
                                   className="rounded border-slate-300"
-                                  aria-label={`${t.title} for ${t.milestoneName} in ${t.courseName}`}
+                                  aria-label={`${t.title} for ${t.milestoneName}`}
                                   checked={t.status === 'done'}
                                   onChange={(e) =>
                                     updateTaskStatus(
@@ -1480,17 +1480,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                 <button
                                   onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
                                   className="truncate text-left flex-1"
-                                  title={`${t.title} – ${t.milestoneName} in ${t.courseName}`}
+                                  title={`${t.title} – ${t.milestoneName}`}
                                 >
-                                  {t.title}{' '}
-                                  <span className="text-black/60">
-                                    for{' '}
-                                    <span className="inline-block rounded px-1 bg-slate-200 text-black/70">
-                                      {t.milestoneName}
-                                    </span>{' '}
-                                    in{' '}
-                                    <span className="text-indigo-700">{t.courseName}</span>
-                                  </span>
+                                  {t.title} <span className="text-black/60">for {t.milestoneName}</span>
                                 </button>
                               </li>
                             );

@@ -43,22 +43,22 @@ describe('Upcoming Deadlines window', () => {
     render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
 
     expect(
-      await screen.findByRole('button', { name: 'Today Task for Milestone 1 in Course 1' })
+      await screen.findByRole('button', { name: 'Today Task for Milestone 1' })
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('button', { name: 'Future Task for Milestone 2 in Course 1' })
+      await screen.findByRole('button', { name: 'Future Task for Milestone 2' })
     ).toBeInTheDocument();
     expect(screen.queryByText('Outside Task')).toBeNull();
 
     const checkbox = await screen.findByRole('checkbox', {
-      name: 'Today Task for Milestone 1 in Course 1',
+      name: 'Today Task for Milestone 1',
     });
     expect(checkbox).not.toBeChecked();
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Today Task for Milestone 1 in Course 1' })
+      screen.getByRole('button', { name: 'Today Task for Milestone 1' })
     );
     expect(await screen.findByText('Delete')).toBeInTheDocument();
   });
@@ -76,7 +76,7 @@ describe('Upcoming Deadlines window', () => {
     }];
     localStorage.setItem('healthPM:courses:v1', JSON.stringify(courses));
     render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
-    const box = await screen.findByRole('checkbox', { name: 'Task for Milestone 1 in Course 1' });
+    const box = await screen.findByRole('checkbox', { name: 'Task for Milestone 1' });
     fireEvent.click(box);
     expect(await screen.findByText('Please provide a link to the output')).toBeInTheDocument();
     fireEvent.click(screen.getByText('No link'));
