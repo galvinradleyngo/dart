@@ -738,7 +738,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                   <select
                     value={milestoneFilter}
                     onChange={e => setMilestoneFilter(e.target.value)}
-                    className="text-sm outline-none bg-transparent"
+                    className="text-sm outline-none bg-transparent w-full sm:w-auto"
                   >
                     <option value="all">All milestones</option>
                     {milestones.map(m => (
@@ -1374,8 +1374,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
-            <button className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50" title="Settings" aria-label="Settings">⚙︎</button>
-            <button className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50" title="Help" aria-label="Help">❓︎</button>
             <button
               onClick={handleSave}
               className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
@@ -2077,12 +2075,12 @@ export function CoursesHub({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') open(c.id);
                     }}
-                    className="group rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    className="group w-full rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-sm text-black/60 truncate">{c.course.description}</div></div>
                     </div>
-                    <div className="flex items-center gap-4 mt-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-3">
                       <Ring className="w-14 h-14 xs:w-16 xs:h-16" stroke={10} progress={t.pct} color="#10b981">
                         <div className="text-center">
                           <div className="text-sm font-semibold">{t.pct}%</div>

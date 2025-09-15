@@ -63,6 +63,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     if (status === 'inprogress') return 'bg-emerald-100 text-emerald-900 border-emerald-300';
     return 'bg-slate-100 text-slate-700 border-slate-300';
   };
+  const statusPillBase = 'min-w-[8rem] px-2 pr-6 py-1 rounded-full border font-semibold text-sm';
   const handleStatusChange = (value) => {
     if (value === 'done' && (!t.links || t.links.length === 0)) {
       setCollapsed(false);
@@ -130,7 +131,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                     setStatusOpen(false);
                   }}
                   onBlur={() => setStatusOpen(false)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
+                  className={`${statusPillBase} ${statusPillClass(t.status)}`}
                   autoFocus
                 >
                   <option value="todo">To Do</option>
@@ -144,7 +145,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   aria-expanded={statusOpen}
                   aria-label={`Status: ${statusLabel[t.status]}`}
                   onClick={() => setStatusOpen((v) => !v)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
+                  className={`${statusPillBase} ${statusPillClass(t.status)}`}
                 >
                   {statusLabel[t.status]}
                 </button>
@@ -154,7 +155,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 aria-label="Status"
                 value={t.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
+                className={`${statusPillBase} ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
                 <option value="inprogress">In Progress</option>
@@ -217,7 +218,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                     setStatusOpen(false);
                   }}
                   onBlur={() => setStatusOpen(false)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
+                  className={`${statusPillBase} ${statusPillClass(t.status)}`}
                   autoFocus
                 >
                   <option value="todo">To Do</option>
@@ -231,7 +232,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   aria-expanded={statusOpen}
                   aria-label={`Status: ${statusLabel[t.status]}`}
                   onClick={() => setStatusOpen((v) => !v)}
-                  className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
+                  className={`${statusPillBase} ${statusPillClass(t.status)}`}
                 >
                   {statusLabel[t.status]}
                 </button>
@@ -241,7 +242,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 aria-label="Status"
                 value={t.status}
                 onChange={(e) => handleStatusChange(e.target.value)}
-                className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
+                className={`${statusPillBase} ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
                 <option value="inprogress">In Progress</option>
@@ -311,7 +312,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   if (t.status === 'todo') patch.status = 'inprogress';
                   update(t.id, patch);
                 }}
-                className="border rounded px-1.5 py-1"
+                className="w-20 border rounded px-1.5 py-1"
               />
             </div>
             <div className="flex items-center gap-2">
