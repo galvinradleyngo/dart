@@ -39,6 +39,15 @@ export default function MilestoneCard({
     return { done, pct, tasksSorted };
   }, [tasks]);
 
+  const progressColor = useMemo(() => {
+    const start = [236, 72, 153];
+    const end = [16, 185, 129];
+    const t = pct / 100;
+    const rgb = start.map((s, i) => Math.round(s + (end[i] - s) * t));
+    const toHex = (v) => v.toString(16).padStart(2, '0');
+    return `#${rgb.map(toHex).join('')}`;
+  }, [pct]);
+
     return (
       <details className="group rounded-xl border border-black/10 bg-white">
         <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
@@ -77,7 +86,10 @@ export default function MilestoneCard({
               <div className="font-semibold">{milestone.title}</div>
             )}
               <div className="h-2 bg-black/10 rounded-full mt-2 overflow-hidden">
-                <div className="h-full bg-black/40" style={{ width: `${pct}%` }} />
+                <div
+                  className="h-full transition-colors"
+                  style={{ width: `${pct}%`, backgroundColor: progressColor }}
+                />
               </div>
             </div>
           </div>
