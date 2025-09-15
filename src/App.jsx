@@ -1026,12 +1026,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     })();
   }, []);
 
-  const [taskView, setTaskView] = useState('board');
   const [saveState, setSaveState] = useState('saved');
   const [taskQuery, setTaskQuery] = useState('');
   const [courseQuery, setCourseQuery] = useState('');
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('userTab') || 'deadlines');
-  useEffect(() => { localStorage.setItem('userTab', activeTab); }, [activeTab]);
+  const [activeTab, setActiveTab] = useState(() => {
+    const stored = localStorage.getItem('userTab');
+    return stored && stored !== 'tasks' ? stored : 'deadlines';
+  });
 
   const recomputeDue = (t, patch = {}, schedule) => {
     const start = patch.startDate ?? t.startDate;
@@ -1188,8 +1189,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     setSaveState('saving');
     saveCourses(courses);
     await saveCoursesRemote(courses);
+    localStorage.setItem('userTab', activeTab);
     setSaveState('saved');
-  }, [courses]);
+  }, [courses, activeTab]);
   useEffect(() => {
     if (saveState !== 'unsaved') return;
     const t = setTimeout(handleSave, 1500);
@@ -1321,7 +1323,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             </h2>
           )}
           <div className="mb-4 flex gap-2">
-            {[['deadlines','Deadlines'],['courses','Courses'],['milestones','Milestones'],['tasks','Tasks']].map(([id,label]) => (
+            {[
+              ['deadlines','Deadlines'],
+              ['courses','Courses'],
+              ['milestones','Milestones'],
+              ['board','Board View'],
+              ['calendar','Calendar View']
+            ].map(([id,label]) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -1361,7 +1369,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                 <input
                                   type="checkbox"
                                   className="rounded border-slate-300"
-                                  aria-label={`${t.title} for ${t.milestoneName}`}
+                                  aria-label={`${t.title} for ${t.milestoneName} in ${t.courseName}`}
                                   checked={t.status === 'done'}
                                   onChange={(e) =>
                                     updateTaskStatus(
@@ -1374,9 +1382,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                 <button
                                   onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
                                   className="truncate text-left flex-1"
-                                  title={`${t.title} – ${t.milestoneName}`}
+                                  title={`${t.title} – ${t.milestoneName} – ${t.courseName}`}
                                 >
-                                  {t.title} <span className="text-black/60">for {t.milestoneName}</span>
+                                  {t.title} <span className="text-black/60">for {t.milestoneName} in {t.courseName}</span>
                                 </button>
                               </li>
                             );
@@ -1463,8 +1471,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             </SectionCard>
           )}
 
-          {activeTab === 'tasks' && (
-            <SectionCard title="My Tasks" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> New Task</button>}>
+          {activeTab === 'board' && (
+            <SectionCard title="My Tasks – Board View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> New Task</button>}>
               {myTasks.length === 0 ? (
                 <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
               ) : (
@@ -1477,101 +1485,92 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       placeholder="Search..."
                       className="px-2 py-1 text-sm border rounded flex-1"
                     />
-                    <button onClick={() => setTaskView('list')} className={`px-2 py-1 text-sm rounded border ${taskView==='list'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>List</button>
-                    <button onClick={() => setTaskView('board')} className={`px-2 py-1 text-sm rounded border ${taskView==='board'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Board</button>
-                    <button onClick={() => setTaskView('calendar')} className={`px-2 py-1 text-sm rounded border ${taskView==='calendar'?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}>Calendar</button>
                   </div>
-                  {taskView === 'list' && (
-                    <div className="space-y-2">
-                      {myTasks.map((t) => {
-                        const c = courses.find((x) => x.course.id === t.courseId);
-                        if (!c) return null;
-                        return (
-                          <TaskCard
-                            key={t.id}
-                            task={t}
-                            tasks={c.tasks}
-                            team={c.team}
-                            milestones={c.milestones}
-                            onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-                            onDelete={(id) => deleteTask(c.course.id, id)}
-                            onDuplicate={(id) => duplicateTask(c.course.id, id)}
-                            onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-                            onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                  {taskView === 'board' && (
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                      {[
-                        { id: 'todo', label: 'To Do' },
-                        { id: 'inprogress', label: 'In Progress' },
-                        { id: 'done', label: 'Done' },
-                      ].map(({ id, label }) => (
-                        <div
-                          key={id}
-                          className={`rounded-xl border border-black/10 p-3 ${id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            const tid = e.dataTransfer.getData('text/task');
-                            const cid = e.dataTransfer.getData('text/course');
-                            if (tid && cid) updateTaskStatus(cid, tid, id);
-                          }}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="text-sm font-medium text-black/70">{label} ({groupedTasks[id].length})</div>
-                          </div>
-                          <div className="space-y-2 min-h-[140px]">
-                            {groupedTasks[id].map((t) => {
-                              const c = courses.find((x) => x.course.id === t.courseId);
-                              if (!c) return null;
-                              return (
-                                <TaskCard
-                                  key={t.id}
-                                  task={t}
-                                  tasks={c.tasks}
-                                  team={c.team}
-                                  milestones={c.milestones}
-                                  onUpdate={(tid, patch) => updateTask(c.course.id, tid, patch)}
-                                  onDelete={(tid) => deleteTask(c.course.id, tid)}
-                                  onDuplicate={(tid) => duplicateTask(c.course.id, tid)}
-                                  onAddLink={(tid, url) => patchTaskLinks(c.course.id, tid, 'add', url)}
-                                  onRemoveLink={(tid, idx) => patchTaskLinks(c.course.id, tid, 'remove', idx)}
-                                  dragHandlers={{
-                                    draggable: true,
-                                    onDragStart: (e) => {
-                                      e.dataTransfer.setData('text/task', t.id);
-                                      e.dataTransfer.setData('text/course', t.courseId);
-                                    },
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {[
+                      { id: 'todo', label: 'To Do' },
+                      { id: 'inprogress', label: 'In Progress' },
+                      { id: 'done', label: 'Done' },
+                    ].map(({ id, label }) => (
+                      <div
+                        key={id}
+                        className={`rounded-xl border border-black/10 p-3 ${id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          const tid = e.dataTransfer.getData('text/task');
+                          const cid = e.dataTransfer.getData('text/course');
+                          if (tid && cid) updateTaskStatus(cid, tid, id);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-sm font-medium text-black/70">{label} ({groupedTasks[id].length})</div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  {taskView === 'calendar' && (
-                    <CalendarView
-                      monthDate={calMonth}
-                      tasks={myTasks}
-                      milestones={[]}
-                      team={[]}
-                      onPrev={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
-                      onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
-                      onToday={() => setCalMonth(new Date())}
-                      schedule={loadGlobalSchedule()}
-                      // open TaskModal when clicking a calendar event
-                      onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
-                    />
-                  )}
+                        <div className="space-y-2 min-h-[140px]">
+                          {groupedTasks[id].map((t) => {
+                            const c = courses.find((x) => x.course.id === t.courseId);
+                            if (!c) return null;
+                            return (
+                              <TaskCard
+                                key={t.id}
+                                task={t}
+                                tasks={c.tasks}
+                                team={c.team}
+                                milestones={c.milestones}
+                                onUpdate={(tid, patch) => updateTask(c.course.id, tid, patch)}
+                                onDelete={(tid) => deleteTask(c.course.id, tid)}
+                                onDuplicate={(tid) => duplicateTask(c.course.id, tid)}
+                                onAddLink={(tid, url) => patchTaskLinks(c.course.id, tid, 'add', url)}
+                                onRemoveLink={(tid, idx) => patchTaskLinks(c.course.id, tid, 'remove', idx)}
+                                dragHandlers={{
+                                  draggable: true,
+                                  onDragStart: (e) => {
+                                    e.dataTransfer.setData('text/task', t.id);
+                                    e.dataTransfer.setData('text/course', t.courseId);
+                                  },
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </>
               )}
             </SectionCard>
           )}
+
+          {activeTab === 'calendar' && (
+            <SectionCard title="My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"><Plus size={16}/> New Task</button>}>
+              {myTasks.length === 0 ? (
+                <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={taskQuery}
+                      onChange={(e) => setTaskQuery(e.target.value)}
+                      placeholder="Search..."
+                      className="px-2 py-1 text-sm border rounded flex-1"
+                    />
+                  </div>
+                  <CalendarView
+                    monthDate={calMonth}
+                    tasks={myTasks}
+                    milestones={[]}
+                    team={[]}
+                    onPrev={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
+                    onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
+                    onToday={() => setCalMonth(new Date())}
+                    schedule={loadGlobalSchedule()}
+                    onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
+                  />
+                </>
+              )}
+            </SectionCard>
+          )}
+
         </div>
         {editing && (() => {
           const c = courses.find((x) => x.course.id === editing.courseId);
