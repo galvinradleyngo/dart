@@ -71,7 +71,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     <motion.div
       data-testid="task-card"
       {...dragProps}
-      className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-base sm:text-sm ${dragProps.draggable ? 'cursor-move' : ''}`}
+      className={`w-full max-w-full break-words rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-base sm:text-sm ${dragProps.draggable ? 'cursor-move' : ''}`}
       animate={controls}
       whileTap={{ scale: 0.98 }}
       style={isMobile ? { touchAction: 'pan-y' } : undefined}
@@ -97,23 +97,23 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
         <div className="flex items-center gap-1">
           <button
             onClick={() => setCollapsed((v) => !v)}
-            className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
-            {collapsed ? <Plus size={16} /> : <Minus size={16} />}
+            {collapsed ? <Plus size={14} /> : <Minus size={14} />}
           </button>
           {onDuplicate && (
             <button
               onClick={() => onDuplicate(t.id)}
-              className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
               title="Duplicate"
             >
-              <CopyIcon size={16} />
+              <CopyIcon size={14} />
             </button>
           )}
           {onDelete && (
             <button onClick={() => onDelete(t.id)} className="text-black/40 hover:text-red-500" title="Delete">
-              <Trash2 size={16} />
+              <Trash2 size={14} />
             </button>
           )}
         </div>
@@ -264,17 +264,16 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             </div>
             <div className="flex items-center gap-2">
               <span>Start</span>
-              {t.status === 'done' ? (
-                <span className="text-slate-500 text-sm">—</span>
-              ) : (
-                <input
-                  type="date"
-                  value={t.startDate || ''}
-                  onChange={(e) => update(t.id, { startDate: e.target.value })}
-                  disabled={t.status === 'todo'}
-                  className={`border rounded px-1.5 py-1 ${t.status === 'todo' ? 'bg-slate-50 text-slate-500' : ''}`}
-                />
-              )}
+              <input
+                type="date"
+                value={t.startDate || ''}
+                onChange={(e) => {
+                  const patch = { startDate: e.target.value };
+                  if (t.status === 'todo') patch.status = 'inprogress';
+                  update(t.id, patch);
+                }}
+                className="border rounded px-1.5 py-1"
+              />
             </div>
             <div className="flex items-center gap-2">
               <span># of Workdays</span>
