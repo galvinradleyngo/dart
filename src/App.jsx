@@ -492,6 +492,12 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
       .map((t) => ({ title: t.title, details: t.details, workDays: t.workDays }));
     const template = { id: uid(), title: src.title, goal: src.goal, tasks };
     onChangeMilestoneTemplates?.([...milestoneTemplates, template]);
+    setSelectedMilestoneTemplate("");
+  };
+
+  const removeMilestoneTemplate = (id) => {
+    onChangeMilestoneTemplates?.(milestoneTemplates.filter((t) => t.id !== id));
+    setSelectedMilestoneTemplate("");
   };
 
   // Milestone DnD
@@ -767,16 +773,28 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
               {!milestonesCollapsed && (
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                   {milestoneTemplates.length > 0 && (
-                    <select
-                      value={selectedMilestoneTemplate}
-                      onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
-                      className="text-sm border border-black/10 rounded-2xl px-2 py-2 bg-white shadow-sm w-full sm:w-auto"
-                    >
-                      <option value="">Blank Milestone</option>
-                      {milestoneTemplates.map((mt) => (
-                        <option key={mt.id} value={mt.id}>{mt.title}</option>
-                      ))}
-                    </select>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <select
+                        value={selectedMilestoneTemplate}
+                        onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
+                        className="text-sm border border-black/10 rounded-2xl px-2 py-2 bg-white shadow-sm w-full sm:w-auto"
+                      >
+                        <option value="">Add from template</option>
+                        {milestoneTemplates.map((mt) => (
+                          <option key={mt.id} value={mt.id}>{mt.title}</option>
+                        ))}
+                      </select>
+                      {selectedMilestoneTemplate && (
+                        <button
+                          onClick={() => removeMilestoneTemplate(selectedMilestoneTemplate)}
+                          className="inline-flex items-center rounded-2xl p-2 border border-black/10 bg-white shadow-sm hover:bg-slate-50"
+                          title="Delete template"
+                          aria-label="Delete template"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   )}
                   <button
                     onClick={() => { addMilestone(selectedMilestoneTemplate); setSelectedMilestoneTemplate(""); }}
