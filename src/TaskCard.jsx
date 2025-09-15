@@ -75,7 +75,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       whileTap={{ scale: 0.98 }}
       style={isMobile ? { touchAction: 'pan-y' } : undefined}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <select
             aria-label="Milestone"
@@ -96,7 +96,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => setCollapsed((v) => !v)}
-            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
             {collapsed ? '+' : '-'}
@@ -104,7 +104,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
           {onDuplicate && (
             <button
               onClick={() => onDuplicate(t.id)}
-              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
               title="Duplicate"
               aria-label="Duplicate"
             >
@@ -114,7 +114,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
           {onDelete && (
             <button
               onClick={() => onDelete(t.id)}
-              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
               title="Delete"
               aria-label="Delete"
             >
