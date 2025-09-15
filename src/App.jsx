@@ -1395,7 +1395,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               Welcome, {user.name}!
             </h2>
           )}
-          <div className="mb-4 flex gap-2">
+          <div className="mb-4 flex flex-wrap gap-2">
             {[
               ['deadlines','🏠︎ Home'],
               ['courses','📚︎ Courses'],
