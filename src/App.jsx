@@ -1049,7 +1049,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   };
   return (
     <div>
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {cols.map((c) => (
           <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
@@ -1578,7 +1578,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     </div>
                   )}
                   {taskView === 'board' && (
-                    <div className="grid gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       {[
                         { id: 'todo', label: 'To Do' },
                         { id: 'inprogress', label: 'In Progress' },
