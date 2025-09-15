@@ -684,9 +684,9 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         </div>
         {/* Secondary row: course title and template pill */}
         <div className="max-w-7xl mx-auto px-4 pb-3 -mt-2">
-          <div className="flex items-center gap-2">
-            <h1 className="text-base sm:text-lg font-semibold leading-tight"><InlineText value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
-            {isTemplateLabel && <span className="text-sm px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200">Course Template</span>}
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-base sm:text-lg font-semibold leading-tight flex-1 min-w-0"><InlineText className="break-words" value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
+            {isTemplateLabel && <span className="text-sm px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 whitespace-nowrap">Course Template</span>}
           </div>
           <p className="text-sm text-black/60"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
           {/* Course-wide LDs & SMEs */}
