@@ -1,5 +1,5 @@
 import React from "react";
-import { Users, UserPlus, Trash2 } from "lucide-react";
+import { UserPlus, Trash2 } from "lucide-react";
 import { rolePalette } from "../utils.js";
 import Avatar from "./Avatar.jsx";
 
@@ -77,9 +77,7 @@ export default function TeamMembersSection({
   return (
     <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between mb-2">
-        <h2 className="font-semibold flex items-center gap-2">
-          <Users size={18} /> Team Members
-        </h2>
+        <h2 className="font-semibold flex items-center gap-2">👥︎ Team Members</h2>
         <div className="flex items-center gap-2">
           <select
             value=""
