@@ -1417,7 +1417,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             </button>
           ))}
         </div>
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6">
           {activeTab === 'deadlines' && (
             <SectionCard title="Upcoming Deadlines">
               {upcoming.every((d) => d.tasks.length === 0) ? (
