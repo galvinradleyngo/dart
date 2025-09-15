@@ -22,6 +22,14 @@ import { applyLinkPatch } from "./linkUtils.js";
 import { SoundContext } from "./sound-context.js";
 import pkg from "../package.json";
 import defaultMilestoneTemplates from "../scripts/defaultMilestoneTemplates.json";
+import {
+  loadMilestoneTemplates,
+  saveMilestoneTemplates,
+  loadMilestoneTemplatesRemote,
+  saveMilestoneTemplatesRemote,
+  createTemplateFromMilestone,
+  removeTemplate as removeMilestoneTemplateStore,
+} from "./milestoneTemplatesStore.js";
 import { X, Plus, Minus, Copy, Trash2, StickyNote } from "lucide-react";
 import {
   uid,
@@ -84,9 +92,6 @@ const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
 const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
-const MILESTONE_TPL_KEY = "healthPM:milestoneTemplates:v1";
-const saveMilestoneTemplates = (arr) => { try { localStorage.setItem(MILESTONE_TPL_KEY, JSON.stringify(arr)); } catch {} };
-const loadMilestoneTemplates = () => { try { const raw = localStorage.getItem(MILESTONE_TPL_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
 const loadTemplateRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'template'));
@@ -111,19 +116,6 @@ const loadCoursesRemote = async () => {
 const saveCoursesRemote = async (arr) => {
   try {
     await setDoc(doc(db, 'app', 'courses'), { courses: arr });
-  } catch {}
-};
-const loadMilestoneTemplatesRemote = async () => {
-  try {
-    const snap = await getDoc(doc(db, 'app', 'milestoneTemplates'));
-    return snap.exists() ? snap.data().milestoneTemplates || [] : [];
-  } catch {
-    return [];
-  }
-};
-const saveMilestoneTemplatesRemote = async (arr) => {
-  try {
-    await setDoc(doc(db, 'app', 'milestoneTemplates'), { milestoneTemplates: arr });
   } catch {}
 };
 
@@ -433,49 +425,46 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
   const deleteTask = (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
 
   const updateMilestone  = (id, patch) => setState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
-  const addMilestone     = (tplId = "") => setState((s)=>{
-    if (tplId) {
-      const tpl = milestoneTemplates.find(t => t.id === tplId);
+  const addMilestone = () =>
+    setState((s) => ({
+      ...s,
+      milestones: [...s.milestones, { id: uid(), title: "New Milestone", start: todayStr(), goal: "" }],
+    }));
+  const addMilestoneFromTemplate = (tplId) =>
+    setState((s) => {
+      const tpl = milestoneTemplates.find((t) => t.id === tplId);
       if (!tpl) return s;
       const newMsId = uid();
       const newMs = { id: newMsId, title: tpl.title, start: todayStr(), goal: tpl.goal || "" };
-      const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null);
+      const ld = s.course.courseLDIds[0] || (s.team.find((m) => m.roleType === 'LD')?.id ?? null);
       const nextOrder = s.tasks.length;
-      const clonedTasks = (tpl.tasks || []).map((t,i)=>({
+      const clonedTasks = (tpl.tasks || []).map((t, i) => ({
+        ...t,
         id: uid(),
         order: nextOrder + i,
-        title: t.title,
-        details: t.details || "",
-        note: "",
-        links: [],
-        depTaskId: null,
         assigneeId: ld,
         milestoneId: newMsId,
-        status: "todo",
-        startDate: "",
-        workDays: t.workDays || 1,
-        dueDate: "",
-        completedDate: "",
+        status: 'todo',
+        startDate: '',
+        dueDate: '',
+        completedDate: '',
       }));
       return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] };
-    }
-    return { ...s, milestones: [...s.milestones, { id: uid(), title: "New Milestone", start: todayStr(), goal: "" }] };
-  });
+    });
   const deleteMilestone  = (id) => setState((s)=>({ ...s, milestones: s.milestones.filter((m)=>m.id!==id), tasks: s.tasks.map((t)=>(t.milestoneId===id?{...t, milestoneId: s.milestones[0]?.id}:t)) }));
   const duplicateMilestone = (id) => setState((s)=>{ const src = s.milestones.find((m)=>m.id===id); if(!src) return s; const newMs = { id: uid(), title: `${src.title} (copy)`, start: src.start, goal: src.goal }; const related = s.tasks.filter((t)=>t.milestoneId===id); const nextOrder = s.tasks.length; const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null); const clonedTasks = related.map((t,i)=>({ ...t, id: uid(), order: nextOrder+i, milestoneId: newMs.id, status: "todo", startDate: "", dueDate: "", completedDate: "", assigneeId: ld, depTaskId: null })); return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] }; });
   const saveMilestoneTemplate = (id) => {
     const src = state.milestones.find((m) => m.id === id);
     if (!src) return;
-    const tasks = state.tasks
-      .filter((t) => t.milestoneId === id)
-      .map((t) => ({ title: t.title, details: t.details, workDays: t.workDays }));
-    const template = { id: uid(), title: src.title, goal: src.goal, tasks };
-    onChangeMilestoneTemplates?.([...milestoneTemplates, template]);
+    const tasks = state.tasks.filter((t) => t.milestoneId === id);
+    const next = createTemplateFromMilestone(src, tasks);
+    onChangeMilestoneTemplates?.(next);
     setSelectedMilestoneTemplate("");
   };
 
   const removeMilestoneTemplate = (id) => {
-    onChangeMilestoneTemplates?.(milestoneTemplates.filter((t) => t.id !== id));
+    const next = removeMilestoneTemplateStore(id);
+    onChangeMilestoneTemplates?.(next);
     setSelectedMilestoneTemplate("");
   };
 
@@ -757,25 +746,33 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                         onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
                         className="text-sm border border-black/10 rounded-2xl px-2 py-2 bg-white shadow-sm w-full sm:w-auto"
                       >
-                        <option value="">Add from template</option>
+                        <option value="">Select template</option>
                         {milestoneTemplates.map((mt) => (
                           <option key={mt.id} value={mt.id}>{mt.title}</option>
                         ))}
                       </select>
                       {selectedMilestoneTemplate && (
-                        <button
-                          onClick={() => removeMilestoneTemplate(selectedMilestoneTemplate)}
-                          className="inline-flex items-center rounded-2xl p-2 border border-black/10 bg-white shadow-sm hover:bg-slate-50"
-                          title="Delete template"
-                          aria-label="Delete template"
-                        >
-                          Delete
-                        </button>
+                        <>
+                          <button
+                            onClick={() => { addMilestoneFromTemplate(selectedMilestoneTemplate); setSelectedMilestoneTemplate(""); }}
+                            className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                          >
+                            Add from Template
+                          </button>
+                          <button
+                            onClick={() => removeMilestoneTemplate(selectedMilestoneTemplate)}
+                            className="inline-flex items-center rounded-2xl p-2 border border-black/10 bg-white shadow-sm hover:bg-slate-50"
+                            title="Delete template"
+                            aria-label="Delete template"
+                          >
+                            Delete
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
                   <button
-                    onClick={() => { addMilestone(selectedMilestoneTemplate); setSelectedMilestoneTemplate(""); }}
+                    onClick={() => addMilestone()}
                     className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 w-full sm:w-auto"
                   >
                     Add Milestone
@@ -2135,8 +2132,6 @@ export default function PMApp() {
   });
   const handleMilestoneTemplatesChange = (next) => {
     setMilestoneTemplates(next);
-    saveMilestoneTemplates(next);
-    saveMilestoneTemplatesRemote(next).catch(() => {});
   };
   useEffect(() => {
     (async () => {
