@@ -337,7 +337,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
     }
   }, [state, onStateChange]);
 
-const handleSave = async () => {
+const handleSave = useCallback(async () => {
   setSaveState('saving');
   const all = loadCourses();
   const idx = all.findIndex(
@@ -349,7 +349,13 @@ const handleSave = async () => {
   await saveCoursesRemote(all);
   onStateChange?.(state);
   setSaveState('saved');
-};
+}, [state, onStateChange]);
+
+useEffect(() => {
+  if (saveState !== 'unsaved') return;
+  const t = setTimeout(handleSave, 1500);
+  return () => clearTimeout(t);
+}, [saveState, handleSave]);
 
   // Listen for global schedule changes from other tabs
   useEffect(() => {
