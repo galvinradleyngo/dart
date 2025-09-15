@@ -58,4 +58,23 @@ describe('Upcoming Deadlines window', () => {
     );
     expect(await screen.findByText('Delete')).toBeInTheDocument();
   });
+
+  it('prompts for link when completing from deadlines panel', async () => {
+    const today = new Date();
+    const courses = [{
+      course: { id: 'c1', name: 'Course 1' },
+      tasks: [
+        { id: 't1', title: 'Task', status: 'todo', dueDate: fmt(today), assigneeId: 'u1', links: [] },
+      ],
+      team: [{ id: 'u1', name: 'Alice', roleType: 'LD' }],
+      schedule: {},
+    }];
+    localStorage.setItem('healthPM:courses:v1', JSON.stringify(courses));
+    render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
+    const box = await screen.findByRole('checkbox', { name: 'Task in Course 1' });
+    fireEvent.click(box);
+    expect(await screen.findByText('Please provide a link to the output')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('No link'));
+    expect(box).toBeChecked();
+  });
 });

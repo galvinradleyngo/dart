@@ -8,6 +8,7 @@ import DuePill from './components/DuePill.jsx';
 import { LinkChips } from './components/LinksEditor.jsx';
 import DocumentInput from './components/DocumentInput.jsx';
 import DepPicker from './components/DepPicker.jsx';
+import LinkReminderModal from './components/LinkReminderModal.jsx';
 import { SoundContext } from './sound-context.js';
 
 export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
@@ -50,12 +51,22 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     playSound();
   };
   const [statusOpen, setStatusOpen] = useState(false);
+  const [linkModal, setLinkModal] = useState(false);
   const a = team.find((m) => m.id === t.assigneeId);
   const statusPillClass = (status) => {
     if (status === 'done') return 'bg-emerald-200/80 text-emerald-900 border-emerald-300';
     if (status === 'inprogress') return 'bg-emerald-100 text-emerald-900 border-emerald-300';
     return 'bg-slate-100 text-slate-700 border-slate-300';
   };
+  const handleStatusChange = (value) => {
+    if (value === 'done' && (!t.links || t.links.length === 0)) {
+      setCollapsed(false);
+      setLinkModal(true);
+      return;
+    }
+    update(t.id, { status: value });
+  };
+
   return (
     <motion.div
       data-testid="task-card"
@@ -115,7 +126,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   aria-label="Status"
                   value={t.status}
                   onChange={(e) => {
-                    update(t.id, { status: e.target.value });
+                    handleStatusChange(e.target.value);
                     setStatusOpen(false);
                   }}
                   onBlur={() => setStatusOpen(false)}
@@ -142,7 +153,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               <select
                 aria-label="Status"
                 value={t.status}
-                onChange={(e) => update(t.id, { status: e.target.value })}
+                onChange={(e) => handleStatusChange(e.target.value)}
                 className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
@@ -183,7 +194,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   aria-label="Status"
                   value={t.status}
                   onChange={(e) => {
-                    update(t.id, { status: e.target.value });
+                    handleStatusChange(e.target.value);
                     setStatusOpen(false);
                   }}
                   onBlur={() => setStatusOpen(false)}
@@ -210,7 +221,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               <select
                 aria-label="Status"
                 value={t.status}
-                onChange={(e) => update(t.id, { status: e.target.value })}
+                onChange={(e) => handleStatusChange(e.target.value)}
                 className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(t.status)}`}
               >
                 <option value="todo">To Do</option>
@@ -287,6 +298,15 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             </div>
           </div>
         </>
+      )}
+      {linkModal && (
+        <LinkReminderModal
+          onOkay={() => setLinkModal(false)}
+          onNoLink={() => {
+            setLinkModal(false);
+            update(t.id, { status: 'done' });
+          }}
+        />
       )}
     </motion.div>
   );

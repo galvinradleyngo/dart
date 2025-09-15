@@ -156,4 +156,22 @@ describe('TaskCard', () => {
       await screen.findByRole('button', { name: /status: in progress/i });
     });
   });
+
+  it('prompts for link when completing without one', () => {
+    const onUpdate = vi.fn();
+    render(
+      <TaskCard
+        task={{ ...sampleTask, links: [] }}
+        milestones={milestones}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'done' } });
+    expect(screen.getByText('Please provide a link to the output')).toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('No link'));
+    expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'done' });
+  });
 });

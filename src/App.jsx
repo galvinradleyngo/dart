@@ -38,6 +38,8 @@ import DepPicker from "./components/DepPicker.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import TaskModal from "./components/TaskModal.jsx";
 import TaskCard from "./TaskCard.jsx";
+import LinkReminderModal from "./components/LinkReminderModal.jsx";
+import { applyLinkPatch } from "./linkUtils.js";
 import { SoundContext } from "./sound-context.js";
 import pkg from "../package.json";
 import {
@@ -456,7 +458,11 @@ const tasksDone = useMemo(() => {
 
   const addTask = (milestoneId) => setState((s) => ({ ...s, tasks: [...s.tasks, { id: uid(), order: s.tasks.length, title: "New Task", details: "", note: "", links: [], depTaskId: null, assigneeId: s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null), milestoneId: milestoneId || s.milestones[0]?.id, status: "todo", startDate: "", workDays: 1, dueDate: "", completedDate: "" }] }));
   const duplicateTask = (id) => setState((s) => { const orig = s.tasks.find((t)=>t.id===id); if(!orig) return s; const clone = { ...orig, id: uid(), order: s.tasks.length, title: `${orig.title} (copy)`, status: "todo", startDate: "", dueDate: "", completedDate: "", depTaskId: null }; return { ...s, tasks: [...s.tasks, clone] }; });
-  const patchTaskLinks = (id, op, payload) => setState((s)=>({ ...s, tasks: s.tasks.map((t)=>{ if(t.id!==id) return t; const links = Array.isArray(t.links)?[...t.links]:[]; if(op==='add') links.push(payload); if(op==='remove') links.splice(payload,1); return { ...t, links }; }) }));
+  const patchTaskLinks = (id, op, payload) =>
+    setState((s) => ({
+      ...s,
+      tasks: applyLinkPatch(s.tasks, id, op, payload),
+    }));
   const deleteTask = (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
 
   const updateMilestone  = (id, patch) => setState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
@@ -1192,22 +1198,26 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     setSaveState('unsaved');
   };
 
-  const updateTaskStatus = (courseId, taskId, status) => updateTask(courseId, taskId, { status });
+  const updateTaskStatus = (courseId, taskId, status) => {
+    const c = courses.find((x) => x.course.id === courseId);
+    const task = c?.tasks.find((t) => t.id === taskId);
+    if (status === 'done' && (!task?.links || task.links.length === 0)) {
+      setLinkPrompt({ courseId, taskId });
+      return;
+    }
+    updateTask(courseId, taskId, { status });
+  };
 
   const patchTaskLinks = (courseId, id, op, payload) => {
-    setCourses((cs) => cs.map((c) => {
-      if (c.course.id !== courseId) return c;
-      return {
-        ...c,
-        tasks: c.tasks.map((t) => {
-          if (t.id !== id) return t;
-          const links = Array.isArray(t.links) ? [...t.links] : [];
-          if (op === 'add') links.push(payload);
-          if (op === 'remove') links.splice(payload,1);
-          return { ...t, links };
-        })
-      };
-    }));
+    setCourses((cs) =>
+      cs.map((c) => {
+        if (c.course.id !== courseId) return c;
+        return {
+          ...c,
+          tasks: applyLinkPatch(c.tasks, id, op, payload),
+        };
+      })
+    );
     setSaveState('unsaved');
   };
 
@@ -1294,6 +1304,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const cycleStatus = (s) => (s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'done' : 'todo');
   const [calMonth, setCalMonth] = useState(() => new Date());
   const [editing, setEditing] = useState(null);
+  const [linkPrompt, setLinkPrompt] = useState(null);
 
   const members = useMemo(() => {
     const map = new Map();
@@ -1451,11 +1462,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   aria-label={`${t.title} in ${t.courseName}`}
                                   checked={t.status === 'done'}
                                   onChange={(e) =>
-                                    updateTask(t.courseId, t.id, {
-                                      status: e.target.checked ? 'done' : 'todo'
-                                    })
+                                    updateTaskStatus(
+                                      t.courseId,
+                                      t.id,
+                                      e.target.checked ? 'done' : 'todo'
+                                    )
                                   }
-                                />
+                                  />
                                 <button
                                   onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
                                   className="truncate text-left flex-1"
@@ -1673,6 +1686,18 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             />
           );
         })()}
+        {linkPrompt && (
+          <LinkReminderModal
+            onOkay={() => {
+              setLinkPrompt(null);
+              setEditing({ courseId: linkPrompt.courseId, taskId: linkPrompt.taskId });
+            }}
+            onNoLink={() => {
+              updateTask(linkPrompt.courseId, linkPrompt.taskId, { status: 'done' });
+              setLinkPrompt(null);
+            }}
+          />
+        )}
       </main>
     </div>
   );
