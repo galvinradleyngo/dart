@@ -900,16 +900,6 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
       )}
       </main>
 
-      {isMobile && (
-        <button
-          onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)}
-          className="fixed bottom-6 right-6 z-50 inline-flex items-center justify-center w-14 h-14 rounded-full bg-black text-white shadow-lg sm:hidden"
-          aria-label="Add task"
-        >
-          +
-        </button>
-      )}
-
       <footer className="max-w-7xl mx-auto px-4 pb-10 text-sm text-black/50">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
     </div>
   );
