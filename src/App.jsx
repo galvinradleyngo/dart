@@ -1378,7 +1378,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               </button>
             )}
             <div className="min-w-0">
-              <div className="text-sm sm:text-base font-semibold truncate">User Dashboard</div>
+              <h1 className="text-sm sm:text-base font-semibold truncate">User Dashboard</h1>
               {user && <div className="text-sm text-black/60 truncate">{user.name}</div>}
             </div>
           </div>
@@ -1402,9 +1402,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
         <main className="max-w-7xl mx-auto px-4 py-6">
           {user && (
-            <h1 className="text-lg font-semibold mb-4">
+            <h2 className="text-lg font-semibold mb-4">
               Welcome, {user.name}!
-            </h1>
+            </h2>
           )}
           <div className="mb-4 flex gap-2">
             {[['deadlines','Deadlines'],['courses','Courses'],['milestones','Milestones'],['tasks','Tasks']].map(([id,label]) => (
