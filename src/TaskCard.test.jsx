@@ -30,8 +30,8 @@ describe('TaskCard', () => {
       />
     );
 
-    // milestone select is visible by default
-    expect(screen.getByLabelText('Milestone')).toBeInTheDocument();
+    // milestone text is visible by default
+    expect(screen.getByText('Milestone 1')).toBeInTheDocument();
 
     const toggleBtn = screen.getByTitle(/expand/i);
     fireEvent.click(toggleBtn);
@@ -74,6 +74,8 @@ describe('TaskCard', () => {
       />
     );
 
+    fireEvent.click(screen.getByTitle(/expand/i));
+    fireEvent.click(screen.getByLabelText(/edit milestone/i));
     fireEvent.change(screen.getByLabelText('Milestone'), { target: { value: 'm2' } });
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { milestoneId: 'm2' });
   });
@@ -185,7 +187,7 @@ describe('TaskCard', () => {
         );
       };
       render(<Wrapper />);
-      expect(screen.getAllByRole('combobox').length).toBe(2);
+      expect(screen.getAllByRole('combobox').length).toBe(1);
       const button = screen.getByRole('button', { name: /status/i });
       expect(button).toHaveTextContent('To Do');
       fireEvent.click(button);
