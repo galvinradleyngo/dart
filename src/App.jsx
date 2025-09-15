@@ -41,7 +41,6 @@ import {
   BookOpen,
   Calendar,
   Kanban,
-  List,
   CheckSquare,
 } from "lucide-react";
 import {
