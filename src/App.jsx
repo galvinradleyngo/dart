@@ -30,7 +30,20 @@ import {
   createTemplateFromMilestone,
   removeTemplate as removeMilestoneTemplateStore,
 } from "./milestoneTemplatesStore.js";
-import { X, Plus, Minus, Copy, Trash2, StickyNote, Home, BookOpen, Calendar, Kanban, List, CheckSquare } from "lucide-react";
+import {
+  X,
+  Plus,
+  Minus,
+  Copy,
+  Trash2,
+  StickyNote,
+  Home,
+  BookOpen,
+  Calendar,
+  Kanban,
+  List,
+  CheckSquare,
+} from "lucide-react";
 import {
   uid,
   todayStr,
