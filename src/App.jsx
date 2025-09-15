@@ -194,29 +194,46 @@ const syncPeopleToCourses = (people) => {
 // =====================================================
 // Seed + Migration
 // =====================================================
-const seed = () => ({
-  course: { id: uid(), name: "Intro to Learning Design", description: "From analysis to deployment, track the whole build.", accent: "from-fuchsia-500 via-pink-500 to-rose-500", courseLDIds: [], courseSMEIds: [] },
-  schedule: { workweek: [1,2,3,4,5], holidays: [] }, // back-compat; overridden by global
-  team: [
-    { id: uid(), name: "Alex Cruz", roleType: "LD",  color: roleColor("LD"),  avatar: "" },
-    { id: uid(), name: "Dr. Reyes", roleType: "SME", color: roleColor("SME"), avatar: "" },
-    { id: uid(), name: "Pat Santos", roleType: "PM",  color: roleColor("PM"),  avatar: "" },
-    { id: uid(), name: "Jae Lim", roleType: "MM",     color: roleColor("MM"),   avatar: "" },
-    { id: uid(), name: "Rio Tan", roleType: "PA",     color: roleColor("PA"),   avatar: "" },
-  ],
-  milestones: [
-    { id: uid(), title: "A–D Blueprint Approved", start: todayStr(), goal: "Complete sections A–D of blueprint" },
-    { id: uid(), title: "Section E Approved",     start: todayStr(), goal: "Finalize Section E (Assessments & Rubrics)" },
-    { id: uid(), title: "Canvas Build",            start: todayStr(), goal: "Transfer & QA in LMS" },
-  ],
-  tasks: [
-    { id: uid(), order: 0, title: "Draft course outcomes", details: "Bloom + alignment checks", note: "", links: [], assigneeId: null, milestoneId: 0, status: "todo",       startDate: "",          workDays: 3, dueDate: "",                          depTaskId: null, completedDate: "" },
-    { id: uid(), order: 1, title: "Collect source materials", details: "Slides, readings, datasets", note: "", links: [], assigneeId: null, milestoneId: 0, status: "inprogress", startDate: todayStr(),  workDays: 2, dueDate: addBusinessDays(todayStr(),2), depTaskId: null, completedDate: "" },
-    { id: uid(), order: 2, title: "Storyboard videos",    details: "3 explainer videos", note: "", links: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",          workDays: 5, dueDate: "",                          depTaskId: null, completedDate: "" },
-    { id: uid(), order: 3, title: "Build Canvas shell",   details: "Modules, pages, nav", note: "", links: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",          workDays: 4, dueDate: "",                          depTaskId: null, completedDate: "" },
-    { id: uid(), order: 4, title: "SME review: A–D",      details: "Async comments", note: "", links: [], assigneeId: null, milestoneId: 0, status: "done",        startDate: todayStr(),  workDays: 1, dueDate: addBusinessDays(todayStr(),1), depTaskId: null, completedDate: todayStr() },
-  ],
-});
+const createSampleMilestones = (today) => ([
+  { id: uid(), title: "A–D Blueprint Approved", start: today, goal: "Complete sections A–D of blueprint" },
+  { id: uid(), title: "Section E Approved",     start: today, goal: "Finalize Section E (Assessments & Rubrics)" },
+  { id: uid(), title: "Canvas Build",            start: today, goal: "Transfer & QA in LMS" },
+]);
+
+const createSampleTasks = (today) => ([
+  { id: uid(), order: 0, title: "Draft course outcomes", details: "Bloom + alignment checks", note: "", links: [], assigneeId: null, milestoneId: 0, status: "todo",       startDate: "",      workDays: 3, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 1, title: "Collect source materials", details: "Slides, readings, datasets", note: "", links: [], assigneeId: null, milestoneId: 0, status: "inprogress", startDate: today, workDays: 2, dueDate: addBusinessDays(today,2), depTaskId: null, completedDate: "" },
+  { id: uid(), order: 2, title: "Storyboard videos",    details: "3 explainer videos", note: "", links: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 5, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 3, title: "Build Canvas shell",   details: "Modules, pages, nav", note: "", links: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 4, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 4, title: "SME review: A–D",      details: "Async comments", note: "", links: [], assigneeId: null, milestoneId: 0, status: "done",        startDate: today, workDays: 1, dueDate: addBusinessDays(today,1), depTaskId: null, completedDate: today },
+]);
+
+export const seed = ({ withSampleData = false } = {}) => {
+  const base = {
+    course: { id: uid(), name: "Intro to Learning Design", description: "From analysis to deployment, track the whole build.", accent: "from-fuchsia-500 via-pink-500 to-rose-500", courseLDIds: [], courseSMEIds: [] },
+    schedule: { workweek: [1,2,3,4,5], holidays: [] }, // back-compat; overridden by global
+    team: [
+      { id: uid(), name: "Alex Cruz", roleType: "LD",  color: roleColor("LD"),  avatar: "" },
+      { id: uid(), name: "Dr. Reyes", roleType: "SME", color: roleColor("SME"), avatar: "" },
+      { id: uid(), name: "Pat Santos", roleType: "PM",  color: roleColor("PM"),  avatar: "" },
+      { id: uid(), name: "Jae Lim", roleType: "MM",     color: roleColor("MM"),   avatar: "" },
+      { id: uid(), name: "Rio Tan", roleType: "PA",     color: roleColor("PA"),   avatar: "" },
+    ],
+    milestones: [],
+    tasks: [],
+  };
+
+  if (!withSampleData) return base;
+
+  const today = todayStr();
+  return {
+    ...base,
+    milestones: createSampleMilestones(today),
+    tasks: createSampleTasks(today),
+  };
+};
+
+export const seedWithSampleData = () => seed({ withSampleData: true });
 
 const remapSeed = (s) => {
   const msIds = s.milestones.map((m) => m.id);
@@ -619,9 +636,9 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
       </span>
       <button
-        onClick={() => {
-          if (confirm("Reset to fresh sample data?")) setState(remapSeed(seed()));
-        }}
+          onClick={() => {
+            if (confirm("Reset to fresh sample data?")) setState(remapSeed(seedWithSampleData()));
+          }}
         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
       >
         Reset
