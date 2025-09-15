@@ -1476,7 +1476,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                       e.target.checked ? 'done' : 'todo'
                                     )
                                   }
-                                  />
+                                />
                                 <button
                                   onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
                                   className="truncate text-left flex-1"

@@ -25,10 +25,14 @@ describe('Upcoming Deadlines window', () => {
 
     const courses = [{
       course: { id: 'c1', name: 'Course 1' },
+      milestones: [
+        { id: 'm1', title: 'Milestone 1' },
+        { id: 'm2', title: 'Milestone 2' },
+      ],
       tasks: [
-        { id: 't1', title: 'Today Task', status: 'todo', dueDate: fmt(today), assigneeId: 'u1' },
-        { id: 't2', title: 'Future Task', status: 'todo', dueDate: fmt(day14), assigneeId: 'u1' },
-        { id: 't3', title: 'Outside Task', status: 'todo', dueDate: fmt(day15), assigneeId: 'u1' },
+        { id: 't1', title: 'Today Task', status: 'todo', dueDate: fmt(today), assigneeId: 'u1', milestoneId: 'm1' },
+        { id: 't2', title: 'Future Task', status: 'todo', dueDate: fmt(day14), assigneeId: 'u1', milestoneId: 'm2' },
+        { id: 't3', title: 'Outside Task', status: 'todo', dueDate: fmt(day15), assigneeId: 'u1', milestoneId: 'm1' },
       ],
       team: [{ id: 'u1', name: 'Alice', roleType: 'LD' }],
       schedule: {},
@@ -39,22 +43,22 @@ describe('Upcoming Deadlines window', () => {
     render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
 
     expect(
-      await screen.findByRole('button', { name: 'Today Task in Course 1' })
+      await screen.findByRole('button', { name: 'Today Task for Milestone 1' })
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('button', { name: 'Future Task in Course 1' })
+      await screen.findByRole('button', { name: 'Future Task for Milestone 2' })
     ).toBeInTheDocument();
     expect(screen.queryByText('Outside Task')).toBeNull();
 
     const checkbox = await screen.findByRole('checkbox', {
-      name: 'Today Task in Course 1',
+      name: 'Today Task for Milestone 1',
     });
     expect(checkbox).not.toBeChecked();
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Today Task in Course 1' })
+      screen.getByRole('button', { name: 'Today Task for Milestone 1' })
     );
     expect(await screen.findByText('Delete')).toBeInTheDocument();
   });
@@ -63,15 +67,16 @@ describe('Upcoming Deadlines window', () => {
     const today = new Date();
     const courses = [{
       course: { id: 'c1', name: 'Course 1' },
+      milestones: [{ id: 'm1', title: 'Milestone 1' }],
       tasks: [
-        { id: 't1', title: 'Task', status: 'todo', dueDate: fmt(today), assigneeId: 'u1', links: [] },
+        { id: 't1', title: 'Task', status: 'todo', dueDate: fmt(today), assigneeId: 'u1', links: [], milestoneId: 'm1' },
       ],
       team: [{ id: 'u1', name: 'Alice', roleType: 'LD' }],
       schedule: {},
     }];
     localStorage.setItem('healthPM:courses:v1', JSON.stringify(courses));
     render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
-    const box = await screen.findByRole('checkbox', { name: 'Task in Course 1' });
+    const box = await screen.findByRole('checkbox', { name: 'Task for Milestone 1' });
     fireEvent.click(box);
     expect(await screen.findByText('Please provide a link to the output')).toBeInTheDocument();
     fireEvent.click(screen.getByText('No link'));
