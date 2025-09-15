@@ -18,3 +18,7 @@ npm test
 ```
 
 Vitest and React Testing Library power the test suite.
+
+## Milestone Templates
+
+The app now includes a library of reusable milestone templates. Selecting a template when adding a milestone will clone the milestone and its pre-defined tasks. You can also save any existing milestone as a new template. Default templates are seeded from [`scripts/defaultMilestoneTemplates.json`](scripts/defaultMilestoneTemplates.json).

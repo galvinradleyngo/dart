@@ -43,6 +43,7 @@ import LinkReminderModal from "./components/LinkReminderModal.jsx";
 import { applyLinkPatch } from "./linkUtils.js";
 import { SoundContext } from "./sound-context.js";
 import pkg from "../package.json";
+import defaultMilestoneTemplates from "../scripts/defaultMilestoneTemplates.json";
 import {
   uid,
   todayStr,
@@ -75,6 +76,12 @@ const AVATAR_CHOICES = [
   "🐨","🐯","🦁","🐮","🐷","🐸","🐵","🦄","🐝","🐢"
 ];
 
+const mergeById = (base = [], extra = []) => {
+  const map = new Map(base.map(t => [t.id, t]));
+  extra.forEach(t => { if (!map.has(t.id)) map.set(t.id, t); });
+  return Array.from(map.values());
+};
+
 
 // =====================================================
 // Utilities
@@ -98,6 +105,9 @@ const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
 const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
+const MILESTONE_TPL_KEY = "healthPM:milestoneTemplates:v1";
+const saveMilestoneTemplates = (arr) => { try { localStorage.setItem(MILESTONE_TPL_KEY, JSON.stringify(arr)); } catch {} };
+const loadMilestoneTemplates = () => { try { const raw = localStorage.getItem(MILESTONE_TPL_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
 const loadTemplateRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'template'));
@@ -122,6 +132,19 @@ const loadCoursesRemote = async () => {
 const saveCoursesRemote = async (arr) => {
   try {
     await setDoc(doc(db, 'app', 'courses'), { courses: arr });
+  } catch {}
+};
+const loadMilestoneTemplatesRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'milestoneTemplates'));
+    return snap.exists() ? snap.data().milestoneTemplates || [] : [];
+  } catch {
+    return [];
+  }
+};
+const saveMilestoneTemplatesRemote = async (arr) => {
+  try {
+    await setDoc(doc(db, 'app', 'milestoneTemplates'), { milestoneTemplates: arr });
   } catch {}
 };
 
@@ -283,7 +306,7 @@ function Ring({ className = "w-20 h-20", stroke = 10, progress = 0, trackOpacity
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
-function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], onOpenUser }) {
+function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], milestoneTemplates = [], onChangeMilestoneTemplates, onOpenUser }) {
   const [state, setState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
@@ -299,6 +322,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const isMobile = useIsMobile();
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(isMobile);
+  const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
 
@@ -430,9 +454,45 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
   const deleteTask = (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
 
   const updateMilestone  = (id, patch) => setState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
-  const addMilestone     = () => setState((s)=>({ ...s, milestones: [...s.milestones, { id: uid(), title: "New Milestone", start: todayStr(), goal: "" }] }));
+  const addMilestone     = (tplId = "") => setState((s)=>{
+    if (tplId) {
+      const tpl = milestoneTemplates.find(t => t.id === tplId);
+      if (!tpl) return s;
+      const newMsId = uid();
+      const newMs = { id: newMsId, title: tpl.title, start: todayStr(), goal: tpl.goal || "" };
+      const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null);
+      const nextOrder = s.tasks.length;
+      const clonedTasks = (tpl.tasks || []).map((t,i)=>({
+        id: uid(),
+        order: nextOrder + i,
+        title: t.title,
+        details: t.details || "",
+        note: "",
+        links: [],
+        depTaskId: null,
+        assigneeId: ld,
+        milestoneId: newMsId,
+        status: "todo",
+        startDate: "",
+        workDays: t.workDays || 1,
+        dueDate: "",
+        completedDate: "",
+      }));
+      return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] };
+    }
+    return { ...s, milestones: [...s.milestones, { id: uid(), title: "New Milestone", start: todayStr(), goal: "" }] };
+  });
   const deleteMilestone  = (id) => setState((s)=>({ ...s, milestones: s.milestones.filter((m)=>m.id!==id), tasks: s.tasks.map((t)=>(t.milestoneId===id?{...t, milestoneId: s.milestones[0]?.id}:t)) }));
   const duplicateMilestone = (id) => setState((s)=>{ const src = s.milestones.find((m)=>m.id===id); if(!src) return s; const newMs = { id: uid(), title: `${src.title} (copy)`, start: src.start, goal: src.goal }; const related = s.tasks.filter((t)=>t.milestoneId===id); const nextOrder = s.tasks.length; const ld = s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null); const clonedTasks = related.map((t,i)=>({ ...t, id: uid(), order: nextOrder+i, milestoneId: newMs.id, status: "todo", startDate: "", dueDate: "", completedDate: "", assigneeId: ld, depTaskId: null })); return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] }; });
+  const saveMilestoneTemplate = (id) => {
+    const src = state.milestones.find((m) => m.id === id);
+    if (!src) return;
+    const tasks = state.tasks
+      .filter((t) => t.milestoneId === id)
+      .map((t) => ({ title: t.title, details: t.details, workDays: t.workDays }));
+    const template = { id: uid(), title: src.title, goal: src.goal, tasks };
+    onChangeMilestoneTemplates?.([...milestoneTemplates, template]);
+  };
 
   // Milestone DnD
 
@@ -705,12 +765,26 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                 </div>
               )}
               {!milestonesCollapsed && (
-                <button
-                  onClick={() => addMilestone()}
-                  className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 w-full sm:w-auto"
-                >
-                  <Plus size={16}/> Add Milestone
-                </button>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {milestoneTemplates.length > 0 && (
+                    <select
+                      value={selectedMilestoneTemplate}
+                      onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
+                      className="text-sm border border-black/10 rounded-2xl px-2 py-2 bg-white shadow-sm w-full sm:w-auto"
+                    >
+                      <option value="">Blank Milestone</option>
+                      {milestoneTemplates.map((mt) => (
+                        <option key={mt.id} value={mt.id}>{mt.title}</option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    onClick={() => { addMilestone(selectedMilestoneTemplate); setSelectedMilestoneTemplate(""); }}
+                    className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 w-full sm:w-auto"
+                  >
+                    <Plus size={16}/> Add Milestone
+                  </button>
+                </div>
               )}
                 <button
                   onClick={() => setMilestonesCollapsed(v => !v)}
@@ -771,6 +845,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                       onDuplicateMilestone={duplicateMilestone}
                       onDeleteMilestone={deleteMilestone}
                       onUpdateMilestone={updateMilestone}
+                      onSaveAsTemplate={saveMilestoneTemplate}
                       onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                       onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
                     />
@@ -2056,6 +2131,12 @@ export default function PMApp() {
     savePeople(arr);
     return arr;
   });
+  const [milestoneTemplates, setMilestoneTemplates] = useState(() => {
+    const stored = loadMilestoneTemplates();
+    const merged = mergeById(stored, defaultMilestoneTemplates);
+    if (merged.length !== stored.length) saveMilestoneTemplates(merged);
+    return merged;
+  });
   const [soundEnabled, setSoundEnabled] = useState(() => {
     const stored = localStorage.getItem('soundEnabled');
     return stored !== 'false';
@@ -2065,6 +2146,25 @@ export default function PMApp() {
     localStorage.setItem('soundEnabled', next ? 'true' : 'false');
     return next;
   });
+  const handleMilestoneTemplatesChange = (next) => {
+    setMilestoneTemplates(next);
+    saveMilestoneTemplates(next);
+    saveMilestoneTemplatesRemote(next).catch(() => {});
+  };
+  useEffect(() => {
+    (async () => {
+      const remote = await loadMilestoneTemplatesRemote();
+      if (remote.length) {
+        setMilestoneTemplates((prev) => {
+          const merged = mergeById(prev, remote);
+          if (merged.length !== prev.length) saveMilestoneTemplates(merged);
+          return merged;
+        });
+      } else {
+        saveMilestoneTemplatesRemote(milestoneTemplates).catch(() => {});
+      }
+    })();
+  }, []);
   const handlePeopleChange = (next) => {
     setPeople(next);
     savePeople(next);
@@ -2134,7 +2234,7 @@ export default function PMApp() {
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
     const handleChange = (s) => { saveTemplate(s); saveTemplateRemote(s).catch(()=>{}); };
-    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} onOpenUser={openUser} />;
+    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} />;
   } else {
     // open selected course
     const courses = loadCourses();
@@ -2148,7 +2248,7 @@ export default function PMApp() {
       else all.push(s);
       saveCourses(all);
     };
-    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} onOpenUser={openUser} />;
+    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} />;
   }
   return (
     <SoundContext.Provider value={soundEnabled}>
