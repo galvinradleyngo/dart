@@ -31,7 +31,7 @@ describe('TaskCard', () => {
     );
 
     // milestone select is visible by default
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByLabelText('Milestone')).toBeInTheDocument();
 
     const toggleBtn = screen.getByTitle(/expand/i);
     fireEvent.click(toggleBtn);
@@ -74,8 +74,29 @@ describe('TaskCard', () => {
       />
     );
 
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'm2' } });
+    fireEvent.change(screen.getByLabelText('Milestone'), { target: { value: 'm2' } });
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { milestoneId: 'm2' });
+  });
+
+  it('updates assignee while collapsed', () => {
+    const onUpdate = vi.fn();
+    const team = [
+      { id: 'u1', name: 'User One', roleType: 'Dev' },
+      { id: 'u2', name: 'User Two', roleType: 'QA' },
+    ];
+    render(
+      <TaskCard
+        task={{ ...sampleTask, assigneeId: 'u1' }}
+        milestones={milestones}
+        team={team}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Assignee'), { target: { value: 'u2' } });
+    expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { assigneeId: 'u2' });
   });
 
   describe('mobile status selection', () => {
@@ -146,7 +167,7 @@ describe('TaskCard', () => {
         );
       };
       render(<Wrapper />);
-      expect(screen.getAllByRole('combobox').length).toBe(1);
+      expect(screen.getAllByRole('combobox').length).toBe(2);
       const button = screen.getByRole('button', { name: /status/i });
       expect(button).toHaveTextContent('To Do');
       fireEvent.click(button);

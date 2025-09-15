@@ -79,6 +79,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <select
+            aria-label="Milestone"
             value={t.milestoneId}
             onChange={(e) => update(t.id, { milestoneId: e.target.value })}
             className="mb-1 text-sm border rounded px-1 py-0.5"
@@ -173,9 +174,19 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               ) : (
                 <span className="text-black/40">—</span>
               )}
-              <span className="truncate">
-                {a ? `${a.name} (${a.roleType})` : 'Unassigned'}
-              </span>
+              <select
+                aria-label="Assignee"
+                value={t.assigneeId || ''}
+                onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
+                className="border rounded px-1.5 py-1"
+              >
+                <option value="">Unassigned</option>
+                {team.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.roleType})
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="flex items-center gap-2">
               <DuePill date={t.dueDate} status={t.status} />
@@ -238,6 +249,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 <span className="text-black/40">—</span>
               )}
               <select
+                aria-label="Assignee"
                 value={t.assigneeId || ''}
                 onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
                 className="border rounded px-1.5 py-1"
