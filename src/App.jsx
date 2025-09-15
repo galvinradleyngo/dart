@@ -320,7 +320,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
     }
     return { ...base, schedule: loadGlobalSchedule() };
   });
-  const [view, setView] = useState("board");
+  const [view, setView] = useState("list");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const isMobile = useIsMobile();
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(isMobile);
