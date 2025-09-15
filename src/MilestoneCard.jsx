@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import TaskCard from './TaskCard.jsx';
+import { Copy, Save, Trash } from 'lucide-react';
 
 export default function MilestoneCard({
   milestone,
@@ -98,7 +99,7 @@ export default function MilestoneCard({
                 title="Duplicate Milestone"
                 aria-label="Duplicate Milestone"
               >
-                Copy
+                <Copy className="icon" />
               </button>
             )}
             {onSaveAsTemplate && (
@@ -111,7 +112,7 @@ export default function MilestoneCard({
                 title="Save as Milestone Template"
                 aria-label="Save as Milestone Template"
               >
-                Save
+                <Save className="icon" />
               </button>
             )}
             {onDeleteMilestone && (
@@ -124,7 +125,7 @@ export default function MilestoneCard({
                 title="Remove Milestone"
                 aria-label="Remove Milestone"
               >
-                Delete
+                <Trash className="icon" />
               </button>
             )}
           </div>
