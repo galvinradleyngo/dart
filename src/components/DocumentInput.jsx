@@ -26,7 +26,7 @@ export default function DocumentInput({ onAdd }) {
           if (e.key === "Enter") add();
         }}
         placeholder="Paste link and press Enter"
-        className="flex-1"
+        className="w-48"
       />
       <button
         onClick={add}

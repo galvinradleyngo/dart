@@ -95,7 +95,7 @@ export default function MilestoneCard({
                   e.stopPropagation();
                   onDuplicateMilestone(milestone.id);
                 }}
-                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 title="Duplicate Milestone"
                 aria-label="Duplicate Milestone"
               >
@@ -108,7 +108,7 @@ export default function MilestoneCard({
                   e.stopPropagation();
                   onSaveAsTemplate(milestone.id);
                 }}
-                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-green-50 text-green-600 hover:bg-green-100"
+                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-green-50 text-green-600 hover:bg-green-100"
                 title="Save as Milestone Template"
                 aria-label="Save as Milestone Template"
               >
@@ -121,7 +121,7 @@ export default function MilestoneCard({
                   e.stopPropagation();
                   onDeleteMilestone(milestone.id);
                 }}
-                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
                 title="Remove Milestone"
                 aria-label="Remove Milestone"
               >
