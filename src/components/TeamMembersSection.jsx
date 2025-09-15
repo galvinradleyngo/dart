@@ -1,4 +1,5 @@
 import React from "react";
+import { Plus, X } from "lucide-react";
 import { rolePalette } from "../utils.js";
 import Avatar from "./Avatar.jsx";
 
@@ -53,7 +54,7 @@ function TeamMemberCard({
             aria-label="Remove member"
             onClick={() => onDelete(member.id)}
           >
-            Remove
+            <X className="icon" />
           </button>
         </div>
       </div>
@@ -100,8 +101,9 @@ export default function TeamMembersSection({
           <button
             onClick={onAddMember}
             className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+            aria-label="Add member"
           >
-            Add Member
+            <Plus className="icon" />
           </button>
         </div>
       </div>

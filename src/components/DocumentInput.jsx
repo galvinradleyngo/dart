@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Plus } from "lucide-react";
 
 export default function DocumentInput({ onAdd }) {
   const [val, setVal] = useState("");
@@ -30,8 +31,9 @@ export default function DocumentInput({ onAdd }) {
       <button
         onClick={add}
         className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+        aria-label="Add document"
       >
-        Add
+        <Plus className="icon" />
       </button>
     </div>
   );

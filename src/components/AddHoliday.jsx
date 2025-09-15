@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Plus } from "lucide-react";
 
 export default function AddHoliday({ onAdd }) {
   const [d, setD] = useState("");
@@ -19,8 +20,9 @@ export default function AddHoliday({ onAdd }) {
           }
         }}
         className="px-2 py-1 text-sm rounded border border-black/10 bg-white hover:bg-slate-50"
+        aria-label="Add holiday"
       >
-        Add
+        <Plus className="icon" />
       </button>
     </div>
   );
