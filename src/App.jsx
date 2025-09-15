@@ -1102,7 +1102,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courseQuery, setCourseQuery] = useState('');
   const [activeTab, setActiveTab] = useState(() => {
     const stored = localStorage.getItem('userTab');
-    return stored && stored !== 'tasks' ? stored : 'deadlines';
+    const validTabs = new Set(['deadlines','courses','milestones','board','calendar']);
+    return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
 
   const recomputeDue = (t, patch = {}, schedule) => {
@@ -1401,9 +1402,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               ['courses','📚︎ Courses'],
               ['milestones','Milestones'],
               ['board','⎘ Board View'],
-              ['calendar','📅︎ Calendar View'],
-              ['settings','⚙︎ Settings'],
-              ['help','❓︎ Help']
+              ['calendar','📅︎ Calendar View']
             ].map(([id,label]) => (
               <button
                 key={id}
@@ -1645,17 +1644,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               )}
             </SectionCard>
           )}
-          {activeTab === 'settings' && (
-            <SectionCard title="⚙︎ Settings">
-              <div className="text-sm text-black/60">Settings coming soon.</div>
-            </SectionCard>
-          )}
-          {activeTab === 'help' && (
-            <SectionCard title="❓︎ Help">
-              <div className="text-sm text-black/60">Help content coming soon.</div>
-            </SectionCard>
-          )}
-
         </div>
         {editing && (() => {
           const c = courses.find((x) => x.course.id === editing.courseId);
