@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { GitBranch } from "lucide-react";
 
 export default function DepPicker({ task, tasks, onUpdate }) {
   const [open, setOpen] = useState(false);
@@ -12,7 +11,7 @@ export default function DepPicker({ task, tasks, onUpdate }) {
         className="inline-flex items-center gap-1 px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
         aria-label="Toggle dependency picker"
       >
-        <GitBranch size={12} /> {current ? `Depends on: ${current.title}` : "Add dependency"}
+        {current ? `Depends on: ${current.title}` : "Add dependency"}
       </button>
       {open && (
         <div className="mt-1">

@@ -1,5 +1,4 @@
 import React from "react";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { fmt, todayStr } from "../utils.js";
 
 export default function CalendarView({ monthDate, tasks, milestones, team, onPrev, onNext, onToday, schedule, onTaskClick }) {
@@ -18,31 +17,28 @@ export default function CalendarView({ monthDate, tasks, milestones, team, onPre
   const workSet = new Set(schedule.workweek);
   return (
     <div className="border border-black/10 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between p-3 bg-white border-b border-black/10">
+      <div className="flex flex-col sm:flex-row items-center justify-between p-3 bg-white border-b border-black/10 gap-2">
         <div className="font-medium">
           {monthDate.toLocaleString(undefined, { month: "long", year: "numeric" })}
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={onPrev}
-            className="p-2 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
-            aria-label="Previous month"
+            className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
           >
-            <ChevronLeft className="w-4 h-4" />
+            Prev
           </button>
           <button
             onClick={onToday}
-            className="p-2 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
-            aria-label="Jump to today"
+            className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
           >
-            <Calendar className="w-4 h-4" />
+            Today
           </button>
           <button
             onClick={onNext}
-            className="p-2 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
-            aria-label="Next month"
+            className="px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
           >
-            <ChevronRight className="w-4 h-4" />
+            Next
           </button>
         </div>
       </div>

@@ -1,5 +1,4 @@
 import React from "react";
-import { UserPlus, Trash2 } from "lucide-react";
 import { rolePalette } from "../utils.js";
 import Avatar from "./Avatar.jsx";
 
@@ -54,7 +53,7 @@ function TeamMemberCard({
             aria-label="Remove member"
             onClick={() => onDelete(member.id)}
           >
-            <Trash2 className="icon" />
+            Remove
           </button>
         </div>
       </div>
@@ -76,7 +75,7 @@ export default function TeamMembersSection({
 }) {
   return (
     <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mb-2">
         <h2 className="font-semibold flex items-center gap-2">👥︎ Team Members</h2>
         <div className="flex items-center gap-2">
           <select
@@ -102,7 +101,7 @@ export default function TeamMembersSection({
             onClick={onAddMember}
             className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
           >
-            <UserPlus className="icon" /> Add Member
+            Add Member
           </button>
         </div>
       </div>
