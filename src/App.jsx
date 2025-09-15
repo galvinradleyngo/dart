@@ -655,7 +655,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
           )}
           <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${state.course.accent} shadow-sm`} />
           {/* DART banner title */}
-          <div className="hidden sm:block text-sm sm:text-base font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+          <div className="hidden sm:block text-[14px] font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
           <div className="w-full flex justify-end sm:w-auto">
             <div className="hidden sm:flex flex-wrap items-center gap-2">
@@ -685,7 +685,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
         {/* Secondary row: course title and template pill */}
         <div className="max-w-7xl mx-auto px-4 pb-3 -mt-2">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-base sm:text-lg font-semibold leading-tight flex-1 min-w-0"><InlineText className="break-words" value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
+            <h1 className="text-sm sm:text-lg font-semibold leading-tight flex-1 min-w-0"><InlineText className="break-words" value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
             {isTemplateLabel && <span className="text-sm px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 whitespace-nowrap">Course Template</span>}
           </div>
           <p className="text-sm text-black/60"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
@@ -720,7 +720,7 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
           courseSMEIds={state.course.courseSMEIds}
         />
         {/* Milestones */}
-          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm text-base sm:text-sm">
+          <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm text-sm sm:text-[14px]">
             <div
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
               onClick={() => setMilestonesCollapsed(v => !v)}
@@ -920,7 +920,7 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
         color={color}
       >
         <div className="text-center">
-          <div className="text-base font-semibold leading-none">{display}</div>
+          <div className="text-[14px] font-semibold leading-none">{display}</div>
           <div className="text-sm text-black/60">
             {mode === "percent" ? "Progress" : "Count"}
           </div>
@@ -1023,14 +1023,14 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   <motion.div
                     key={t.id}
                     data-testid="task-card"
-                    className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-base sm:text-sm ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
+                    className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm sm:text-[14px] ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
                     draggable={!isMobile}
                     onDragStart={!isMobile ? onDragStart(t.id) : undefined}
                     style={isMobile ? { touchAction: 'pan-y' } : undefined}
                     whileTap={{ scale: 0.98 }}
                   >
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1"><div className="text-[15px] sm:text-base font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
+                    <div className="min-w-0 flex-1"><div className="text-[15px] sm:text-[14px] font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
                     <div className="flex items-center gap-1 flex-shrink-0"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? '+' : '-'}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate">⧉</button><button onClick={()=>onDelete(t.id)} className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Delete" aria-label="Delete">🗑️</button></div>
                   </div>
                   {collapsed ? (
@@ -1356,12 +1356,12 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-semibold truncate">🏠︎ User Dashboard</h1>
+              <h1 className="text-sm sm:text-[14px] font-semibold truncate">🏠︎ User Dashboard</h1>
               {user && <div className="text-sm text-black/60 truncate">{user.name}</div>}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {user && <Avatar name={user.name} roleType={user.roleType} avatar={user.avatar} className="w-8 h-8 text-base" />}
+            {user && <Avatar name={user.name} roleType={user.roleType} avatar={user.avatar} className="w-8 h-8 text-[14px]" />}
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
@@ -1869,7 +1869,7 @@ export function CoursesHub({
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
             <div className="min-w-0">
-              <div className="text-sm sm:text-base font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+              <div className="text-sm sm:text-[14px] font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
               <div className="text-sm text-black/60 truncate">📚︎ Courses Hub</div>
             </div>
           </div>

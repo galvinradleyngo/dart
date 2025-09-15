@@ -70,7 +70,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     <motion.div
       data-testid="task-card"
       {...dragProps}
-      className={`w-full max-w-full break-words rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-base sm:text-sm ${dragProps.draggable ? 'cursor-move' : ''}`}
+      className={`w-full max-w-full break-words rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm sm:text-[14px] ${dragProps.draggable ? 'cursor-move' : ''}`}
       animate={controls}
       whileTap={{ scale: 0.98 }}
       style={isMobile ? { touchAction: 'pan-y' } : undefined}
@@ -89,7 +89,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               </option>
             ))}
           </select>
-          <div className="text-sm sm:text-base font-semibold leading-tight truncate">
+          <div className="text-sm sm:text-[14px] font-semibold leading-tight truncate">
             <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
           </div>
         </div>

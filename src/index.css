@@ -5,6 +5,9 @@
 html, body, #root {
   height: 100%;
 }
+html {
+  font-size: 15px;
+}
 body {
   @apply bg-slate-50 text-slate-900 font-sans;
 }
