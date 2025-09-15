@@ -42,6 +42,8 @@ import {
   Calendar,
   Kanban,
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   uid,
@@ -798,7 +800,11 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                   aria-expanded={!milestonesCollapsed}
                   className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
                 >
-                  {milestonesCollapsed ? '▼' : '▲'}
+                  {milestonesCollapsed ? (
+                    <ChevronDown className="icon" />
+                  ) : (
+                    <ChevronUp className="icon" />
+                  )}
                 </button>
             </div>
           </div>
@@ -1508,7 +1514,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
                       <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                         <div className="flex items-center gap-2">
-                          <span className="w-4 h-4 transition-transform group-open:rotate-180">▼</span>
+                          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                           <div className="font-medium">{c.course.name}</div>
                         </div>
                       </summary>
