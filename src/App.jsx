@@ -2067,7 +2067,7 @@ export function CoursesHub({
               <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow">Add Course</button>
             </div>
           ) : (
-            <div className="grid w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {courses.map((c) => {
                 const t = computeTotals(c);
                 return (
