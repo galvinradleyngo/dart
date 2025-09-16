@@ -13,16 +13,28 @@ function TeamMemberCard({
   onOpenUser,
 }) {
   const courseWide = member.roleType === "LD" ? courseLDIds : courseSMEIds;
+  const handleOpenUser = () => {
+    if (typeof onOpenUser === "function") {
+      onOpenUser(member.id);
+    }
+  };
   return (
-    <div className="group rounded-xl border border-black/10 p-3 flex items-center justify-between">
+    <div
+      className="group rounded-xl border border-black/10 p-3 flex items-center justify-between cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onClick={handleOpenUser}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleOpenUser();
+        }
+      }}
+    >
       <div className="flex items-center gap-2 min-w-0">
         <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
-        <button
-          onClick={() => onOpenUser(member.id)}
-          className="font-medium truncate text-left hover:underline"
-        >
-          {member.name}
-        </button>
+        <span className="font-medium truncate text-left hover:underline">{member.name}</span>
       </div>
       <div className="flex items-center gap-2">
         <span className="text-sm group-hover:hidden">{member.roleType}</span>
@@ -30,6 +42,7 @@ function TeamMemberCard({
           <select
             value={member.roleType}
             onChange={(e) => onUpdate(member.id, { roleType: e.target.value })}
+            onClick={(e) => e.stopPropagation()}
             className="text-sm"
           >
             {Object.keys(rolePalette).map((r) => (
@@ -39,10 +52,14 @@ function TeamMemberCard({
             ))}
           </select>
           {(member.roleType === "LD" || member.roleType === "SME") && (
-            <label className="text-sm inline-flex items-center gap-1 cursor-pointer">
+            <label
+              className="text-sm inline-flex items-center gap-1 cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            >
               <input
                 type="checkbox"
                 checked={courseWide.includes(member.id)}
+                onClick={(e) => e.stopPropagation()}
                 onChange={() => onToggleCourseWide(member.roleType, member.id)}
               />
               course-wide
@@ -52,7 +69,10 @@ function TeamMemberCard({
             className="text-black/40 hover:text-red-500"
             title="Remove member"
             aria-label="Remove member"
-            onClick={() => onDelete(member.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(member.id);
+            }}
           >
             <X className="icon" />
           </button>
