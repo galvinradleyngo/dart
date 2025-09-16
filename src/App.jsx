@@ -2288,77 +2288,93 @@ export function CoursesHub({
                   const roleCmp = roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType);
                   return roleCmp !== 0 ? roleCmp : a.name.localeCompare(b.name);
                 })
-                .map((m) => (
-                  <div
-                    key={m.id}
-                    className="rounded-xl p-4 shadow border-2 flex flex-col items-center text-center"
-                    style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
-                  >
-                    <Avatar
-                      name={m.name}
-                      roleType={m.roleType}
-                      avatar={m.avatar}
-                      className="w-12 h-12 text-2xl mb-2"
-                    />
-                    {membersEditing ? (
-                      <>
-                        <select
-                          value={m.avatar}
-                          onChange={(e) => updatePerson(m.id, { avatar: e.target.value })}
-                          className="border rounded px-2 py-1 text-sm mb-2"
-                        >
-                          <option value="">None</option>
-                          {AVATAR_CHOICES.map((e) => (
-                            <option key={e} value={e}>
-                              {e}
-                            </option>
-                          ))}
-                        </select>
-                        <InlineText
-                          value={m.name}
-                          onChange={(v) => renamePerson(m.id, v)}
-                          className="font-medium leading-tight"
-                        />
-                        <select
-                          value={m.roleType}
-                          onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
-                          className="mt-1 border rounded px-2 py-1 text-sm"
-                        >
-                          {Object.keys(rolePalette).map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="mt-2 flex gap-2">
-                          <button
-                            onClick={() => onOpenUser(m.id)}
-                            className="text-sm px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                .map((m) => {
+                  const interactive = !membersEditing;
+                  const cardProps = interactive
+                    ? {
+                        role: "button",
+                        tabIndex: 0,
+                        onClick: () => onOpenUser(m.id),
+                        onKeyDown: (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onOpenUser(m.id);
+                          }
+                        },
+                        "aria-label": `Open ${m.name}`,
+                      }
+                    : {};
+                  return (
+                    <div
+                      key={m.id}
+                      className={`group rounded-xl p-4 shadow border-2 flex flex-col items-center text-center ${
+                        interactive
+                          ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
+                          : ""
+                      }`}
+                      style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
+                      {...cardProps}
+                    >
+                      <Avatar
+                        name={m.name}
+                        roleType={m.roleType}
+                        avatar={m.avatar}
+                        className="w-12 h-12 text-2xl mb-2"
+                      />
+                      {membersEditing ? (
+                        <>
+                          <select
+                            value={m.avatar}
+                            onChange={(e) => updatePerson(m.id, { avatar: e.target.value })}
+                            className="border rounded px-2 py-1 text-sm mb-2"
                           >
-                            Open
-                          </button>
-                          <button
-                            onClick={() => removePerson(m.id)}
-                            className="text-sm px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                            <option value="">None</option>
+                            {AVATAR_CHOICES.map((e) => (
+                              <option key={e} value={e}>
+                                {e}
+                              </option>
+                            ))}
+                          </select>
+                          <InlineText
+                            value={m.name}
+                            onChange={(v) => renamePerson(m.id, v)}
+                            className="font-medium leading-tight"
+                          />
+                          <select
+                            value={m.roleType}
+                            onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
+                            className="mt-1 border rounded px-2 py-1 text-sm"
                           >
-                            Remove
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onOpenUser(m.id)}
-                          className="font-medium leading-tight hover:underline"
-                        >
-                          {m.name}
-                        </button>
-                        <div className="text-sm text-black/60">{m.roleType}</div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                            {Object.keys(rolePalette).map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              onClick={() => onOpenUser(m.id)}
+                              className="text-sm px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                            >
+                              Open
+                            </button>
+                            <button
+                              onClick={() => removePerson(m.id)}
+                              className="text-sm px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="font-medium leading-tight group-hover:underline">{m.name}</div>
+                          <div className="text-sm text-black/60">{m.roleType}</div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           )}
         </section>
