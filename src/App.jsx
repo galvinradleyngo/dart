@@ -740,6 +740,35 @@ useEffect(() => {
 
   const memberById = (id) => team.find((m) => m.id === id) || null;
 
+  const renderCourseRoleBadge = (id, label) => {
+    const member = memberById(id);
+    if (!member) return null;
+    return (
+      <span
+        key={`${label}-${id}`}
+        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white"
+        style={{ background: roleColor(member.roleType) }}
+      >
+        <Avatar
+          name={member.name}
+          roleType={member.roleType}
+          avatar={member.avatar}
+          className="w-6 h-6 text-sm"
+        />
+        <span>{label}</span>
+      </span>
+    );
+  };
+
+  const courseLeadBadges = state.course.courseLDIds.map((id) =>
+    renderCourseRoleBadge(id, "LD")
+  );
+  const courseSmeBadges = state.course.courseSMEIds.map((id) =>
+    renderCourseRoleBadge(id, "SME")
+  );
+  const hasCourseRoleBadges =
+    courseLeadBadges.some(Boolean) || courseSmeBadges.some(Boolean);
+
   const ActionButtons = () => (
     <>
       <button
@@ -833,7 +862,7 @@ useEffect(() => {
     <div className={APP_SHELL_CLASS}>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3 sm:flex-nowrap">
           {onBack && (
             <button onClick={onBack} className="glass-button-primary">Back to 📚︎ Courses</button>
           )}
@@ -867,16 +896,24 @@ useEffect(() => {
           </div>
         </div>
         {/* Secondary row: course title and template pill */}
-        <div className="max-w-7xl mx-auto px-4 pb-4 -mt-1">
+        <div className="max-w-7xl mx-auto px-4 pb-4 -mt-1 space-y-2 sm:space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-base sm:text-xl font-semibold leading-tight flex-1 min-w-0 text-slate-800"><InlineText className="break-words" value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
             {isTemplateLabel && <span className="text-sm font-medium px-3 py-1 rounded-full bg-violet-100/80 text-violet-700 border border-violet-200/70 shadow-[0_10px_18px_rgba(79,70,229,0.18)] whitespace-nowrap">Course Template</span>}
           </div>
-          <p className="text-sm text-slate-600/90"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
-          {/* Course-wide LDs & SMEs */}
-          <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-700">
-            {state.course.courseLDIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> LD</span>; })}
-            {state.course.courseSMEIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> SME</span>; })}
+          <div className="flex flex-col gap-2 text-sm sm:mt-0 sm:flex-row sm:items-center sm:gap-4">
+            <p className="text-slate-600/90 leading-snug sm:flex-1 sm:min-w-[280px]">
+              <InlineText
+                value={state.course.description}
+                onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))}
+              />
+            </p>
+            {hasCourseRoleBadges && (
+              <div className="flex flex-wrap gap-2 text-slate-700">
+                {courseLeadBadges}
+                {courseSmeBadges}
+              </div>
+            )}
           </div>
         </div>
       </header>
