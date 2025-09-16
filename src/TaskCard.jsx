@@ -183,7 +183,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                     aria-label="Assignee"
                     value={t.assigneeId || ''}
                     onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
-                    className="border rounded px-1.5 py-1"
+                    className="w-20 border rounded px-1.5 py-1"
                   >
                     <option value="">Unassigned</option>
                     {team.map((m) => (
@@ -290,7 +290,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 aria-label="Assignee"
                 value={t.assigneeId || ''}
                 onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
-                className="border rounded px-1.5 py-1"
+                className="w-20 border rounded px-1.5 py-1"
               >
                 <option value="">Unassigned</option>
                 {team.map((m) => (
