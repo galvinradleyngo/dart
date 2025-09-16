@@ -1793,7 +1793,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                             return (
                               <details key={m.id} className="group rounded-xl border border-black/10 bg-white">
                                 <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
-                                  <div className="flex w-full items-center gap-2">
+                                  <div className="flex w-full items-start gap-2">
                                     <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                                     <div className="min-w-0 flex-1">
                                       <div className="font-medium">{m.title}</div>
