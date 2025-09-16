@@ -13,10 +13,21 @@ function TeamMemberCard({
   onOpenUser,
 }) {
   const courseWide = member.roleType === "LD" ? courseLDIds : courseSMEIds;
+  const openUser = () => {
+    onOpenUser?.(member.id);
+  };
   return (
     <div
       className="group rounded-xl border border-black/10 p-3 flex items-center justify-between cursor-pointer"
-      onClick={() => onOpenUser(member.id)}
+      role="button"
+      tabIndex={0}
+      onClick={openUser}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          openUser();
+        }
+      }}
     >
       <div className="flex items-center gap-2 min-w-0">
         <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
