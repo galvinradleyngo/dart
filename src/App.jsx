@@ -1693,14 +1693,67 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 <div className="text-sm text-black/60">No milestones</div>
               ) : (
                 <div className="space-y-4">
-                  {myCourses.map((c) => (
-                    <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
-                      <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
-                        <div className="flex items-center gap-2">
-                          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
-                          <div className="font-medium">{c.course.name}</div>
-                        </div>
-                      </summary>
+                  {myCourses.map((c) => {
+                    const userTasks = c.tasks.filter((t) => t.assigneeId === userId);
+                    const courseCounts = userTasks.reduce(
+                      (acc, task) => {
+                        const key = task.status;
+                        if (acc[key] !== undefined) acc[key] += 1;
+                        else acc.todo += 1;
+                        return acc;
+                      },
+                      { todo: 0, inprogress: 0, done: 0 }
+                    );
+                    const totalCourseTasks = userTasks.length;
+                    const coursePctDone = totalCourseTasks
+                      ? Math.round((courseCounts.done / totalCourseTasks) * 100)
+                      : 0;
+                    const courseSegments = totalCourseTasks
+                      ? {
+                          todo: (courseCounts.todo / totalCourseTasks) * 100,
+                          inprogress: (courseCounts.inprogress / totalCourseTasks) * 100,
+                          done: (courseCounts.done / totalCourseTasks) * 100,
+                        }
+                      : { todo: 0, inprogress: 0, done: 0 };
+
+                    return (
+                      <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
+                        <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                          <div className="flex w-full items-center gap-2">
+                            <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium truncate">{c.course.name}</div>
+                              <div className="mt-1 text-xs text-black/60">
+                                {courseCounts.inprogress} in progress • {courseCounts.todo} to do • {courseCounts.done} done
+                              </div>
+                              <div className="mt-2 flex items-center gap-2">
+                                <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                  {courseSegments.todo > 0 && (
+                                    <span
+                                      className="bg-white shrink-0"
+                                      style={{ width: `${courseSegments.todo}%` }}
+                                    />
+                                  )}
+                                  {courseSegments.inprogress > 0 && (
+                                    <span
+                                      className="bg-emerald-400 shrink-0"
+                                      style={{ width: `${courseSegments.inprogress}%` }}
+                                    />
+                                  )}
+                                  {courseSegments.done > 0 && (
+                                    <span
+                                      className="bg-pink-400 shrink-0"
+                                      style={{ width: `${courseSegments.done}%` }}
+                                    />
+                                  )}
+                                </div>
+                                <span className="text-xs font-semibold text-black/60 whitespace-nowrap">
+                                  {coursePctDone}% done
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </summary>
                       <div className="p-4 space-y-2">
                         {[...c.milestones]
                           .sort(

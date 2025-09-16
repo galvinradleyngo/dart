@@ -14,16 +14,15 @@ function TeamMemberCard({
 }) {
   const courseWide = member.roleType === "LD" ? courseLDIds : courseSMEIds;
   return (
-    <div className="group rounded-xl border border-black/10 p-3 flex items-center justify-between">
-      <div className="flex items-center gap-2 min-w-0">
+    <div className="group rounded-xl border border-black/10 p-3 flex items-center justify-between gap-3">
+      <button
+        type="button"
+        onClick={() => onOpenUser(member.id)}
+        className="flex flex-1 items-center gap-2 min-w-0 rounded-lg px-1 py-1 text-left transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-300"
+      >
         <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
-        <button
-          onClick={() => onOpenUser(member.id)}
-          className="font-medium truncate text-left hover:underline"
-        >
-          {member.name}
-        </button>
-      </div>
+        <span className="font-medium truncate">{member.name}</span>
+      </button>
       <div className="flex items-center gap-2">
         <span className="text-sm group-hover:hidden">{member.roleType}</span>
         <div className="hidden group-hover:flex items-center gap-2">
