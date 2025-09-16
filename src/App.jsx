@@ -37,7 +37,6 @@ import {
   Copy,
   Trash2,
   StickyNote,
-  BookOpen,
   Kanban,
   ChevronDown,
   ChevronUp,
@@ -52,6 +51,7 @@ import {
   Flag,
   CalendarDays,
   Users,
+  Home,
 } from "lucide-react";
 import {
   uid,
@@ -338,6 +338,11 @@ function IconBadge({ children, className = "" }) {
       {children}
     </span>
   );
+}
+
+function CourseIcon({ className = "" }) {
+  const cls = ["icon", className].filter(Boolean).join(" ");
+  return <GraduationCap className={cls} aria-hidden="true" />;
 }
 
 // =====================================================
@@ -864,7 +869,10 @@ useEffect(() => {
       <header className="sticky top-0 z-30 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3 sm:flex-nowrap">
           {onBack && (
-            <button onClick={onBack} className="glass-button-primary">Back to 📚︎ Courses</button>
+            <button onClick={onBack} className="glass-button-primary">
+              <CourseIcon className="text-white" />
+              <span>Back to Courses</span>
+            </button>
           )}
           <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${state.course.accent} shadow-[0_12px_32px_rgba(15,23,42,0.2)]`} />
           {/* DART banner title */}
@@ -1847,11 +1855,15 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 onClick={onBack}
                 className="glass-button-primary"
               >
-                Back to 📚︎ Courses
+                <CourseIcon className="text-white" />
+                <span>Back to Courses</span>
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">🏠︎ User Dashboard</h1>
+              <h1 className="text-sm sm:text-[15px] font-semibold text-slate-700/90 flex items-center gap-1.5">
+                <Home className="icon flex-shrink-0" aria-hidden="true" />
+                <span className="truncate">User Dashboard</span>
+              </h1>
               {user && <div className="text-sm text-slate-600/90 truncate">{user.name}</div>}
             </div>
           </div>
@@ -1932,7 +1944,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'courses' && (
-            <SectionCard title="📚︎ My Courses">
+            <SectionCard
+              title={(
+                <span className="inline-flex items-center gap-2">
+                  <CourseIcon />
+                  <span>My Courses</span>
+                </span>
+              )}
+            >
               {myCourses.length === 0 ? (
                 <div className="text-sm text-slate-600/90">No courses</div>
               ) : (
@@ -2405,7 +2424,10 @@ export function CoursesHub({
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-sm text-slate-600/90 truncate">📚︎ Courses Hub</div>
+              <div className="text-sm text-slate-600/90 truncate flex items-center gap-1.5">
+                <CourseIcon className="flex-shrink-0" />
+                <span className="truncate">Courses Hub</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -2602,7 +2624,10 @@ export function CoursesHub({
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-2">📚︎ All Courses</h2>
+          <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+            <CourseIcon />
+            <span>All Courses</span>
+          </h2>
           {courses.length === 0 ? (
             <div className="glass-card p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
@@ -2644,7 +2669,7 @@ export function CoursesHub({
                         className="glass-icon-button w-11 h-11 text-slate-700"
                         aria-label="Open course"
                       >
-                        <BookOpen className="icon" />
+                        <CourseIcon />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); duplicateCourse(c.id); }}
