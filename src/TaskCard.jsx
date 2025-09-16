@@ -254,13 +254,14 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             {milestoneEdit ? (
               <select
                 aria-label="Milestone"
-                value={t.milestoneId || ''}
+                value={t.milestoneId ?? ''}
                 onChange={(e) => {
-                  update(t.id, { milestoneId: e.target.value });
+                  update(t.id, { milestoneId: e.target.value || null });
                   setMilestoneEdit(false);
                 }}
                 className="text-xs text-slate-500 border rounded px-1 py-0.5"
               >
+                <option value="">Unassigned</option>
                 {milestones.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.title}
@@ -269,7 +270,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               </select>
             ) : (
               <div className="text-xs text-slate-500 flex items-center gap-1 truncate">
-                <span className="truncate">{milestone ? milestone.title : '—'}</span>
+                <span className="truncate">{milestone ? milestone.title : 'Unassigned'}</span>
                 <button
                   type="button"
                   onClick={() => setMilestoneEdit(true)}

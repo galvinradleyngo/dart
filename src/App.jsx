@@ -238,15 +238,17 @@ export const seedWithSampleData = () => seed({ withSampleData: true });
 
 const remapSeed = (s) => {
   const msIds = s.milestones.map((m) => m.id);
+  const msIdSet = new Set(msIds);
   s.schedule = s.schedule || { workweek: [1,2,3,4,5], holidays: [] };
-  s.tasks.forEach((t) => {
-    if (typeof t.milestoneId === 'number') {
-      t.milestoneId = msIds[t.milestoneId] ?? msIds[0];
-    } else if (!msIds.includes(t.milestoneId)) {
-      t.milestoneId = msIds[0];
-    }
-  });
   s.tasks = s.tasks.map((t) => {
+    let milestoneId = t.milestoneId ?? null;
+    if (typeof milestoneId === 'number') {
+      milestoneId = msIds[milestoneId] ?? null;
+    }
+    if (milestoneId === '') milestoneId = null;
+    if (milestoneId !== null && !msIdSet.has(milestoneId)) {
+      milestoneId = null;
+    }
     const workDays = t.workDays ?? t.estimateDays ?? 0;
     let startDate = t.startDate || "";
     let dueDate = t.dueDate || "";
@@ -254,7 +256,7 @@ const remapSeed = (s) => {
     const note = t.note ?? "";
     if (t.status === "todo") { startDate = ""; dueDate = ""; }
     if (!dueDate && startDate) dueDate = addBusinessDays(startDate, workDays, s.schedule.workweek, s.schedule.holidays);
-    return { ...t, workDays, startDate, dueDate, links, note, depTaskId: t.depTaskId ?? null, completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : "") };
+    return { ...t, milestoneId, workDays, startDate, dueDate, links, note, depTaskId: t.depTaskId ?? null, completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : "") };
   });
   s.milestones = s.milestones.map((m) => { const { due, ...rest } = m; return rest; });
   s.team = s.team.map((m) => ({ ...m, color: roleColor(m.roleType), avatar: m.avatar || "" }));
@@ -420,18 +422,25 @@ useEffect(() => {
 
   const team = state.team; const milestones = state.milestones; const tasksRaw = state.tasks;
   const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
-const groupedTasks = useMemo(() => {
-  return filteredTasks.reduce((acc, t) => {
-    (acc[t.milestoneId] ||= []).push(t);
-    return acc;
-  }, {});
-}, [filteredTasks]);
-const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones : milestones.filter((m) => m.id === milestoneFilter)), [milestones, milestoneFilter]);
-const activeFilterLabel = useMemo(() => {
-  if (milestoneFilter === "all") return "All milestones";
-  const match = milestones.find((m) => m.id === milestoneFilter);
-  return match ? match.title : "All milestones";
-}, [milestoneFilter, milestones]);
+  const groupedTasks = useMemo(() => {
+    return filteredTasks.reduce((acc, t) => {
+      (acc[t.milestoneId] ||= []).push(t);
+      return acc;
+    }, {});
+  }, [filteredTasks]);
+  const unassignedTasks = useMemo(() => {
+    const validIds = new Set(milestones.map((m) => m.id));
+    return tasksRaw.filter((t) => {
+      const id = t.milestoneId;
+      return id === null || id === undefined || id === "" || !validIds.has(id);
+    });
+  }, [tasksRaw, milestones]);
+  const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones : milestones.filter((m) => m.id === milestoneFilter)), [milestones, milestoneFilter]);
+  const activeFilterLabel = useMemo(() => {
+    if (milestoneFilter === "all") return "All milestones";
+    const match = milestones.find((m) => m.id === milestoneFilter);
+    return match ? match.title : "All milestones";
+  }, [milestoneFilter, milestones]);
 
   const totals = useMemo(() => {
     const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
@@ -480,7 +489,33 @@ const activeFilterLabel = useMemo(() => {
     }
   };
 
-  const addTask = (milestoneId) => setState((s) => ({ ...s, tasks: [...s.tasks, { id: uid(), order: s.tasks.length, title: "New Task", details: "", note: "", links: [], depTaskId: null, assigneeId: s.course.courseLDIds[0] || (s.team.find((m)=>m.roleType==='LD')?.id ?? null), milestoneId: milestoneId || s.milestones[0]?.id, status: "todo", startDate: "", workDays: 1, dueDate: "", completedDate: "" }] }));
+  const addTask = (milestoneId = null) =>
+    setState((s) => {
+      const desiredId = milestoneId ?? null;
+      const validMilestoneId = desiredId && s.milestones.some((m) => m.id === desiredId) ? desiredId : null;
+      return {
+        ...s,
+        tasks: [
+          ...s.tasks,
+          {
+            id: uid(),
+            order: s.tasks.length,
+            title: "New Task",
+            details: "",
+            note: "",
+            links: [],
+            depTaskId: null,
+            assigneeId: s.course.courseLDIds[0] || (s.team.find((m) => m.roleType === 'LD')?.id ?? null),
+            milestoneId: validMilestoneId,
+            status: "todo",
+            startDate: "",
+            workDays: 1,
+            dueDate: "",
+            completedDate: "",
+          },
+        ],
+      };
+    });
   const duplicateTask = (id) => setState((s) => { const orig = s.tasks.find((t)=>t.id===id); if(!orig) return s; const clone = { ...orig, id: uid(), order: s.tasks.length, title: `${orig.title} (copy)`, status: "todo", startDate: "", dueDate: "", completedDate: "", depTaskId: null }; return { ...s, tasks: [...s.tasks, clone] }; });
   const patchTaskLinks = (id, op, payload) =>
     setState((s) => ({
@@ -488,6 +523,17 @@ const activeFilterLabel = useMemo(() => {
       tasks: applyLinkPatch(s.tasks, id, op, payload),
     }));
   const deleteTask = (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
+  const deleteUnassignedTasks = () =>
+    setState((s) => {
+      const validMilestoneIds = new Set(s.milestones.map((m) => m.id));
+      const nextTasks = s.tasks.filter((t) => {
+        const id = t.milestoneId;
+        if (id === null || id === undefined || id === "") return false;
+        return validMilestoneIds.has(id);
+      });
+      if (nextTasks.length === s.tasks.length) return s;
+      return { ...s, tasks: nextTasks };
+    });
 
   const updateMilestone  = (id, patch) => setState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
   const addMilestone = () =>
@@ -516,7 +562,12 @@ const activeFilterLabel = useMemo(() => {
       }));
       return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] };
     });
-  const deleteMilestone  = (id) => setState((s)=>({ ...s, milestones: s.milestones.filter((m)=>m.id!==id), tasks: s.tasks.map((t)=>(t.milestoneId===id?{...t, milestoneId: s.milestones[0]?.id}:t)) }));
+  const deleteMilestone  = (id) =>
+    setState((s) => ({
+      ...s,
+      milestones: s.milestones.filter((m) => m.id !== id),
+      tasks: s.tasks.map((t) => (t.milestoneId === id ? { ...t, milestoneId: null } : t)),
+    }));
   const duplicateMilestone = (id) =>
     setState((s) => {
       const src = s.milestones.find((m) => m.id === id);
@@ -978,6 +1029,48 @@ const activeFilterLabel = useMemo(() => {
               {dragMilestoneOverId === null && dragMilestoneId.current && (
                 <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
               )}
+              {milestoneFilter === "all" && unassignedTasks.length > 0 && (
+                <div className="mt-6">
+                  <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/60 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
+                        <p className="text-sm text-slate-600">
+                          Assign these tasks to a milestone to track progress alongside the rest of your plan.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm("Delete all unassigned tasks? This cannot be undone.")) {
+                            deleteUnassignedTasks();
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Delete all
+                      </button>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {unassignedTasks.map((task) => (
+                        <TaskCard
+                          key={task.id}
+                          task={task}
+                          tasks={tasksRaw}
+                          team={team}
+                          milestones={milestones}
+                          onUpdate={updateTask}
+                          onDelete={deleteTask}
+                          onDuplicate={duplicateTask}
+                          onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
+                          onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </section>
@@ -1230,7 +1323,18 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                     <>
                       <div className="mt-1">{renderStatusControl(t)}</div>
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                        <select value={t.milestoneId} onChange={(e)=>onUpdate(t.id,{ milestoneId:e.target.value })} className="border rounded px-1.5 py-1">{milestones.map((m)=>(<option key={m.id} value={m.id}>{m.title}</option>))}</select>
+                        <select
+                          value={t.milestoneId ?? ""}
+                          onChange={(e) => onUpdate(t.id, { milestoneId: e.target.value || null })}
+                          className="border rounded px-1.5 py-1"
+                        >
+                          <option value="">Unassigned</option>
+                          {milestones.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.title}
+                            </option>
+                          ))}
+                        </select>
                         <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40 text-sm">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
                         <div className="flex items-center gap-2"><span>Start</span><input type="date" value={t.startDate || ""} onChange={(e)=>{ const patch = { startDate: e.target.value }; if (t.status === 'todo') patch.status = 'inprogress'; onUpdate(t.id, patch); }} className="border rounded px-1.5 py-1" /></div>
                         <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
@@ -1421,7 +1525,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       note: '',
       links: [],
       assigneeId: userId || null,
-      milestoneId: targetCourse.milestones[0]?.id || null,
+      milestoneId: null,
       status: 'todo',
       startDate: '',
       workDays: 0,

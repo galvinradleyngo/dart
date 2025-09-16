@@ -99,9 +99,10 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             </select>
           )}
           <select
-            value={task.milestoneId}
-            onChange={(e) => onUpdate(task.id, { milestoneId: e.target.value })}
+            value={task.milestoneId ?? ""}
+            onChange={(e) => onUpdate(task.id, { milestoneId: e.target.value || null })}
           >
+            <option value="">Unassigned</option>
             {milestones.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.title}
