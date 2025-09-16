@@ -1462,6 +1462,29 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     done: 'bg-pink-100 text-pink-800 border-pink-200',
   };
 
+  const getProgressMetrics = (tasks) => {
+    const counts = tasks.reduce(
+      (acc, task) => {
+        const key = task.status;
+        if (acc[key] !== undefined) acc[key] += 1;
+        else acc.todo += 1;
+        return acc;
+      },
+      { todo: 0, inprogress: 0, done: 0 }
+    );
+    const total = tasks.length;
+    const pctDone = total ? Math.round((counts.done / total) * 100) : 0;
+    const segments = total
+      ? {
+          todo: (counts.todo / total) * 100,
+          inprogress: (counts.inprogress / total) * 100,
+          done: (counts.done / total) * 100,
+        }
+      : { todo: 0, inprogress: 0, done: 0 };
+
+    return { counts, pctDone, segments, total };
+  };
+
   const members = useMemo(() => {
     const map = new Map();
     courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
@@ -1695,26 +1718,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 <div className="space-y-4">
                   {myCourses.map((c) => {
                     const userTasks = c.tasks.filter((t) => t.assigneeId === userId);
-                    const courseCounts = userTasks.reduce(
-                      (acc, task) => {
-                        const key = task.status;
-                        if (acc[key] !== undefined) acc[key] += 1;
-                        else acc.todo += 1;
-                        return acc;
-                      },
-                      { todo: 0, inprogress: 0, done: 0 }
-                    );
-                    const totalCourseTasks = userTasks.length;
-                    const coursePctDone = totalCourseTasks
-                      ? Math.round((courseCounts.done / totalCourseTasks) * 100)
-                      : 0;
-                    const courseSegments = totalCourseTasks
-                      ? {
-                          todo: (courseCounts.todo / totalCourseTasks) * 100,
-                          inprogress: (courseCounts.inprogress / totalCourseTasks) * 100,
-                          done: (courseCounts.done / totalCourseTasks) * 100,
-                        }
-                      : { todo: 0, inprogress: 0, done: 0 };
+                    const {
+                      counts: courseCounts,
+                      pctDone: coursePctDone,
+                      segments: courseSegments,
+                    } = getProgressMetrics(userTasks);
 
                     return (
                       <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
@@ -1772,24 +1780,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                               const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
                               return da - db;
                             });
-                            const counts = sortedTasks.reduce(
-                              (acc, task) => {
-                                const key = task.status;
-                                if (acc[key] !== undefined) acc[key] += 1;
-                                else acc.todo += 1;
-                                return acc;
-                              },
-                              { todo: 0, inprogress: 0, done: 0 }
-                            );
-                            const totalTasks = sortedTasks.length;
-                            const pctDone = totalTasks ? Math.round((counts.done / totalTasks) * 100) : 0;
-                            const segments = totalTasks
-                              ? {
-                                  todo: (counts.todo / totalTasks) * 100,
-                                  inprogress: (counts.inprogress / totalTasks) * 100,
-                                  done: (counts.done / totalTasks) * 100,
-                                }
-                              : { todo: 0, inprogress: 0, done: 0 };
+                            const { counts, pctDone, segments } = getProgressMetrics(sortedTasks);
                             return (
                               <details key={m.id} className="group rounded-xl border border-black/10 bg-white">
                                 <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
