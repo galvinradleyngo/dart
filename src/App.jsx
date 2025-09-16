@@ -281,6 +281,7 @@ function Ring({ className = "w-20 h-20", stroke = 10, progress = 0, trackOpacity
   const c = 2 * Math.PI * r;
   const pct = clamp(progress, 0, 100);
   const dash = (pct / 100) * c;
+  const inset = Math.max(stroke, 8);
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`}>
       <svg viewBox="0 0 100 100" className="absolute inset-0 rotate-[-90deg]">
@@ -305,7 +306,19 @@ function Ring({ className = "w-20 h-20", stroke = 10, progress = 0, trackOpacity
           fill="none"
         />
       </svg>
-      <div className="absolute inset-0 grid place-items-center text-center select-none">{children}</div>
+      <div
+        className="absolute flex flex-col items-center justify-center rounded-full text-center select-none"
+        style={{
+          top: `${inset}px`,
+          right: `${inset}px`,
+          bottom: `${inset}px`,
+          left: `${inset}px`,
+          backgroundColor: "rgba(255, 255, 255, 0.96)",
+          boxShadow: "inset 0 1px 4px rgba(15, 23, 42, 0.08)",
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
