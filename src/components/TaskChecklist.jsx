@@ -45,18 +45,18 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                   <input
                     type="checkbox"
                     className="rounded border-slate-300"
-                    aria-label={`${t.title} for ${milestone ? milestone.title : ""}`}
+                    aria-label={`${t.title} for ${milestone ? milestone.title : "Unassigned"}`}
                     checked={t.status === "done"}
                     onChange={(e) => onUpdate(t.id, { status: e.target.checked ? "done" : "todo" })}
                   />
                   <button
                     onClick={() => onEdit(t.id)}
                     className="truncate text-left flex-1"
-                    title={`${t.title}${milestone ? ` – ${milestone.title}` : ""}`}
+                    title={`${t.title}${milestone ? ` – ${milestone.title}` : " – Unassigned"}`}
                   >
                     {t.title} {" "}
                     <span className="text-black/60">
-                      for {milestone ? milestone.title : "—"} — {assignee ? assignee.name : "Unassigned"}
+                      for {milestone ? milestone.title : "Unassigned"} — {assignee ? assignee.name : "Unassigned"}
                     </span>
                   </button>
                 </li>
