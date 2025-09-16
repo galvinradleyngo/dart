@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UserDashboard, UPCOMING_DAYS } from './App.jsx';
 import { fmt } from './utils.js';
@@ -42,13 +42,19 @@ describe('Upcoming Deadlines window', () => {
 
     render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
 
-    expect(
-      await screen.findByRole('button', { name: 'Today Task for Milestone 1' })
-    ).toBeInTheDocument();
+    const taskButton = await screen.findByRole('button', {
+      name: 'Today Task for Milestone 1',
+    });
+    expect(taskButton).toBeInTheDocument();
     expect(
       await screen.findByRole('button', { name: 'Future Task for Milestone 2' })
     ).toBeInTheDocument();
     expect(screen.queryByText('Outside Task')).toBeNull();
+
+    fireEvent.click(taskButton);
+    expect(await screen.findByText('Delete')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Close'));
+    await waitFor(() => expect(screen.queryByLabelText('Close')).toBeNull());
 
     const checkbox = await screen.findByRole('checkbox', {
       name: 'Today Task for Milestone 1',
@@ -57,26 +63,13 @@ describe('Upcoming Deadlines window', () => {
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
 
-    const row = checkbox.closest('li');
-    const card = row?.parentElement?.closest('li');
-    expect(card).not.toBeNull();
-    if (card) {
-      const completedHeading = within(card).getByText('Completed');
-      const completedList = completedHeading.nextElementSibling;
-      expect(completedList).not.toBeNull();
-      if (completedList instanceof HTMLElement) {
-        expect(
-          within(completedList).getByRole('button', {
-            name: 'Today Task for Milestone 1',
-          })
-        ).toBeInTheDocument();
-      }
-    }
-
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Today Task for Milestone 1' })
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', {
+          name: 'Today Task for Milestone 1',
+        })
+      ).toBeNull()
     );
-    expect(await screen.findByText('Delete')).toBeInTheDocument();
   });
 
   it('prompts for link when completing from deadlines panel', async () => {
