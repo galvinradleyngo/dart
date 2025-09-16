@@ -44,6 +44,7 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronUp,
+  Filter,
 } from "lucide-react";
 import {
   uid,
@@ -322,16 +323,14 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   });
   const [view, setView] = useState("list");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
-  const isMobile = useIsMobile();
-  const [milestonesCollapsed, setMilestonesCollapsed] = useState(isMobile);
+  const [milestonesCollapsed, setMilestonesCollapsed] = useState(false);
+  const [teamCollapsed, setTeamCollapsed] = useState(true);
   const [tasksCollapsed, setTasksCollapsed] = useState(true);
   const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
+  const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
   const [saveState, setSaveState] = useState('saved');
   const firstRun = useRef(true);
-
-  useEffect(() => {
-    setMilestonesCollapsed(isMobile);
-  }, [isMobile]);
+  const milestoneFilterRef = useRef(null);
 
   useEffect(() => {
     setState((s) => ({
@@ -354,6 +353,29 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
       setSaveState('unsaved');
     }
   }, [state, onStateChange]);
+
+  useEffect(() => {
+    if (milestoneFilter !== "all" && !state.milestones.some((m) => m.id === milestoneFilter)) {
+      setMilestoneFilter("all");
+    }
+  }, [milestoneFilter, state.milestones]);
+
+  useEffect(() => {
+    if (!milestoneFilterOpen) return;
+    const handleClickAway = (event) => {
+      if (milestoneFilterRef.current && !milestoneFilterRef.current.contains(event.target)) {
+        setMilestoneFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickAway);
+    return () => document.removeEventListener("mousedown", handleClickAway);
+  }, [milestoneFilterOpen]);
+
+  useEffect(() => {
+    if (milestonesCollapsed) {
+      setMilestoneFilterOpen(false);
+    }
+  }, [milestonesCollapsed]);
 
 const handleSave = useCallback(async () => {
   setSaveState('saving');
@@ -405,6 +427,11 @@ const groupedTasks = useMemo(() => {
   }, {});
 }, [filteredTasks]);
 const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones : milestones.filter((m) => m.id === milestoneFilter)), [milestones, milestoneFilter]);
+const activeFilterLabel = useMemo(() => {
+  if (milestoneFilter === "all") return "All milestones";
+  const match = milestones.find((m) => m.id === milestoneFilter);
+  return match ? match.title : "All milestones";
+}, [milestoneFilter, milestones]);
 
   const totals = useMemo(() => {
     const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
@@ -787,6 +814,8 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
           onOpenUser={onOpenUser}
           courseLDIds={state.course.courseLDIds}
           courseSMEIds={state.course.courseSMEIds}
+          collapsed={teamCollapsed}
+          onToggle={() => setTeamCollapsed((v) => !v)}
         />
         {/* Milestones */}
           <section className="-mx-4 sm:mx-0 bg-white shadow-sm sm:rounded-2xl sm:border border-black/10 p-0 sm:p-4 text-sm sm:text-[14px]">
@@ -801,64 +830,81 @@ const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones
                 className="flex flex-wrap items-center gap-2 w-full sm:w-auto"
                 onClick={e => e.stopPropagation()}
               >
-              {!milestonesCollapsed && (
-                <div className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm w-full sm:w-auto">
-                  <select
-                    value={milestoneFilter}
-                    onChange={e => setMilestoneFilter(e.target.value)}
-                    className="text-sm outline-none bg-transparent w-full sm:w-auto"
-                  >
-                    <option value="all">All milestones</option>
-                    {milestones.map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {!milestonesCollapsed && (
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {milestoneTemplates.length > 0 && (
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <select
-                        value={selectedMilestoneTemplate}
-                        onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
-                        className="text-sm border border-black/10 rounded-2xl px-2 py-2 bg-white shadow-sm w-full sm:w-auto"
+                {!milestonesCollapsed && (
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <div className="relative" ref={milestoneFilterRef}>
+                      <button
+                        type="button"
+                        onClick={() => setMilestoneFilterOpen((v) => !v)}
+                        aria-haspopup="menu"
+                        aria-expanded={milestoneFilterOpen}
+                        className={`inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm text-sm ${milestoneFilter !== 'all' ? 'text-slate-900' : 'text-slate-600'}`}
                       >
-                        <option value="">Select template</option>
-                        {milestoneTemplates.map((mt) => (
-                          <option key={mt.id} value={mt.id}>{mt.title}</option>
-                        ))}
-                      </select>
-                      {selectedMilestoneTemplate && (
-                        <>
+                        <Filter className="w-4 h-4" />
+                        <span className="max-w-[10rem] truncate">{activeFilterLabel}</span>
+                      </button>
+                      {milestoneFilterOpen && (
+                        <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-black/10 bg-white py-1 shadow-lg z-10">
                           <button
-                            onClick={() => { addMilestoneFromTemplate(selectedMilestoneTemplate); setSelectedMilestoneTemplate(""); }}
-                            className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                            type="button"
+                            onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
+                            className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === 'all' ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
                           >
-                            Add from Template
+                            All milestones
                           </button>
-                          <button
-                            onClick={() => removeMilestoneTemplate(selectedMilestoneTemplate)}
-                            className="inline-flex items-center rounded-2xl p-2 border border-black/10 bg-white shadow-sm hover:bg-slate-50"
-                            title="Delete template"
-                            aria-label="Delete template"
-                          >
-                            Delete
-                          </button>
-                        </>
+                          {milestones.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => { setMilestoneFilter(m.id); setMilestoneFilterOpen(false); }}
+                              className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === m.id ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
+                            >
+                              {m.title}
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
-                  )}
-                  <button
-                    onClick={() => addMilestone()}
-                    className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 w-full sm:w-auto"
-                  >
-                    Add Milestone
-                  </button>
-                </div>
-              )}
+                    {milestoneTemplates.length > 0 && (
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <select
+                          value={selectedMilestoneTemplate}
+                          onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
+                          className="text-sm border border-black/10 rounded-2xl px-2 py-2 bg-white shadow-sm w-full sm:w-auto"
+                        >
+                          <option value="">Select template</option>
+                          {milestoneTemplates.map((mt) => (
+                            <option key={mt.id} value={mt.id}>{mt.title}</option>
+                          ))}
+                        </select>
+                        {selectedMilestoneTemplate && (
+                          <>
+                            <button
+                              onClick={() => { addMilestoneFromTemplate(selectedMilestoneTemplate); setSelectedMilestoneTemplate(''); }}
+                              className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                            >
+                              Add from Template
+                            </button>
+                            <button
+                              onClick={() => removeMilestoneTemplate(selectedMilestoneTemplate)}
+                              className="inline-flex items-center rounded-2xl p-2 border border-black/10 bg-white shadow-sm hover:bg-slate-50"
+                              title="Delete template"
+                              aria-label="Delete template"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => addMilestone()}
+                      className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 w-full sm:w-auto"
+                    >
+                      Add Milestone
+                    </button>
+                  </div>
+                )}
                 <button
                   onClick={() => setMilestonesCollapsed(v => !v)}
                   title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
@@ -1101,7 +1147,11 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
       n.has(id) ? n.delete(id) : n.add(id);
       return n;
     });
-  const statusPillClass = (status) => { if(status==="done") return "bg-emerald-200/80 text-emerald-900 border-emerald-300"; if(status==="inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-300"; return "bg-slate-100 text-slate-700 border-slate-300"; };
+  const statusPillClass = (status) => {
+    if (status === "done") return "bg-pink-100 text-pink-800 border-pink-200";
+    if (status === "inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-200";
+    return "bg-white text-slate-700 border-slate-300";
+  };
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const renderStatusControl = (task) => {
     if (!isMobile) {
@@ -1399,6 +1449,18 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [calMonth, setCalMonth] = useState(() => new Date());
   const [editing, setEditing] = useState(null);
   const [linkPrompt, setLinkPrompt] = useState(null);
+  const statusPriority = { inprogress: 0, todo: 1, done: 2 };
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
+  const statusListClasses = {
+    todo: 'bg-white border-slate-200 text-slate-700',
+    inprogress: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+    done: 'bg-pink-50 border-pink-200 text-pink-800',
+  };
+  const statusBadgeClasses = {
+    todo: 'bg-slate-100 text-slate-700 border-slate-200',
+    inprogress: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    done: 'bg-pink-100 text-pink-800 border-pink-200',
+  };
 
   const members = useMemo(() => {
     const map = new Map();
@@ -1646,21 +1708,114 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                               c.tasks.filter((t) => t.milestoneId === b.id).length -
                               c.tasks.filter((t) => t.milestoneId === a.id).length
                           )
-                          .map((m) => (
-                            <MilestoneCard
-                              key={m.id}
-                              milestone={m}
-                              tasks={c.tasks.filter((t) => t.milestoneId === m.id)}
-                              tasksAll={c.tasks}
-                              team={c.team}
-                              milestones={c.milestones}
-                              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-                              onDelete={(id) => deleteTask(c.course.id, id)}
-                              onDuplicate={(id) => duplicateTask(c.course.id, id)}
-                              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-                              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
-                            />
-                          ))}
+                          .map((m) => {
+                            const tasksForMilestone = c.tasks.filter(
+                              (t) => t.milestoneId === m.id && t.assigneeId === userId
+                            );
+                            const sortedTasks = [...tasksForMilestone].sort((a, b) => {
+                              const statusDiff = (statusPriority[a.status] ?? 1) - (statusPriority[b.status] ?? 1);
+                              if (statusDiff !== 0) return statusDiff;
+                              const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+                              const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+                              return da - db;
+                            });
+                            const counts = sortedTasks.reduce(
+                              (acc, task) => {
+                                const key = task.status;
+                                if (acc[key] !== undefined) acc[key] += 1;
+                                else acc.todo += 1;
+                                return acc;
+                              },
+                              { todo: 0, inprogress: 0, done: 0 }
+                            );
+                            const totalTasks = sortedTasks.length;
+                            const pctDone = totalTasks ? Math.round((counts.done / totalTasks) * 100) : 0;
+                            const segments = totalTasks
+                              ? {
+                                  todo: (counts.todo / totalTasks) * 100,
+                                  inprogress: (counts.inprogress / totalTasks) * 100,
+                                  done: (counts.done / totalTasks) * 100,
+                                }
+                              : { todo: 0, inprogress: 0, done: 0 };
+                            return (
+                              <details key={m.id} className="group rounded-xl border border-black/10 bg-white">
+                                <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                                  <div className="flex w-full items-start gap-2">
+                                    <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-medium">{m.title}</div>
+                                      <div className="text-xs text-black/60">
+                                        {counts.inprogress} in progress • {counts.todo} to do • {counts.done} done
+                                      </div>
+                                      <div className="mt-2 flex items-center gap-2">
+                                        <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                          {segments.todo > 0 && (
+                                            <span
+                                              className="bg-white shrink-0"
+                                              style={{ width: `${segments.todo}%` }}
+                                            />
+                                          )}
+                                          {segments.inprogress > 0 && (
+                                            <span
+                                              className="bg-emerald-400 shrink-0"
+                                              style={{ width: `${segments.inprogress}%` }}
+                                            />
+                                          )}
+                                          {segments.done > 0 && (
+                                            <span
+                                              className="bg-pink-400 shrink-0"
+                                              style={{ width: `${segments.done}%` }}
+                                            />
+                                          )}
+                                        </div>
+                                        <span className="text-xs font-semibold text-black/60 whitespace-nowrap">
+                                          {pctDone}% done
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </summary>
+                                <div className="p-4 space-y-3">
+                                  {m.goal && <p className="text-sm text-black/60">{m.goal}</p>}
+                                  {sortedTasks.length === 0 ? (
+                                    <div className="text-sm text-black/60">No tasks assigned to you.</div>
+                                  ) : (
+                                    <ul className="space-y-2">
+                                      {sortedTasks.map((t) => (
+                                        <li
+                                          key={t.id}
+                                          className={`rounded-xl border px-3 py-2 ${statusListClasses[t.status] || statusListClasses.todo}`}
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() => setEditing({ courseId: c.course.id, taskId: t.id })}
+                                            className="flex w-full items-center justify-between gap-3 text-left"
+                                          >
+                                            <div className="min-w-0">
+                                              <div className="font-medium truncate">{t.title || 'Untitled task'}</div>
+                                              <div className="text-xs text-black/60 truncate">
+                                                {t.dueDate
+                                                  ? `Due ${new Date(t.dueDate).toLocaleDateString(undefined, {
+                                                      month: 'short',
+                                                      day: 'numeric',
+                                                    })}`
+                                                  : 'No due date'}
+                                              </div>
+                                            </div>
+                                            <span
+                                              className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadgeClasses[t.status] || statusBadgeClasses.todo}`}
+                                            >
+                                              {statusLabel[t.status] || t.status}
+                                            </span>
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              </details>
+                            );
+                          })}
                       </div>
                     </details>
                   ))}
