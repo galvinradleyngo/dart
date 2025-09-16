@@ -31,7 +31,7 @@ function TeamMemberCard({
   };
   return (
     <div
-      className="group rounded-xl border border-black/10 p-3 flex items-center justify-between cursor-pointer"
+      className="group glass-card p-3 flex items-center justify-between cursor-pointer"
       role="button"
       tabIndex={0}
       onClick={handleCardClick}
@@ -55,7 +55,7 @@ function TeamMemberCard({
           <select
             value={member.roleType}
             onChange={(e) => onUpdate(member.id, { roleType: e.target.value })}
-            className="text-sm"
+            className="text-sm rounded-xl border border-white/60 bg-white/80 px-2 py-1 shadow-sm"
             data-team-card-control="true"
           >
             {Object.keys(rolePalette).map((r) => (
@@ -66,7 +66,7 @@ function TeamMemberCard({
           </select>
           {(member.roleType === "LD" || member.roleType === "SME") && (
             <label
-              className="text-sm inline-flex items-center gap-1 cursor-pointer"
+              className="text-sm inline-flex items-center gap-1 cursor-pointer text-slate-600"
               data-team-card-control="true"
             >
               <input
@@ -79,7 +79,7 @@ function TeamMemberCard({
             </label>
           )}
           <button
-            className="text-black/40 hover:text-red-500"
+            className="glass-icon-button w-9 h-9 text-rose-500 hover:text-rose-600"
             title="Remove member"
             aria-label="Remove member"
             onClick={() => {
@@ -110,15 +110,15 @@ export default function TeamMembersSection({
   onToggle = () => {},
 }) {
   return (
-    <section className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+    <section className="glass-surface p-4 sm:p-6">
       <div
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2 px-1 cursor-pointer"
         onClick={onToggle}
       >
-        <h2 className="font-semibold flex items-center gap-2">
-          👥︎ Team Members
-          <span className="text-sm font-normal text-black/60">({team.length})</span>
-        </h2>
+          <h2 className="font-semibold flex items-center gap-2">
+            👥︎ Team Members
+            <span className="text-sm font-normal text-slate-600/90">({team.length})</span>
+          </h2>
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {!collapsed && (
             <>
@@ -130,7 +130,7 @@ export default function TeamMembersSection({
                     e.target.value = "";
                   }
                 }}
-                className="text-sm"
+                className="text-sm rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm"
               >
                 <option value="">Add existing...</option>
                 {people
@@ -143,7 +143,7 @@ export default function TeamMembersSection({
               </select>
               <button
                 onClick={onAddMember}
-                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="glass-button"
                 aria-label="Add member"
               >
                 <Plus className="icon" />
@@ -155,7 +155,7 @@ export default function TeamMembersSection({
             onClick={onToggle}
             aria-expanded={!collapsed}
             aria-label={collapsed ? "Expand team members" : "Collapse team members"}
-            className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+            className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
           >
             {collapsed ? <ChevronDown className="icon" /> : <ChevronUp className="icon" />}
           </button>
