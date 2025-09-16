@@ -13,22 +13,20 @@ function TeamMemberCard({
   onOpenUser,
 }) {
   const courseWide = member.roleType === "LD" ? courseLDIds : courseSMEIds;
-  const handleOpenUser = () => {
-    if (typeof onOpenUser === "function") {
-      onOpenUser(member.id);
-    }
+  const openUser = () => {
+    onOpenUser?.(member.id);
   };
   return (
     <div
       className="group rounded-xl border border-black/10 p-3 flex items-center justify-between cursor-pointer"
       role="button"
       tabIndex={0}
-      onClick={handleOpenUser}
+      onClick={openUser}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          handleOpenUser();
+          openUser();
         }
       }}
     >
