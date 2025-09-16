@@ -47,7 +47,7 @@ import {
   Loader2,
   ListChecks,
   AlarmClock,
-  LayoutDashboard,
+  Home,
   GraduationCap,
   Flag,
   CalendarDays,
@@ -92,6 +92,14 @@ const mergeById = (base = [], extra = []) => {
 };
 
 const APP_SHELL_CLASS = "min-h-screen text-slate-900 bg-transparent";
+
+const CoursesIcon = ({ className = "", ...props }) => (
+  <GraduationCap
+    aria-hidden="true"
+    className={className ? `icon ${className}` : "icon"}
+    {...props}
+  />
+);
 
 
 // =====================================================
@@ -864,7 +872,13 @@ useEffect(() => {
       <header className="sticky top-0 z-30 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3 sm:flex-nowrap">
           {onBack && (
-            <button onClick={onBack} className="glass-button-primary">Back to 📚︎ Courses</button>
+            <button
+              onClick={onBack}
+              className="glass-button-primary inline-flex items-center gap-2"
+            >
+              <CoursesIcon className="shrink-0" />
+              <span>Back to Courses</span>
+            </button>
           )}
           <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${state.course.accent} shadow-[0_12px_32px_rgba(15,23,42,0.2)]`} />
           {/* DART banner title */}
@@ -1519,7 +1533,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   });
 
   const dashboardTabs = [
-    { id: 'deadlines', label: 'Overview', Icon: LayoutDashboard },
+    { id: 'deadlines', label: 'Overview', Icon: Home },
     { id: 'courses', label: 'Courses', Icon: GraduationCap },
     { id: 'milestones', label: 'Milestones', Icon: Flag },
     { id: 'board', label: 'Board View', Icon: Kanban },
@@ -1845,13 +1859,17 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             {onBack && (
               <button
                 onClick={onBack}
-                className="glass-button-primary"
+                className="glass-button-primary inline-flex items-center gap-2"
               >
-                Back to 📚︎ Courses
+                <CoursesIcon className="shrink-0" />
+                <span>Back to Courses</span>
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">🏠︎ User Dashboard</h1>
+              <h1 className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate flex items-center gap-2">
+                <Home className="icon shrink-0" aria-hidden="true" />
+                <span className="truncate">User Dashboard</span>
+              </h1>
               {user && <div className="text-sm text-slate-600/90 truncate">{user.name}</div>}
             </div>
           </div>
@@ -1932,7 +1950,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'courses' && (
-            <SectionCard title="📚︎ My Courses">
+            <SectionCard
+              title={(
+                <span className="inline-flex items-center gap-2">
+                  <CoursesIcon className="shrink-0" />
+                  <span>My Courses</span>
+                </span>
+              )}
+            >
               {myCourses.length === 0 ? (
                 <div className="text-sm text-slate-600/90">No courses</div>
               ) : (
@@ -2405,7 +2430,10 @@ export function CoursesHub({
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-sm text-slate-600/90 truncate">📚︎ Courses Hub</div>
+              <div className="text-sm text-slate-600/90 truncate flex items-center gap-2">
+                <CoursesIcon className="shrink-0" />
+                <span className="truncate">Courses Hub</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -2602,7 +2630,10 @@ export function CoursesHub({
         </section>
 
         <section>
-          <h2 className="text-lg font-semibold mb-2">📚︎ All Courses</h2>
+          <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+            <CoursesIcon className="shrink-0" />
+            <span>All Courses</span>
+          </h2>
           {courses.length === 0 ? (
             <div className="glass-card p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
