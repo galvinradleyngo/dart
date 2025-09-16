@@ -16,13 +16,29 @@ function TeamMemberCard({
   const openUser = () => {
     onOpenUser?.(member.id);
   };
+  const handleCardClick = (event) => {
+    if (event.defaultPrevented) {
+      return;
+    }
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest('[data-team-card-control="true"]')
+    ) {
+      return;
+    }
+    openUser();
+  };
   return (
     <div
       className="group rounded-xl border border-black/10 p-3 flex items-center justify-between cursor-pointer"
       role="button"
       tabIndex={0}
-      onClick={openUser}
+      onClick={handleCardClick}
       onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) {
+          return;
+        }
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           openUser();
@@ -39,8 +55,8 @@ function TeamMemberCard({
           <select
             value={member.roleType}
             onChange={(e) => onUpdate(member.id, { roleType: e.target.value })}
-            onClick={(e) => e.stopPropagation()}
             className="text-sm"
+            data-team-card-control="true"
           >
             {Object.keys(rolePalette).map((r) => (
               <option key={r} value={r}>
@@ -51,13 +67,13 @@ function TeamMemberCard({
           {(member.roleType === "LD" || member.roleType === "SME") && (
             <label
               className="text-sm inline-flex items-center gap-1 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
+              data-team-card-control="true"
             >
               <input
                 type="checkbox"
                 checked={courseWide.includes(member.id)}
-                onClick={(e) => e.stopPropagation()}
                 onChange={() => onToggleCourseWide(member.roleType, member.id)}
+                data-team-card-control="true"
               />
               course-wide
             </label>
@@ -66,10 +82,10 @@ function TeamMemberCard({
             className="text-black/40 hover:text-red-500"
             title="Remove member"
             aria-label="Remove member"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={() => {
               onDelete(member.id);
             }}
+            data-team-card-control="true"
           >
             <X className="icon" />
           </button>
