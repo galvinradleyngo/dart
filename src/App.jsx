@@ -1639,11 +1639,57 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const ds = fmt(d);
-      const tasks = myTasks.filter((t) => t.dueDate === ds);
-      return { date: d, tasks };
+      const tasksOnDate = myTasks.filter((t) => t.dueDate === ds);
+      const pending = tasksOnDate.filter((t) => t.status !== 'done');
+      const completed = tasksOnDate.filter((t) => t.status === 'done');
+      return { date: d, tasks: pending, completed };
     });
   }, [myTasks]);
   const today = fmt(new Date());
+  const hasUpcomingTasks = upcoming.some(({ tasks }) => tasks.length > 0);
+  const hasCompletedUpcoming = upcoming.some(({ completed }) => completed.length > 0);
+  const renderUpcomingTask = (t, isCompleted = false) => {
+    const urgentClass =
+      isCompleted
+        ? 'bg-slate-100'
+        : t.dueDate < today
+        ? 'bg-rose-100 text-rose-800'
+        : t.dueDate === today
+        ? 'bg-amber-100 text-amber-800'
+        : 'bg-slate-100';
+    return (
+      <li
+        key={t.id}
+        className={`text-sm flex items-center gap-1 truncate w-full rounded px-2 py-1 ${urgentClass} ${
+          isCompleted ? 'opacity-75' : ''
+        }`}
+      >
+        <input
+          type="checkbox"
+          className="rounded border-slate-300"
+          aria-label={`${t.title} for ${t.milestoneName} in ${t.courseName}`}
+          checked={t.status === 'done'}
+          onChange={(e) =>
+            updateTaskStatus(
+              t.courseId,
+              t.id,
+              e.target.checked ? 'done' : 'todo'
+            )
+          }
+        />
+        <button
+          onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
+          className={`truncate text-left flex-1 ${isCompleted ? 'line-through text-black/60' : ''}`}
+          title={`${t.title} – ${t.milestoneName} – ${t.courseName}`}
+        >
+          {t.title}{' '}
+          <span className={isCompleted ? 'text-black/40' : 'text-black/60'}>
+            for {t.milestoneName} in {t.courseName}
+          </span>
+        </button>
+      </li>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
@@ -1707,54 +1753,36 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         <div className="grid grid-cols-1 gap-6">
           {activeTab === 'deadlines' && (
             <SectionCard title="Upcoming Deadlines">
-              {upcoming.every((d) => d.tasks.length === 0) ? (
+              {!hasUpcomingTasks && !hasCompletedUpcoming ? (
                 <div className="text-sm text-black/60">No tasks due in the next 2 weeks.</div>
               ) : (
                 <ul className="space-y-2">
                   {upcoming
-                    .filter(({ tasks }) => tasks.length > 0)
-                    .map(({ date, tasks }) => (
+                    .filter(({ tasks, completed }) => tasks.length > 0 || completed.length > 0)
+                    .map(({ date, tasks, completed }) => (
                       <li key={fmt(date)} className="rounded-xl border border-black/10 bg-white p-3 w-full">
                         <div className="text-sm font-medium mb-1">
-                          {date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' })}
-                        </div>
-                        <ul className="space-y-1">
-                          {tasks.map((t) => {
-                            const urgentClass =
-                              t.dueDate < today
-                                ? 'bg-rose-100 text-rose-800'
-                                : t.dueDate === today
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-slate-100';
-                            return (
-                              <li
-                                key={t.id}
-                                className={`text-sm flex items-center gap-1 truncate w-full rounded px-2 py-1 ${urgentClass}`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="rounded border-slate-300"
-                                  aria-label={`${t.title} for ${t.milestoneName} in ${t.courseName}`}
-                                  checked={t.status === 'done'}
-                                  onChange={(e) =>
-                                    updateTaskStatus(
-                                      t.courseId,
-                                      t.id,
-                                      e.target.checked ? 'done' : 'todo'
-                                    )
-                                  }
-                                />
-                                <button
-                                  onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
-                                  className="truncate text-left flex-1"
-                                  title={`${t.title} – ${t.milestoneName} – ${t.courseName}`}
-                                >
-                                  {t.title} <span className="text-black/60">for {t.milestoneName} in {t.courseName}</span>
-                                </button>
-                              </li>
-                            );
+                          {date.toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'numeric',
+                            day: 'numeric',
                           })}
-                        </ul>
+                        </div>
+                        {tasks.length > 0 && (
+                          <ul className="space-y-1">
+                            {tasks.map((t) => renderUpcomingTask(t))}
+                          </ul>
+                        )}
+                        {completed.length > 0 && (
+                          <>
+                            <div className="mt-3 text-xs font-semibold uppercase tracking-wide text-black/50">
+                              Completed
+                            </div>
+                            <ul className="mt-1 space-y-1">
+                              {completed.map((t) => renderUpcomingTask(t, true))}
+                            </ul>
+                          </>
+                        )}
                       </li>
                     ))}
                 </ul>
