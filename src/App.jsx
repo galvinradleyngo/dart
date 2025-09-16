@@ -1833,6 +1833,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                               },
                               { todo: 0, inprogress: 0, done: 0 }
                             );
+                            const total = counts.todo + counts.inprogress + counts.done;
+                            const pct = total ? Math.round((counts.done / total) * 100) : 0;
+                            const progressColor = `hsl(${330 + (pct / 100) * (120 - 330)}, 70%, 50%)`;
                             return (
                               <details key={m.id} className="group rounded-xl border border-black/10 bg-white">
                                 <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
@@ -1842,6 +1845,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                       <div className="font-medium">{m.title}</div>
                                       <div className="text-xs text-black/60">
                                         {counts.inprogress} in progress • {counts.todo} to do • {counts.done} done
+                                      </div>
+                                      <div className="h-2 bg-black/10 rounded-full mt-1 overflow-hidden">
+                                        <div className="h-full" style={{ width: `${pct}%`, backgroundColor: progressColor }} />
                                       </div>
                                     </div>
                                   </div>
