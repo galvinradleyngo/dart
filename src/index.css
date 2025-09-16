@@ -8,6 +8,12 @@ html, body, #root {
 html {
   font-size: 15px;
 }
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 13.5px;
+  }
+}
 body {
   @apply text-slate-900 font-sans antialiased;
   color: #0f172a;
