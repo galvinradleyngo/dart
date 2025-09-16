@@ -20,7 +20,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const soundEnabled = useContext(SoundContext);
   const audioCtxRef = useRef(null);
   const controls = useAnimation();
-  const statusColors = { todo: '#ffffff', inprogress: '#ecfdf5', done: '#d1fae5' };
+  const statusColors = { todo: '#ffffff', inprogress: '#dcfce7', done: '#fce7f3' };
   useEffect(() => { controls.set({ backgroundColor: statusColors[t.status], scale: 1 }); }, []);
   useEffect(() => {
     controls.start({
@@ -59,9 +59,9 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     if (collapsed) setMilestoneEdit(false);
   }, [collapsed]);
   const statusPillClass = (status) => {
-    if (status === 'done') return 'bg-emerald-200/80 text-emerald-900 border-emerald-300';
-    if (status === 'inprogress') return 'bg-emerald-100 text-emerald-900 border-emerald-300';
-    return 'bg-slate-100 text-slate-700 border-slate-300';
+    if (status === 'done') return 'bg-pink-100 text-pink-800 border-pink-200';
+    if (status === 'inprogress') return 'bg-emerald-100 text-emerald-900 border-emerald-200';
+    return 'bg-white text-slate-700 border-slate-300';
   };
   const statusPillBase = 'min-w-[10rem] px-3 pr-10 py-1 rounded-full border font-semibold text-sm';
   const handleStatusChange = (value) => {
