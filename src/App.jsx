@@ -84,6 +84,8 @@ const mergeById = (base = [], extra = []) => {
   return Array.from(map.values());
 };
 
+const APP_SHELL_CLASS = "min-h-screen text-slate-900 bg-transparent";
+
 
 // =====================================================
 // Utilities
@@ -712,18 +714,18 @@ useEffect(() => {
     <>
       <button
         onClick={handleSave}
-        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+        className="glass-button-primary"
       >
         Save
       </button>
-      <span className="text-sm text-black/60">
+      <span className="text-sm font-medium text-slate-600/90">
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
       </span>
       <button
           onClick={() => {
             if (confirm("Reset to fresh sample data?")) setState(remapSeed(seedWithSampleData()));
           }}
-        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+        className="glass-button"
       >
         Reset
       </button>
@@ -732,7 +734,7 @@ useEffect(() => {
           saveTemplate(state);
           await saveTemplateRemote(state).catch(() => {});
         }}
-        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+        className="glass-button"
       >
         Save as Template
       </button>
@@ -743,11 +745,11 @@ useEffect(() => {
             setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
           else alert("No template saved yet.");
         }}
-        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+        className="glass-button"
       >
         Reset to Template
       </button>
-      <label className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 cursor-pointer">
+      <label className="glass-button cursor-pointer">
         Import
         <input
           type="file"
@@ -790,7 +792,7 @@ useEffect(() => {
           a.click();
           URL.revokeObjectURL(url);
         }}
-        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+        className="glass-button"
       >
         Export
       </button>
@@ -798,25 +800,25 @@ useEffect(() => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
+    <div className={APP_SHELL_CLASS}>
       {/* Header */}
-      <header className="sticky top-0 z-30 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+      <header className="sticky top-0 z-30 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
           {onBack && (
-            <button onClick={onBack} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800">Back to 📚︎ Courses</button>
+            <button onClick={onBack} className="glass-button-primary">Back to 📚︎ Courses</button>
           )}
-          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${state.course.accent} shadow-sm`} />
+          <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${state.course.accent} shadow-[0_12px_32px_rgba(15,23,42,0.2)]`} />
           {/* DART banner title */}
-          <div className="hidden sm:block text-[14px] font-semibold text-slate-800 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+          <div className="hidden sm:block text-[15px] font-semibold text-slate-700/90 tracking-tight truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
           <div className="w-full flex justify-end sm:w-auto">
-            <div className="hidden sm:flex flex-wrap items-center gap-2">
+            <div className="hidden sm:flex flex-wrap items-center gap-3">
               <ActionButtons />
             </div>
             <div className="relative sm:hidden">
               <button
                 onClick={() => setActionsOpen((v) => !v)}
-                className="inline-flex items-center justify-center rounded-xl p-2 bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="glass-icon-button"
                 aria-label="Toggle actions menu"
                 aria-expanded={actionsOpen}
                 aria-controls="actions-menu"
@@ -826,7 +828,7 @@ useEffect(() => {
               {actionsOpen && (
                 <div
                   id="actions-menu"
-                  className="absolute right-0 mt-2 z-10 w-56 rounded-xl border border-black/10 bg-white p-2 shadow-lg flex flex-col gap-2"
+                  className="absolute right-0 mt-2 z-10 w-60 glass-surface p-3 flex flex-col gap-2"
                 >
                   <ActionButtons />
                 </div>
@@ -835,14 +837,14 @@ useEffect(() => {
           </div>
         </div>
         {/* Secondary row: course title and template pill */}
-        <div className="max-w-7xl mx-auto px-4 pb-3 -mt-2">
+        <div className="max-w-7xl mx-auto px-4 pb-4 -mt-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-sm sm:text-lg font-semibold leading-tight flex-1 min-w-0"><InlineText className="break-words" value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
-            {isTemplateLabel && <span className="text-sm px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 whitespace-nowrap">Course Template</span>}
+            <h1 className="text-base sm:text-xl font-semibold leading-tight flex-1 min-w-0 text-slate-800"><InlineText className="break-words" value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
+            {isTemplateLabel && <span className="text-sm font-medium px-3 py-1 rounded-full bg-violet-100/80 text-violet-700 border border-violet-200/70 shadow-[0_10px_18px_rgba(79,70,229,0.18)] whitespace-nowrap">Course Template</span>}
           </div>
-          <p className="text-sm text-black/60"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
+          <p className="text-sm text-slate-600/90"><InlineText value={state.course.description} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))} /></p>
           {/* Course-wide LDs & SMEs */}
-          <div className="mt-2 flex flex-wrap gap-2 text-sm">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-700">
             {state.course.courseLDIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> LD</span>; })}
             {state.course.courseSMEIds.map((id) => { const m = memberById(id); if (!m) return null; return <span key={id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-white" style={{ background: roleColor(m.roleType) }}><Avatar name={m.name} roleType={m.roleType} avatar={m.avatar} /> SME</span>; })}
           </div>
@@ -874,7 +876,7 @@ useEffect(() => {
           onToggle={() => setTeamCollapsed((v) => !v)}
         />
         {/* Milestones */}
-          <section className="-mx-4 sm:mx-0 bg-white shadow-sm sm:rounded-2xl sm:border border-black/10 p-0 sm:p-4 text-sm sm:text-[14px]">
+          <section className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6 text-sm sm:text-[14px]">
             <div
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
               onClick={() => setMilestonesCollapsed(v => !v)}
@@ -894,17 +896,17 @@ useEffect(() => {
                         onClick={() => setMilestoneFilterOpen((v) => !v)}
                         aria-haspopup="menu"
                         aria-expanded={milestoneFilterOpen}
-                        className={`inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm text-sm ${milestoneFilter !== 'all' ? 'text-slate-900' : 'text-slate-600'}`}
+                        className="glass-button"
                       >
                         <Filter className="w-4 h-4" />
                         <span className="max-w-[10rem] truncate">{activeFilterLabel}</span>
                       </button>
                       {milestoneFilterOpen && (
-                        <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-black/10 bg-white py-1 shadow-lg z-10">
+                        <div className="absolute right-0 mt-2 w-60 glass-surface p-2 z-10 flex flex-col gap-1">
                           <button
                             type="button"
                             onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
-                            className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === 'all' ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
+                            className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === 'all' ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
                           >
                             All milestones
                           </button>
@@ -913,7 +915,7 @@ useEffect(() => {
                               key={m.id}
                               type="button"
                               onClick={() => { setMilestoneFilter(m.id); setMilestoneFilterOpen(false); }}
-                              className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === m.id ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
+                              className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === m.id ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
                             >
                               {m.title}
                             </button>
@@ -926,7 +928,7 @@ useEffect(() => {
                         <select
                           value={selectedMilestoneTemplate}
                           onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
-                          className="text-sm border border-black/10 rounded-2xl px-2 py-2 bg-white shadow-sm w-full sm:w-auto"
+                          className="text-sm rounded-2xl border border-white/60 bg-white/80 px-3 py-2 shadow-sm w-full sm:w-auto backdrop-blur"
                         >
                           <option value="">Select template</option>
                           {milestoneTemplates.map((mt) => (
@@ -937,13 +939,13 @@ useEffect(() => {
                           <>
                             <button
                               onClick={() => { addMilestoneFromTemplate(selectedMilestoneTemplate); setSelectedMilestoneTemplate(''); }}
-                              className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                              className="glass-button"
                             >
                               Add from Template
                             </button>
                             <button
                               onClick={() => removeMilestoneTemplate(selectedMilestoneTemplate)}
-                              className="inline-flex items-center rounded-2xl p-2 border border-black/10 bg-white shadow-sm hover:bg-slate-50"
+                              className="glass-icon-button w-10 h-10"
                               title="Delete template"
                               aria-label="Delete template"
                             >
@@ -955,7 +957,7 @@ useEffect(() => {
                     )}
                     <button
                       onClick={() => addMilestone()}
-                      className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 w-full sm:w-auto"
+                      className="glass-button w-full sm:w-auto"
                     >
                       Add Milestone
                     </button>
@@ -966,7 +968,7 @@ useEffect(() => {
                   title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
                   aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
                   aria-expanded={!milestonesCollapsed}
-                  className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+                  className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
                 >
                   {milestonesCollapsed ? (
                     <ChevronDown className="icon" />
@@ -976,7 +978,7 @@ useEffect(() => {
                 </button>
             </div>
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500/90 mt-1">
             Tap the Milestones bar to expand or collapse.
           </p>
           <motion.div
@@ -1036,7 +1038,7 @@ useEffect(() => {
               )}
               {milestoneFilter === "all" && unassignedTasks.length > 0 && (
                 <div className="mt-6">
-                  <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/60 p-4">
+                  <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div>
                         <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
@@ -1077,7 +1079,7 @@ useEffect(() => {
         </section>
 
         {/* Tasks */}
-        <section className="-mx-4 sm:mx-0 bg-white shadow-sm sm:rounded-2xl sm:border border-black/10 p-0 sm:p-4">
+        <section className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
             <h2 className="font-semibold flex items-center gap-2">☑ Course Tasks</h2>
             <div className="flex items-center gap-2">
@@ -1092,7 +1094,7 @@ useEffect(() => {
               />
               <button
                 onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)}
-                className="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-sm bg-black text-white shadow hover:opacity-90"
+                className="glass-button-primary"
               >
                 Add Task
               </button>
@@ -1101,7 +1103,7 @@ useEffect(() => {
                 title={tasksCollapsed ? "Expand Course Tasks" : "Collapse Course Tasks"}
                 aria-label={tasksCollapsed ? "Expand course tasks" : "Collapse course tasks"}
                 aria-expanded={!tasksCollapsed}
-                className="inline-flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-full border border-black/10 bg-white text-slate-600 hover:bg-slate-50"
+                className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
               >
                 {tasksCollapsed ? (
                   <ChevronDown className="icon" />
@@ -1176,7 +1178,7 @@ useEffect(() => {
       )}
       </main>
 
-      <footer className="max-w-7xl mx-auto px-4 pb-10 text-sm text-black/50">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
+      <footer className="max-w-7xl mx-auto px-4 pb-10 text-sm text-slate-500/80">Tip: ⌘/Ctrl + Enter to commit multiline edits. Data auto-saves to your browser.</footer>
     </div>
   );
 }
@@ -1188,7 +1190,7 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
   const display = mode === "percent" ? `${value}%` : value;
   const pct = mode === "percent" ? value : undefined;
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm flex items-center gap-4">
+    <div className="glass-card flex items-center gap-4 p-4">
       <Ring
         className="w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24"
         stroke={10}
@@ -1197,13 +1199,13 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
       >
         <div className="text-center">
           <div className="text-[14px] font-semibold leading-none">{display}</div>
-          <div className="text-sm text-black/60">
+          <div className="text-sm text-slate-600/90">
             {mode === "percent" ? "Progress" : "Count"}
           </div>
         </div>
       </Ring>
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-black/60 flex items-center gap-1">
+        <div className="text-sm text-slate-600/90 flex items-center gap-1">
           {icon} <span>{title}</span>
         </div>
         <div className="text-sm font-medium truncate">{subtitle}</div>
@@ -1211,7 +1213,25 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
     </div>
   );
 }
-function Toggle({ value, onChange, options }) { return (<div className="inline-flex rounded-2xl border border-black/10 bg-white p-1 shadow-sm">{options.map((o)=>(<button key={o.id} onClick={()=>onChange(o.id)} className={`px-3 py-1.5 text-sm rounded-xl ${value===o.id?"bg-slate-900 text-white":"text-slate-700 hover:bg-slate-50"}`}>{o.label}</button>))}</div>); }
+function Toggle({ value, onChange, options }) {
+  return (
+    <div className="inline-flex gap-1 rounded-3xl border border-white/60 bg-white/70 p-1 shadow-[0_12px_28px_-18px_rgba(15,23,42,0.45)] backdrop-blur">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          onClick={() => onChange(o.id)}
+          className={`px-3 py-1.5 text-sm rounded-2xl transition ${
+            value === o.id
+              ? 'bg-slate-900 text-white shadow-[0_18px_36px_-18px_rgba(15,23,42,0.6)]'
+              : 'text-slate-600 hover:bg-white/80'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
   const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
@@ -1316,7 +1336,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   {collapsed ? (
                     <>
                       <div className="mt-1">{renderStatusControl(t)}</div>
-                      <div className="text-sm text-black/60 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
+                      <div className="text-sm text-slate-600/90 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-sm text-slate-600 mt-1 flex items-center gap-1 truncate"><StickyNote className="w-4 h-4 flex-shrink-0" />{t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-sm"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40 text-sm">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
@@ -1557,14 +1577,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const statusPriority = { inprogress: 0, todo: 1, done: 2 };
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const statusListClasses = {
-    todo: 'bg-white border-slate-200 text-slate-700',
-    inprogress: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-    done: 'bg-pink-50 border-pink-200 text-pink-800',
+    todo: 'bg-white/80 border-white/60 text-slate-700',
+    inprogress: 'bg-emerald-50/70 border-emerald-200/80 text-emerald-700',
+    done: 'bg-pink-50/70 border-pink-200/80 text-pink-700',
   };
   const statusBadgeClasses = {
-    todo: 'bg-slate-100 text-slate-700 border-slate-200',
-    inprogress: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    done: 'bg-pink-100 text-pink-800 border-pink-200',
+    todo: 'bg-white/80 text-slate-600 border-white/60',
+    inprogress: 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80',
+    done: 'bg-pink-100/80 text-pink-700 border-pink-200/80',
   };
 
   const members = useMemo(() => {
@@ -1649,20 +1669,20 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const isOverdue = t.dueDate < today;
     const isDueToday = t.dueDate === today;
     const containerTone = isOverdue
-      ? 'border-rose-200 bg-rose-50/80 shadow-rose-100/60'
+      ? 'border-rose-200/80 bg-rose-50/70 text-rose-700/90'
       : isDueToday
-      ? 'border-amber-200 bg-amber-50/80 shadow-amber-100/60'
-      : 'border-slate-200 bg-white/90 shadow-slate-100/80';
+      ? 'border-amber-200/80 bg-amber-50/70 text-amber-700/90'
+      : 'border-white/60 bg-white/80 text-slate-700';
     const pillTone = isOverdue
-      ? 'bg-rose-100 text-rose-700'
+      ? 'bg-rose-100/80 text-rose-700 border-rose-200/80'
       : isDueToday
-      ? 'bg-amber-100 text-amber-700'
-      : 'bg-slate-100 text-slate-600';
+      ? 'bg-amber-100/80 text-amber-700 border-amber-200/80'
+      : 'bg-white/80 text-slate-600 border-white/60';
     const pillLabel = isOverdue ? 'Overdue' : isDueToday ? 'Today' : 'Scheduled';
     return (
       <li key={t.id}>
         <div
-          className={`flex items-center gap-3 rounded-2xl border px-4 py-3 shadow-sm transition-all ${containerTone}`}
+          className={`flex items-center gap-3 rounded-3xl border px-4 py-3 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.45)] backdrop-blur transition-all ${containerTone}`}
         >
           <input
             type="checkbox"
@@ -1686,11 +1706,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             <div className="truncate text-[15px] font-medium leading-tight">
               {t.title || 'Untitled task'}
             </div>
-            <div className="mt-0.5 truncate text-xs text-black/60">
+            <div className="mt-0.5 truncate text-xs text-slate-600/80">
               for {t.milestoneName} • {t.courseName}
             </div>
           </button>
-          <span className={`self-start rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${pillTone}`}>
+          <span className={`self-start rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide shadow-sm backdrop-blur ${pillTone}`}>
             {pillLabel}
           </span>
         </div>
@@ -1699,59 +1719,59 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+    <div className={APP_SHELL_CLASS}>
+      <header className="sticky top-0 z-20 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             {onBack && (
               <button
                 onClick={onBack}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-slate-900 text-white border border-slate-900 shadow-sm hover:bg-slate-800"
+                className="glass-button-primary"
               >
                 Back to 📚︎ Courses
               </button>
             )}
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-[14px] font-semibold truncate">🏠︎ User Dashboard</h1>
-              {user && <div className="text-sm text-black/60 truncate">{user.name}</div>}
+              <h1 className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">🏠︎ User Dashboard</h1>
+              {user && <div className="text-sm text-slate-600/90 truncate">{user.name}</div>}
             </div>
           </div>
           <div className="flex items-center gap-2">
             {user && <Avatar name={user.name} roleType={user.roleType} avatar={user.avatar} className="w-8 h-8 text-[14px]" />}
-            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm border rounded px-2 py-1">
+            <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
             <button
               onClick={handleSave}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+              className="glass-button"
             >
               Save
             </button>
-            <span className="text-sm text-black/60">
+            <span className="text-sm text-slate-600/90">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
           </div>
         </div>
       </header>
 
-        <main className="max-w-7xl mx-auto px-4 py-6">
+        <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
           {user && (
             <h2 className="text-lg font-semibold mb-4">
               Welcome, {user.name}!
             </h2>
           )}
-          <div className="mb-4 flex flex-wrap gap-2">
-            {[
-              ['deadlines','🏠︎ Home'],
-              ['courses','📚︎ Courses'],
-              ['milestones','Milestones'],
-              ['board','⎘ Board View'],
-              ['calendar','📅︎ Calendar View']
-            ].map(([id,label]) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-              className={`px-3 py-1.5 text-sm rounded border ${activeTab===id?'bg-slate-900 text-white border-slate-900':'bg-white border-black/10'}`}
+        <div className="mb-4 flex flex-wrap gap-2">
+          {[
+            ['deadlines','🏠︎ Home'],
+            ['courses','📚︎ Courses'],
+            ['milestones','Milestones'],
+            ['board','⎘ Board View'],
+            ['calendar','📅︎ Calendar View']
+          ].map(([id,label]) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={activeTab===id ? 'glass-button-primary' : 'glass-button'}
             >
               {label}
             </button>
@@ -1761,7 +1781,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'deadlines' && (
             <SectionCard title="Upcoming Deadlines">
               {!hasUpcomingTasks ? (
-                <div className="text-sm text-black/60">No tasks due in the next 2 weeks.</div>
+                <div className="text-sm text-slate-600/90">No tasks due in the next 2 weeks.</div>
               ) : (
                 <ul className="space-y-3">
                   {upcoming
@@ -1769,17 +1789,17 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     .map(({ date, tasks }) => (
                       <li
                         key={fmt(date)}
-                        className="rounded-3xl border border-black/5 bg-white/90 p-4 shadow-sm"
+                        className="glass-card p-4"
                       >
                         <div className="flex items-baseline justify-between gap-3">
-                          <div className="text-sm font-semibold text-slate-900">
+                          <div className="text-sm font-semibold text-slate-800">
                             {date.toLocaleDateString(undefined, {
                               weekday: 'short',
                               month: 'short',
                               day: 'numeric',
                             })}
                           </div>
-                          <div className="text-xs font-medium text-black/40">
+                          <div className="text-xs font-medium text-slate-500/80">
                             {tasks.length} task{tasks.length === 1 ? '' : 's'}
                           </div>
                         </div>
@@ -1796,7 +1816,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'courses' && (
             <SectionCard title="📚︎ My Courses">
               {myCourses.length === 0 ? (
-                <div className="text-sm text-black/60">No courses</div>
+                <div className="text-sm text-slate-600/90">No courses</div>
               ) : (
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {myCourses.map((c) => {
@@ -1804,13 +1824,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     const tDone = c.tasks.filter((t) => t.assigneeId === userId && t.status === 'done').length;
                     const pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
                     return (
-                      <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex flex-col gap-2">
+                      <li key={c.course.id} className="glass-card p-4 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <div className="min-w-0">
                             <div className="font-medium truncate">{c.course.name}</div>
-                            <div className="text-sm text-black/60 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
+                            <div className="text-sm text-slate-600/90 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
                           </div>
-                          <button onClick={()=>onOpenCourse(c.course.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-white shadow">Open</button>
+                          <button onClick={()=>onOpenCourse(c.course.id)} className="glass-button-primary">Open</button>
                         </div>
                         <div className="h-2 bg-slate-100 rounded">
                           <div className="h-2 bg-emerald-500 rounded" style={{width:`${pct}%`}} />
@@ -1826,11 +1846,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'milestones' && (
             <SectionCard title="My Milestones">
               {myCourses.length === 0 ? (
-                <div className="text-sm text-black/60">No milestones</div>
+                <div className="text-sm text-slate-600/90">No milestones</div>
               ) : (
                 <div className="space-y-4">
                   {myCourses.map((c) => (
-                    <details key={c.course.id} className="group rounded-xl border border-black/10 bg-white">
+                    <details key={c.course.id} className="group glass-card">
                       <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                         <div className="flex items-center gap-2">
                           <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
@@ -1868,13 +1888,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                             const pct = total ? Math.round((counts.done / total) * 100) : 0;
                             const progressColor = `hsl(${330 + (pct / 100) * (120 - 330)}, 70%, 50%)`;
                             return (
-                              <details key={m.id} className="group rounded-xl border border-black/10 bg-white">
+                              <details key={m.id} className="group glass-card">
                                 <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                                   <div className="flex items-center gap-2">
                                     <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
                                     <div>
                                       <div className="font-medium">{m.title}</div>
-                                      <div className="text-xs text-black/60">
+                                      <div className="text-xs text-slate-600/80">
                                         {counts.inprogress} in progress • {counts.todo} to do • {counts.done} done
                                       </div>
                                       <div className="h-2 bg-black/10 rounded-full mt-1 overflow-hidden">
@@ -1884,9 +1904,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   </div>
                                 </summary>
                                 <div className="p-4 space-y-3">
-                                  {m.goal && <p className="text-sm text-black/60">{m.goal}</p>}
+                                  {m.goal && <p className="text-sm text-slate-600/90">{m.goal}</p>}
                                   {sortedTasks.length === 0 ? (
-                                    <div className="text-sm text-black/60">No tasks assigned to you.</div>
+                                    <div className="text-sm text-slate-600/90">No tasks assigned to you.</div>
                                   ) : (
                                     <ul className="space-y-2">
                                       {sortedTasks.map((t) => (
@@ -1901,7 +1921,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                           >
                                             <div className="min-w-0">
                                               <div className="font-medium truncate">{t.title || 'Untitled task'}</div>
-                                              <div className="text-xs text-black/60 truncate">
+                                              <div className="text-xs text-slate-600/80 truncate">
                                                 {t.dueDate
                                                   ? `Due ${new Date(t.dueDate).toLocaleDateString(undefined, {
                                                       month: 'short',
@@ -1933,9 +1953,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'board' && (
-            <SectionCard title="☑ My Tasks – Board View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
+            <SectionCard title="☑ My Tasks – Board View" actions={<button onClick={handleNewTask} className="glass-button">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
+                <div className="text-sm text-slate-600/90">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-2">
@@ -1944,7 +1964,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       value={taskQuery}
                       onChange={(e) => setTaskQuery(e.target.value)}
                       placeholder="Search..."
-                      className="px-2 py-1 text-sm border rounded flex-1"
+                      className="flex-1 rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow-sm"
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -1955,7 +1975,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     ].map(({ id, label }) => (
                       <div
                         key={id}
-                        className={`rounded-xl border border-black/10 p-3 ${id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`}
+                        className={`glass-card p-3 ${id==='inprogress' ? 'ring-1 ring-emerald-200/70' : ''}`}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
                           const tid = e.dataTransfer.getData('text/task');
@@ -1964,7 +1984,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         }}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <div className="text-sm font-medium text-black/70">{label} ({groupedTasks[id].length})</div>
+                          <div className="text-sm font-medium text-slate-700/90">{label} ({groupedTasks[id].length})</div>
                         </div>
                         <div className="space-y-2 min-h-[140px]">
                           {groupedTasks[id].map((t) => {
@@ -2002,9 +2022,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'calendar' && (
-            <SectionCard title="☑ My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">New Task</button>}>
+            <SectionCard title="☑ My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="glass-button">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-black/60">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
+                <div className="text-sm text-slate-600/90">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
               ) : (
                 <>
                   <div className="flex items-center gap-2 mb-2">
@@ -2013,7 +2033,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       value={taskQuery}
                       onChange={(e) => setTaskQuery(e.target.value)}
                       placeholder="Search..."
-                      className="px-2 py-1 text-sm border rounded flex-1"
+                      className="flex-1 rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow-sm"
                     />
                   </div>
                   <CalendarView
@@ -2260,28 +2280,28 @@ export function CoursesHub({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 text-slate-900">
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-white/60 bg-white/80 border-b border-black/5">
+    <div className={APP_SHELL_CLASS}>
+      <header className="sticky top-0 z-20 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500"/>
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"/>
             <div className="min-w-0">
-              <div className="text-sm sm:text-[14px] font-semibold truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-sm text-black/60 truncate">📚︎ Courses Hub</div>
+              <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
+              <div className="text-sm text-slate-600/90 truncate">📚︎ Courses Hub</div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={onEditTemplate} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50">Edit Template</button>
+          <div className="flex items-center gap-3">
+            <button onClick={onEditTemplate} className="glass-button">Edit Template</button>
             <button
               onClick={undo}
               disabled={!history.length}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="glass-button disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Undo
             </button>
             <button
               onClick={handleAddCourse}
-              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow"
+              className="glass-button-primary"
             >
               Add Course
             </button>
@@ -2292,26 +2312,26 @@ export function CoursesHub({
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
         {/* Team member management */}
-        <section>
+        <section className="glass-surface p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">👥︎ Team Members</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={addPerson}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="glass-button"
               >
                 Add Member
               </button>
               <button
                 onClick={() => setMembersEditing(v => !v)}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-white border border-black/10 shadow-sm hover:bg-slate-50"
+                className="glass-button"
               >
                 {membersEditing ? 'Done' : 'Edit Members'}
               </button>
             </div>
           </div>
           {people.length === 0 ? (
-            <div className="text-sm text-black/60">No team members</div>
+            <div className="text-sm text-slate-600/90">No team members</div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {[...people]
@@ -2335,20 +2355,20 @@ export function CoursesHub({
                         "aria-label": `Open ${m.name}`,
                       }
                     : {};
-                  return (
-                    <div
-                      key={m.id}
-                      className={`group rounded-xl p-4 shadow border-2 flex flex-col items-center text-center ${
-                        interactive
-                          ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
-                          : ""
-                      }`}
-                      style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
-                      {...cardProps}
-                    >
-                      <Avatar
-                        name={m.name}
-                        roleType={m.roleType}
+                return (
+                  <div
+                    key={m.id}
+                    className={`group glass-card p-4 flex flex-col items-center text-center border-2 ${
+                      interactive
+                        ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
+                        : ""
+                    }`}
+                    style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
+                    {...cardProps}
+                  >
+                    <Avatar
+                      name={m.name}
+                      roleType={m.roleType}
                         avatar={m.avatar}
                         className="w-12 h-12 text-2xl mb-2"
                       />
@@ -2357,7 +2377,7 @@ export function CoursesHub({
                           <select
                             value={m.avatar}
                             onChange={(e) => updatePerson(m.id, { avatar: e.target.value })}
-                            className="border rounded px-2 py-1 text-sm mb-2"
+                            className="mb-2 rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow-sm"
                           >
                             <option value="">None</option>
                             {AVATAR_CHOICES.map((e) => (
@@ -2374,7 +2394,7 @@ export function CoursesHub({
                           <select
                             value={m.roleType}
                             onChange={(e) => updatePerson(m.id, { roleType: e.target.value })}
-                            className="mt-1 border rounded px-2 py-1 text-sm"
+                            className="mt-1 rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow-sm"
                           >
                             {Object.keys(rolePalette).map((r) => (
                               <option key={r} value={r}>
@@ -2385,13 +2405,13 @@ export function CoursesHub({
                           <div className="mt-2 flex gap-2">
                             <button
                               onClick={() => onOpenUser(m.id)}
-                              className="text-sm px-2 py-1 rounded border border-black/10 bg-white hover:bg-slate-50"
+                              className="glass-button text-sm px-3 py-1.5"
                             >
                               Open
                             </button>
                             <button
                               onClick={() => removePerson(m.id)}
-                              className="text-sm px-2 py-1 rounded border border-black/10 bg-white text-rose-600 hover:bg-rose-50"
+                              className="glass-button text-sm px-3 py-1.5 text-rose-600 hover:text-rose-700"
                             >
                               Remove
                             </button>
@@ -2400,7 +2420,7 @@ export function CoursesHub({
                       ) : (
                         <>
                           <div className="font-medium leading-tight group-hover:underline">{m.name}</div>
-                          <div className="text-sm text-black/60">{m.roleType}</div>
+                          <div className="text-sm text-slate-600/90">{m.roleType}</div>
                         </>
                       )}
                     </div>
@@ -2412,24 +2432,24 @@ export function CoursesHub({
 
 
         {/* Global schedule controls */}
-        <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
+        <section className="glass-surface p-4 sm:p-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
               Workweek & Holidays
               <span className="text-sm font-normal text-indigo-700">(Global)</span>
             </h2>
           </div>
-          <div className="rounded-xl border border-indigo-200 bg-white p-3 text-sm">
+          <div className="glass-card p-4 text-sm">
             <div className="flex flex-wrap items-center gap-3">
               <div className="font-medium">Workweek:</div>
               {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
                 <button
                   key={idx}
                   onClick={() => toggleWorkday(idx)}
-                  className={`px-2 py-1 rounded-full border ${
+                  className={`px-3 py-1.5 rounded-full text-sm transition ${
                     schedule.workweek.includes(idx)
-                      ? "bg-slate-900 text-white border-slate-900"
-                      : "bg-white text-slate-700 border-black/10"
+                      ? 'bg-slate-900 text-white shadow-[0_14px_30px_-12px_rgba(15,23,42,0.6)] border border-slate-900'
+                      : 'border border-white/60 bg-white/75 text-slate-600 shadow-sm backdrop-blur'
                   }`}
                 >
                   {label}
@@ -2441,7 +2461,7 @@ export function CoursesHub({
                 {schedule.holidays.map((h) => (
                   <span
                     key={h}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200"
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-rose-200/80 bg-rose-50/70 text-rose-600 shadow-sm backdrop-blur"
                   >
                     {h}
                     <button
@@ -2461,10 +2481,10 @@ export function CoursesHub({
         <section>
           <h2 className="text-lg font-semibold mb-2">📚︎ All Courses</h2>
           {courses.length === 0 ? (
-            <div className="rounded-2xl border border-black/10 bg-white p-6 text-center">
+            <div className="glass-card p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
-              <p className="text-sm text-black/60 mb-4">Use your Course Template to spin up your first course.</p>
-              <button onClick={onAddCourse} className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm bg-black text-white shadow">Add Course</button>
+              <p className="text-sm text-slate-600/90 mb-4">Use your Course Template to spin up your first course.</p>
+              <button onClick={onAddCourse} className="glass-button-primary">Add Course</button>
             </div>
           ) : (
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -2481,16 +2501,16 @@ export function CoursesHub({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') open(c.id);
                     }}
-                    className="group w-full rounded-2xl border border-black/10 bg-white p-4 shadow-sm cursor-pointer hover:ring-2 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                    className="group w-full glass-card p-4 cursor-pointer hover:ring-2 hover:ring-indigo-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0"><div className="font-semibold truncate">{c.course.name}</div><div className="text-sm text-black/60 truncate">{c.course.description}</div></div>
+                      <div className="min-w-0"><div className="font-semibold truncate text-slate-800">{c.course.name}</div><div className="text-sm text-slate-600/90 truncate">{c.course.description}</div></div>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-3">
                       <Ring className="w-14 h-14 xs:w-16 xs:h-16" stroke={10} progress={t.pct} color="#10b981">
                         <div className="text-center">
                           <div className="text-sm font-semibold">{t.pct}%</div>
-                          <div className="text-sm text-black/60">{t.done}/{t.total}</div>
+                          <div className="text-sm text-slate-600/90">{t.done}/{t.total}</div>
                         </div>
                       </Ring>
                       <div className="text-sm space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
@@ -2498,21 +2518,21 @@ export function CoursesHub({
                     <div className="mt-3 flex items-center gap-2">
                       <button
                         onClick={(e) => { e.stopPropagation(); open(c.id); }}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 p-2 text-white shadow"
+                        className="glass-icon-button w-11 h-11 text-slate-700"
                         aria-label="Open course"
                       >
                         <BookOpen className="icon" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); duplicateCourse(c.id); }}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 bg-white p-2 shadow-sm hover:bg-slate-50"
+                        className="glass-icon-button w-11 h-11"
                         aria-label="Duplicate course"
                       >
                         <Copy className="icon" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); if (confirm('Delete this course?')) removeCourse(c.id); }}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 bg-white p-2 text-rose-600 shadow-sm hover:bg-rose-50"
+                        className="glass-icon-button w-11 h-11 text-rose-500 hover:text-rose-600"
                         aria-label="Delete course"
                       >
                         <Trash2 className="icon" />

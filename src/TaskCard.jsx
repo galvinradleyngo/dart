@@ -59,11 +59,11 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     if (collapsed) setMilestoneEdit(false);
   }, [collapsed]);
   const statusPillClass = (status) => {
-    if (status === 'done') return 'bg-pink-100 text-pink-800 border-pink-200';
-    if (status === 'inprogress') return 'bg-emerald-100 text-emerald-900 border-emerald-200';
-    return 'bg-white text-slate-700 border-slate-300';
+    if (status === 'done') return 'bg-pink-100/70 text-pink-700 border-pink-200/80';
+    if (status === 'inprogress') return 'bg-emerald-100/70 text-emerald-700 border-emerald-200/80';
+    return 'bg-white/80 text-slate-700 border-white/60';
   };
-  const statusPillBase = 'min-w-[10rem] px-3 pr-10 py-1 rounded-full border font-semibold text-sm';
+  const statusPillBase = 'min-w-[10rem] px-3 pr-10 py-1.5 rounded-full border font-semibold text-sm shadow-sm backdrop-blur';
   const handleStatusChange = (value) => {
     if (value === 'done' && (!t.links || t.links.length === 0)) {
       setCollapsed(false);
@@ -77,7 +77,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     <motion.div
       data-testid="task-card"
       {...dragProps}
-      className={`w-full max-w-full break-words rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm sm:text-[14px] ${dragProps.draggable ? 'cursor-move' : ''}`}
+      className={`w-full max-w-full break-words glass-card p-3 sm:p-4 text-sm sm:text-[14px] ${dragProps.draggable ? 'cursor-move' : ''}`}
       animate={controls}
       whileTap={{ scale: 0.98 }}
       style={isMobile ? { touchAction: 'pan-y' } : undefined}
@@ -88,10 +88,10 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
           </div>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
             onClick={() => setCollapsed((v) => !v)}
-            className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+            className="glass-icon-button w-7 h-7 sm:w-9 sm:h-9"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
             {collapsed ? <Plus className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
@@ -99,7 +99,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
           {onDuplicate && (
             <button
               onClick={() => onDuplicate(t.id)}
-              className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              className="glass-icon-button w-7 h-7 sm:w-9 sm:h-9"
               title="Duplicate"
               aria-label="Duplicate"
             >
@@ -109,7 +109,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
           {onDelete && (
             <button
               onClick={() => onDelete(t.id)}
-              className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+              className="glass-icon-button w-7 h-7 sm:w-9 sm:h-9 text-rose-500 hover:text-rose-600"
               title="Delete"
               aria-label="Delete"
             >
@@ -163,11 +163,11 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               </select>
             )}
           </div>
-          <div className="text-sm text-black/60 mt-1 truncate">
+          <div className="text-sm text-slate-600/90 mt-1 truncate">
             <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
           </div>
           {t.note && (
-            <div className="text-sm text-slate-600 mt-1 flex items-center gap-1 truncate">
+            <div className="text-sm text-slate-600/90 mt-1 flex items-center gap-1 truncate">
               <StickyNote className="w-4 h-4 flex-shrink-0" /> {t.note}
             </div>
           )}
@@ -176,14 +176,14 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 {a ? (
                   <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
                 ) : (
-                  <span className="text-black/40 text-sm">—</span>
+                  <span className="text-slate-400 text-sm">—</span>
                 )}
                 <div className="flex flex-col min-w-0">
                   <select
                     aria-label="Assignee"
                     value={t.assigneeId || ''}
                     onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
-                    className="min-w-[8rem] max-w-full w-auto border rounded px-1.5 py-1 flex-1"
+                    className="min-w-[8rem] max-w-full w-auto rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm flex-1"
                     title={team.find((m) => m.id === t.assigneeId)?.name}
                   >
                     <option value="">Unassigned</option>
@@ -193,7 +193,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                       </option>
                     ))}
                   </select>
-                  <div className="text-xs text-slate-500 mt-1 truncate">
+                  <div className="text-xs text-slate-500/90 mt-1 truncate">
                     {milestone ? milestone.title : '—'}
                   </div>
                 </div>
@@ -201,7 +201,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               <div className="flex items-center gap-2">
                 <DuePill date={t.dueDate} status={t.status} />
                 {t.status === 'done' && (
-                  <span className="text-slate-500">Completed: {t.completedDate || '—'}</span>
+                  <span className="text-slate-500/90">Completed: {t.completedDate || '—'}</span>
                 )}
               </div>
             </div>
@@ -260,7 +260,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   update(t.id, { milestoneId: e.target.value || null });
                   setMilestoneEdit(false);
                 }}
-                className="text-xs text-slate-500 border rounded px-1 py-0.5"
+                className="text-xs text-slate-600 rounded-xl border border-white/60 bg-white/80 px-2 py-1 shadow-sm"
               >
                 <option value="">Unassigned</option>
                 {milestones.map((m) => (
@@ -286,13 +286,13 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               {a ? (
                 <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
               ) : (
-                <span className="text-black/40 text-sm">—</span>
+                <span className="text-slate-400 text-sm">—</span>
               )}
               <select
                 aria-label="Assignee"
                 value={t.assigneeId || ''}
                 onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
-                className="min-w-[8rem] max-w-full w-auto border rounded px-1.5 py-1 flex-1"
+                className="min-w-[8rem] max-w-full w-auto rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm flex-1"
                 title={team.find((m) => m.id === t.assigneeId)?.name}
               >
                 <option value="">Unassigned</option>
@@ -314,7 +314,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                     if (t.status === 'todo') patch.status = 'inprogress';
                     update(t.id, patch);
                   }}
-                  className="w-20 border rounded px-1.5 py-1"
+                  className="w-24 rounded-2xl border border-white/60 bg-white/80 px-2.5 py-1.5 shadow-sm"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   min={0}
                   value={t.workDays ?? 0}
                   onChange={(e) => update(t.id, { workDays: Number(e.target.value) })}
-                  className="w-20 border rounded px-1.5 py-1"
+                  className="w-24 rounded-2xl border border-white/60 bg-white/80 px-2.5 py-1.5 shadow-sm"
                 />
               </div>
             </div>
@@ -334,7 +334,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 <LinkChips links={t.links} onRemove={(i) => onRemoveLink?.(t.id, i)} />
               )}
             </div>
-            <div className="text-sm text-slate-700">
+            <div className="text-sm text-slate-700/90">
               <span className="font-medium mr-1">Note:</span>
               <InlineText
                 value={t.note}
