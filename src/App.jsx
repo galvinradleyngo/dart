@@ -523,7 +523,7 @@ useEffect(() => {
       tasks: applyLinkPatch(s.tasks, id, op, payload),
     }));
   const deleteTask = (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
-  const deleteUnassignedTasks = () =>
+  const deleteUnassignedTasks = useCallback(() => {
     setState((s) => {
       const validMilestoneIds = new Set(s.milestones.map((m) => m.id));
       const nextTasks = s.tasks.filter((t) => {
@@ -534,6 +534,12 @@ useEffect(() => {
       if (nextTasks.length === s.tasks.length) return s;
       return { ...s, tasks: nextTasks };
     });
+  }, []);
+  const handleDeleteUnassignedTasksClick = useCallback(() => {
+    if (unassignedTasks.length === 0) return;
+    if (!confirm("Delete all unassigned tasks? This cannot be undone.")) return;
+    deleteUnassignedTasks();
+  }, [unassignedTasks.length, deleteUnassignedTasks]);
 
   const updateMilestone  = (id, patch) => setState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
   const addMilestone = () =>
@@ -1041,11 +1047,7 @@ useEffect(() => {
                       </div>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (confirm("Delete all unassigned tasks? This cannot be undone.")) {
-                            deleteUnassignedTasks();
-                          }
-                        }}
+                        onClick={handleDeleteUnassignedTasksClick}
                         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
                       >
                         <Trash2 className="w-4 h-4" />
