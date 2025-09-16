@@ -94,7 +94,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
             className="glass-icon-button w-7 h-7 sm:w-9 sm:h-9"
             title={collapsed ? 'Expand' : 'Collapse'}
           >
-            {collapsed ? <Plus className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
+            {collapsed ? <Plus className="icon" /> : <Minus className="icon" />}
           </button>
           {onDuplicate && (
             <button
@@ -103,7 +103,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               title="Duplicate"
               aria-label="Duplicate"
             >
-              <Copy className="w-4 h-4" />
+              <Copy className="icon" />
             </button>
           )}
           {onDelete && (
@@ -113,7 +113,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               title="Delete"
               aria-label="Delete"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="icon" />
             </button>
           )}
         </div>
@@ -168,7 +168,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
           </div>
           {t.note && (
             <div className="text-sm text-slate-600/90 mt-1 flex items-center gap-1 truncate">
-              <StickyNote className="w-4 h-4 flex-shrink-0" /> {t.note}
+              <StickyNote className="icon flex-shrink-0 text-amber-500" /> {t.note}
             </div>
           )}
             <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
@@ -278,7 +278,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   className="text-slate-400 hover:text-slate-600"
                   aria-label="Edit Milestone"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Pencil className="icon" />
                 </button>
               </div>
             )}

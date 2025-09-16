@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, X, ChevronDown, ChevronUp } from "lucide-react";
+import { X, ChevronDown, ChevronUp, Users, UserPlus } from "lucide-react";
 import { rolePalette } from "../utils.js";
 import Avatar from "./Avatar.jsx";
 
@@ -115,9 +115,14 @@ export default function TeamMembersSection({
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2 px-1 cursor-pointer"
         onClick={onToggle}
       >
-          <h2 className="font-semibold flex items-center gap-2">
-            👥︎ Team Members
-            <span className="text-sm font-normal text-slate-600/90">({team.length})</span>
+          <h2 className="font-semibold flex items-center gap-3">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
+              <Users className="icon icon-lg" aria-hidden="true" />
+            </span>
+            <span className="flex items-baseline gap-2">
+              <span>Team Members</span>
+              <span className="text-sm font-normal text-slate-600/90">({team.length})</span>
+            </span>
           </h2>
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {!collapsed && (
@@ -146,7 +151,7 @@ export default function TeamMembersSection({
                 className="glass-button"
                 aria-label="Add member"
               >
-                <Plus className="icon" />
+                <UserPlus className="icon" aria-hidden="true" />
               </button>
             </>
           )}
