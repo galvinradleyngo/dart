@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UserDashboard, UPCOMING_DAYS } from './App.jsx';
 import { fmt } from './utils.js';
@@ -56,6 +56,22 @@ describe('Upcoming Deadlines window', () => {
     expect(checkbox).not.toBeChecked();
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
+
+    const row = checkbox.closest('li');
+    const card = row?.parentElement?.closest('li');
+    expect(card).not.toBeNull();
+    if (card) {
+      const completedHeading = within(card).getByText('Completed');
+      const completedList = completedHeading.nextElementSibling;
+      expect(completedList).not.toBeNull();
+      if (completedList instanceof HTMLElement) {
+        expect(
+          within(completedList).getByRole('button', {
+            name: 'Today Task for Milestone 1',
+          })
+        ).toBeInTheDocument();
+      }
+    }
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Today Task for Milestone 1' })
