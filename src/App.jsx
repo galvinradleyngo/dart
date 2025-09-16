@@ -420,7 +420,12 @@ useEffect(() => {
   // Capture current content once as initial template (only if not already captured)
   useEffect(() => { try { const flag = localStorage.getItem("healthPM:template:captured"); if (!flag) { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(state)); localStorage.setItem("healthPM:template:captured","1"); } } catch {} }, []);
 
-  const team = state.team; const milestones = state.milestones; const tasksRaw = state.tasks;
+  const team = state.team;
+  const milestones = useMemo(
+    () => [...state.milestones].sort((a, b) => a.title.localeCompare(b.title)),
+    [state.milestones]
+  );
+  const tasksRaw = state.tasks;
   const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
   const groupedTasks = useMemo(() => {
     return filteredTasks.reduce((acc, t) => {
