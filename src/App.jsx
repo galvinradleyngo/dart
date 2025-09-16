@@ -34,7 +34,10 @@ import {
   X,
   Plus,
   Minus,
+  Save,
+  RotateCcw,
   Copy,
+  History,
   Trash2,
   StickyNote,
   BookOpen,
@@ -52,6 +55,8 @@ import {
   Flag,
   CalendarDays,
   Users,
+  Upload,
+  Download,
 } from "lucide-react";
 import {
   uid,
@@ -778,46 +783,63 @@ useEffect(() => {
     courseLeadBadges.some(Boolean) || courseSmeBadges.some(Boolean);
 
   const ActionButtons = () => (
-    <>
+    <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
       <button
+        type="button"
         onClick={handleSave}
-        className="glass-button-primary"
+        className="glass-icon-button"
+        title="Save"
+        aria-label="Save"
       >
-        Save
+        <Save className="icon" aria-hidden="true" />
       </button>
-      <span className="text-sm font-medium text-slate-600/90">
+      <span className="text-sm font-medium text-slate-600/90 whitespace-nowrap px-3 py-1 rounded-full bg-white/80 border border-white/60 shadow-sm">
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
       </span>
       <button
-          onClick={() => {
-            if (confirm("Reset to fresh sample data?")) setState(remapSeed(seedWithSampleData()));
-          }}
-        className="glass-button"
+        type="button"
+        onClick={() => {
+          if (confirm("Reset to fresh sample data?")) setState(remapSeed(seedWithSampleData()));
+        }}
+        className="glass-icon-button"
+        title="Reset sample data"
+        aria-label="Reset sample data"
       >
-        Reset
+        <RotateCcw className="icon" aria-hidden="true" />
       </button>
       <button
+        type="button"
         onClick={async () => {
           saveTemplate(state);
           await saveTemplateRemote(state).catch(() => {});
         }}
-        className="glass-button"
+        className="glass-icon-button"
+        title="Save as template"
+        aria-label="Save as template"
       >
-        Save as Template
+        <Copy className="icon" aria-hidden="true" />
       </button>
       <button
+        type="button"
         onClick={async () => {
           const tpl = (await loadTemplateRemote()) || loadTemplate();
           if (tpl)
             setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
           else alert("No template saved yet.");
         }}
-        className="glass-button"
+        className="glass-icon-button"
+        title="Reset to saved template"
+        aria-label="Reset to saved template"
       >
-        Reset to Template
+        <History className="icon" aria-hidden="true" />
       </button>
-      <label className="glass-button cursor-pointer">
-        Import
+      <label
+        className="glass-icon-button cursor-pointer"
+        title="Import JSON"
+        aria-label="Import JSON"
+      >
+        <Upload className="icon" aria-hidden="true" />
+        <span className="sr-only">Import JSON</span>
         <input
           type="file"
           accept="application/json"
@@ -843,6 +865,7 @@ useEffect(() => {
         />
       </label>
       <button
+        type="button"
         onClick={() => {
           const { schedule, ...rest } = state;
           const toSave = {
@@ -859,11 +882,13 @@ useEffect(() => {
           a.click();
           URL.revokeObjectURL(url);
         }}
-        className="glass-button"
+        className="glass-icon-button"
+        title="Export JSON"
+        aria-label="Export JSON"
       >
-        Export
+        <Download className="icon" aria-hidden="true" />
       </button>
-    </>
+    </div>
   );
 
   return (
