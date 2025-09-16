@@ -858,38 +858,44 @@ const activeFilterLabel = useMemo(() => {
               >
                 {!milestonesCollapsed && (
                   <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <div className="relative" ref={milestoneFilterRef}>
-                      <button
-                        type="button"
-                        onClick={() => setMilestoneFilterOpen((v) => !v)}
-                        aria-haspopup="menu"
-                        aria-expanded={milestoneFilterOpen}
-                        className={`inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 shadow-sm text-sm ${milestoneFilter !== 'all' ? 'text-slate-900' : 'text-slate-600'}`}
-                      >
-                        <Filter className="w-4 h-4" />
-                        <span className="max-w-[10rem] truncate">{activeFilterLabel}</span>
-                      </button>
-                      {milestoneFilterOpen && (
-                        <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-black/10 bg-white py-1 shadow-lg z-10">
-                          <button
-                            type="button"
-                            onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
-                            className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === 'all' ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
-                          >
-                            All milestones
-                          </button>
-                          {milestones.map((m) => (
+                    <div className="flex items-center gap-2" ref={milestoneFilterRef}>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setMilestoneFilterOpen((v) => !v)}
+                          aria-haspopup="menu"
+                          aria-expanded={milestoneFilterOpen}
+                          aria-label={`Filter milestones${activeFilterLabel ? `: ${activeFilterLabel}` : ''}`}
+                          title={activeFilterLabel}
+                          className={`inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white shadow-sm text-slate-600 transition-colors hover:text-slate-900 ${milestoneFilter !== 'all' ? 'ring-2 ring-emerald-400 text-emerald-600' : ''}`}
+                        >
+                          <Filter className="w-4 h-4" />
+                        </button>
+                        {milestoneFilterOpen && (
+                          <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-black/10 bg-white py-1 shadow-lg z-10">
                             <button
-                              key={m.id}
                               type="button"
-                              onClick={() => { setMilestoneFilter(m.id); setMilestoneFilterOpen(false); }}
-                              className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === m.id ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
+                              onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
+                              className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === 'all' ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
                             >
-                              {m.title}
+                              All milestones
                             </button>
-                          ))}
-                        </div>
-                      )}
+                            {milestones.map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => { setMilestoneFilter(m.id); setMilestoneFilterOpen(false); }}
+                                className={`w-full px-3 py-2 text-left text-sm ${milestoneFilter === m.id ? 'bg-slate-50 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100'}`}
+                              >
+                                {m.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs font-medium text-slate-600 max-w-[10rem] truncate">
+                        {activeFilterLabel}
+                      </span>
                     </div>
                     {milestoneTemplates.length > 0 && (
                       <div className="flex items-center gap-2 w-full sm:w-auto">
