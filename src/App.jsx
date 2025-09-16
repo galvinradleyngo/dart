@@ -37,14 +37,21 @@ import {
   Copy,
   Trash2,
   StickyNote,
-  Home,
   BookOpen,
-  Calendar,
   Kanban,
-  CheckSquare,
   ChevronDown,
   ChevronUp,
   Filter,
+  Menu,
+  Target,
+  Loader2,
+  ListChecks,
+  AlarmClock,
+  LayoutDashboard,
+  GraduationCap,
+  Flag,
+  CalendarDays,
+  Users,
 } from "lucide-react";
 import {
   uid,
@@ -320,6 +327,16 @@ function Ring({ className = "w-20 h-20", stroke = 10, progress = 0, trackOpacity
         {children}
       </div>
     </div>
+  );
+}
+
+function IconBadge({ children, className = "" }) {
+  return (
+    <span
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${className}`}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -836,7 +853,7 @@ useEffect(() => {
                 aria-expanded={actionsOpen}
                 aria-controls="actions-menu"
               >
-                Menu
+                <Menu className="icon" />
               </button>
               {actionsOpen && (
                 <div
@@ -867,10 +884,53 @@ useEffect(() => {
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
         {/* Dashboard Rings */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DashboardRing title="Course Progress" value={totals.pct} subtitle={`${totals.done}/${totals.total} done`} color="#10b981" />
-          <DashboardRing title="In Progress" value={totals.inprog} subtitle="tasks" color="#6366f1" mode="count" />
-          <DashboardRing title="To Do" value={totals.todo} subtitle="tasks" color="#0ea5e9" mode="count" />
-          <DashboardRing title="Overdue" value={totals.overdue} subtitle="needs attention" color="#ef4444" mode="count" />
+          <DashboardRing
+            title="Course Progress"
+            value={totals.pct}
+            subtitle={`${totals.done}/${totals.total} done`}
+            color="#10b981"
+            icon={(
+              <IconBadge className="bg-emerald-100 text-emerald-600 shadow-[0_16px_32px_-18px_rgba(16,185,129,0.55)]">
+                <Target className="icon icon-lg" />
+              </IconBadge>
+            )}
+          />
+          <DashboardRing
+            title="In Progress"
+            value={totals.inprog}
+            subtitle="tasks"
+            color="#6366f1"
+            mode="count"
+            icon={(
+              <IconBadge className="bg-indigo-100 text-indigo-600 shadow-[0_16px_32px_-18px_rgba(99,102,241,0.55)]">
+                <Loader2 className="icon icon-lg" />
+              </IconBadge>
+            )}
+          />
+          <DashboardRing
+            title="To Do"
+            value={totals.todo}
+            subtitle="tasks"
+            color="#0ea5e9"
+            mode="count"
+            icon={(
+              <IconBadge className="bg-sky-100 text-sky-600 shadow-[0_16px_32px_-18px_rgba(14,165,233,0.55)]">
+                <ListChecks className="icon icon-lg" />
+              </IconBadge>
+            )}
+          />
+          <DashboardRing
+            title="Overdue"
+            value={totals.overdue}
+            subtitle="needs attention"
+            color="#ef4444"
+            mode="count"
+            icon={(
+              <IconBadge className="bg-rose-100 text-rose-600 shadow-[0_16px_32px_-18px_rgba(244,63,94,0.55)]">
+                <AlarmClock className="icon icon-lg" />
+              </IconBadge>
+            )}
+          />
         </section>
 
         {/* Team Members FIRST */}
@@ -911,7 +971,7 @@ useEffect(() => {
                         aria-expanded={milestoneFilterOpen}
                         className="glass-button"
                       >
-                        <Filter className="w-4 h-4" />
+                        <Filter className="icon text-slate-500" />
                         <span className="max-w-[10rem] truncate">{activeFilterLabel}</span>
                       </button>
                       {milestoneFilterOpen && (
@@ -1064,7 +1124,7 @@ useEffect(() => {
                         onClick={handleDeleteUnassignedTasksClick}
                         className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="icon" />
                         Delete all
                       </button>
                     </div>
@@ -1218,8 +1278,9 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
         </div>
       </Ring>
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-slate-600/90 flex items-center gap-1">
-          {icon} <span>{title}</span>
+        <div className="text-sm text-slate-600/90 flex items-center gap-2">
+          {icon && <span className="flex-shrink-0">{icon}</span>}
+          <span>{title}</span>
         </div>
         <div className="text-sm font-medium truncate">{subtitle}</div>
       </div>
@@ -1344,13 +1405,13 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1"><div className="text-[15px] sm:text-[14px] font-semibold leading-tight truncate"><InlineText value={t.title} onChange={(v)=>onUpdate(t.id,{ title:v })} /></div></div>
-                    <div className="flex items-center gap-1 flex-shrink-0"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus className="w-4 h-4" /> : <Minus className="w-4 h-4" />}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate"><Copy className="w-4 h-4" /></button><button onClick={()=>onDelete(t.id)} className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Delete" aria-label="Delete"><Trash2 className="w-4 h-4" /></button></div>
+                    <div className="flex items-center gap-1 flex-shrink-0"><button onClick={()=>toggleCollapse(t.id)} className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title={collapsed?'Expand':'Collapse'} aria-label={collapsed?'Expand':'Collapse'}>{collapsed ? <Plus className="icon" /> : <Minus className="icon" />}</button><button onClick={()=>onDuplicate(t.id)} className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Duplicate" aria-label="Duplicate"><Copy className="icon" /></button><button onClick={()=>onDelete(t.id)} className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200" title="Delete" aria-label="Delete"><Trash2 className="icon" /></button></div>
                   </div>
                   {collapsed ? (
                     <>
                       <div className="mt-1">{renderStatusControl(t)}</div>
                       <div className="text-sm text-slate-600/90 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
-                      {t.note && <div className="text-sm text-slate-600 mt-1 flex items-center gap-1 truncate"><StickyNote className="w-4 h-4 flex-shrink-0" />{t.note}</div>}
+                      {t.note && <div className="text-sm text-slate-600 mt-1 flex items-center gap-1 truncate"><StickyNote className="icon flex-shrink-0 text-amber-500" />{t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-sm"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40 text-sm">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
                     </>
                   ) : (
@@ -1419,6 +1480,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const validTabs = new Set(['deadlines','courses','milestones','board','calendar']);
     return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
+
+  const dashboardTabs = [
+    { id: 'deadlines', label: 'Overview', Icon: LayoutDashboard },
+    { id: 'courses', label: 'Courses', Icon: GraduationCap },
+    { id: 'milestones', label: 'Milestones', Icon: Flag },
+    { id: 'board', label: 'Board View', Icon: Kanban },
+    { id: 'calendar', label: 'Calendar', Icon: CalendarDays },
+  ];
 
   const recomputeDue = (t, patch = {}, schedule) => {
     const start = patch.startDate ?? t.startDate;
@@ -1774,21 +1843,20 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             </h2>
           )}
         <div className="mb-4 flex flex-wrap gap-2">
-          {[
-            ['deadlines','🏠︎ Home'],
-            ['courses','📚︎ Courses'],
-            ['milestones','Milestones'],
-            ['board','⎘ Board View'],
-            ['calendar','📅︎ Calendar View']
-          ].map(([id,label]) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={activeTab===id ? 'glass-button-primary' : 'glass-button'}
-            >
-              {label}
-            </button>
-          ))}
+          {dashboardTabs.map(({ id, label, Icon }) => {
+            const ButtonIcon = Icon;
+            const cls = activeTab === id ? 'glass-button-primary' : 'glass-button';
+            return (
+              <button
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`${cls} min-w-[10rem] justify-center`}
+              >
+                <ButtonIcon className="icon" aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            );
+          })}
         </div>
         <div className="grid grid-cols-1 gap-6">
           {activeTab === 'deadlines' && (
@@ -1866,7 +1934,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     <details key={c.course.id} className="group glass-card">
                       <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                         <div className="flex items-center gap-2">
-                          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                          <ChevronDown className="icon transition-transform group-open:rotate-180" />
                           <div className="font-medium">{c.course.name}</div>
                         </div>
                       </summary>
@@ -1904,7 +1972,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                               <details key={m.id} className="group glass-card">
                                 <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                                   <div className="flex items-center gap-2">
-                                    <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+                                    <ChevronDown className="icon transition-transform group-open:rotate-180" />
                                     <div>
                                       <div className="font-medium">{m.title}</div>
                                       <div className="text-xs text-slate-600/80">
@@ -2327,7 +2395,12 @@ export function CoursesHub({
         {/* Team member management */}
         <section className="glass-surface p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold">👥︎ Team Members</h2>
+            <h2 className="text-lg font-semibold flex items-center gap-3">
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
+                <Users className="icon icon-lg" aria-hidden="true" />
+              </span>
+              <span>Team Members</span>
+            </h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={addPerson}
