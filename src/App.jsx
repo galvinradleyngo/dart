@@ -902,7 +902,7 @@ useEffect(() => {
                         <span className="max-w-[10rem] truncate">{activeFilterLabel}</span>
                       </button>
                       {milestoneFilterOpen && (
-                        <div className="absolute right-0 mt-2 w-60 glass-surface p-2 z-10 flex flex-col gap-1">
+                        <div className="absolute left-4 right-4 sm:left-auto sm:right-0 mt-2 max-h-[70vh] sm:max-h-none overflow-y-auto glass-surface p-2 z-20 flex flex-col gap-1 w-auto sm:w-60">
                           <button
                             type="button"
                             onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
