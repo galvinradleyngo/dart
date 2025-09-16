@@ -79,9 +79,35 @@ const AVATAR_CHOICES = [
 ];
 
 const mergeById = (base = [], extra = []) => {
-  const map = new Map(base.map(t => [t.id, t]));
-  extra.forEach(t => { if (!map.has(t.id)) map.set(t.id, t); });
+  const map = new Map(base.map((t) => [t.id, t]));
+  extra.forEach((t) => {
+    if (!map.has(t.id)) map.set(t.id, t);
+  });
   return Array.from(map.values());
+};
+
+const getProgressMetrics = (tasks = []) => {
+  const counts = tasks.reduce(
+    (acc, task) => {
+      const key = task.status;
+      if (acc[key] !== undefined) acc[key] += 1;
+      else acc.todo += 1;
+      return acc;
+    },
+    { todo: 0, inprogress: 0, done: 0 }
+  );
+
+  const total = tasks.length;
+  const pctDone = total ? Math.round((counts.done / total) * 100) : 0;
+  const segments = total
+    ? {
+        todo: (counts.todo / total) * 100,
+        inprogress: (counts.inprogress / total) * 100,
+        done: (counts.done / total) * 100,
+      }
+    : { todo: 0, inprogress: 0, done: 0 };
+
+  return { counts, pctDone, segments, total };
 };
 
 
@@ -1462,29 +1488,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     done: 'bg-pink-100 text-pink-800 border-pink-200',
   };
 
-  const getProgressMetrics = (tasks) => {
-    const counts = tasks.reduce(
-      (acc, task) => {
-        const key = task.status;
-        if (acc[key] !== undefined) acc[key] += 1;
-        else acc.todo += 1;
-        return acc;
-      },
-      { todo: 0, inprogress: 0, done: 0 }
-    );
-    const total = tasks.length;
-    const pctDone = total ? Math.round((counts.done / total) * 100) : 0;
-    const segments = total
-      ? {
-          todo: (counts.todo / total) * 100,
-          inprogress: (counts.inprogress / total) * 100,
-          done: (counts.done / total) * 100,
-        }
-      : { todo: 0, inprogress: 0, done: 0 };
-
-    return { counts, pctDone, segments, total };
-  };
-
   const members = useMemo(() => {
     const map = new Map();
     courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
@@ -1687,9 +1690,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               ) : (
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {myCourses.map((c) => {
-                    const tTotal = c.tasks.filter((t) => t.assigneeId === userId).length;
-                    const tDone = c.tasks.filter((t) => t.assigneeId === userId && t.status === 'done').length;
-                    const pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
+                    const userTasks = c.tasks.filter((t) => t.assigneeId === userId);
+                    const { total: tTotal, pctDone: pct } = getProgressMetrics(userTasks);
                     return (
                       <li key={c.course.id} className="rounded-xl border border-black/10 bg-white p-4 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
