@@ -2286,6 +2286,10 @@ export function CoursesHub({
   const [membersEditing, setMembersEditing] = useState(false);
   const [history, setHistory] = useState([]);
 
+  const toggleLinkLibraryCollapsed = useCallback(() => {
+    setLinkLibraryCollapsed((value) => !value);
+  }, [setLinkLibraryCollapsed]);
+
   const pushHistory = useCallback((snapshot) => {
     setHistory((h) => [JSON.parse(JSON.stringify(snapshot)), ...h].slice(0, 5));
   }, []);
@@ -2677,7 +2681,22 @@ export function CoursesHub({
         {/* Link Library */}
         <section className="glass-surface p-4 sm:p-6">
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={toggleLinkLibraryCollapsed}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+                  event.preventDefault();
+                  if (!event.repeat) {
+                    toggleLinkLibraryCollapsed();
+                  }
+                }
+              }}
+              aria-expanded={!linkLibraryCollapsed}
+              aria-label={linkLibraryCollapsed ? 'Expand link library' : 'Collapse link library'}
+              className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-2xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
+            >
               <h2 className="text-lg font-semibold flex items-center gap-3">
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
                   <LinkIcon className="icon icon-lg" aria-hidden="true" />
@@ -2688,15 +2707,9 @@ export function CoursesHub({
                 </span>
               </h2>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLinkLibraryCollapsed((v) => !v)}
-                  aria-expanded={!linkLibraryCollapsed}
-                  aria-label={linkLibraryCollapsed ? 'Expand link library' : 'Collapse link library'}
-                  className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
-                >
+                <span className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11" aria-hidden="true">
                   {linkLibraryCollapsed ? <ChevronDown className="icon" /> : <ChevronUp className="icon" />}
-                </button>
+                </span>
               </div>
             </div>
             {!linkLibraryCollapsed && (
