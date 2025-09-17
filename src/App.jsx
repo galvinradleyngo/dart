@@ -1689,38 +1689,40 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
 
   const updateTask = (courseId, taskId, patch) => {
-    updateCourses((cs) => cs.map((c) => {
-      if (c.course.id !== courseId) return c;
-      const sched = c.schedule || loadGlobalSchedule();
-      let changedTo = null;
-      const tasks1 = c.tasks.map((t) => {
-        if (t.id !== taskId) return t;
-        let adjusted = { ...patch };
-        if (patch.status && patch.status !== t.status) {
-          changedTo = patch.status;
-          if (patch.status === 'inprogress') { if (!t.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr(); }
-          if (patch.status === 'todo') { adjusted.startDate = ''; adjusted.dueDate = ''; adjusted.completedDate = ''; }
-          if (patch.status === 'done') { adjusted.completedDate = todayStr(); }
-        }
-        if ('startDate' in adjusted || 'workDays' in adjusted) adjusted = recomputeDue({ ...t, ...adjusted }, adjusted, sched);
-        return { ...t, ...adjusted };
-      });
-      let tasks2 = tasks1;
-      if (changedTo === 'inprogress') tasks2 = tasks2.map((d) => (d.depTaskId === taskId && d.status !== 'done' ? { ...d, status: 'inprogress' } : d));
-      if (changedTo === 'done') {
-        const doneDate = todayStr();
-        tasks2 = tasks2.map((x) => (x.id === taskId ? { ...x, completedDate: x.completedDate || doneDate } : x));
-        tasks2 = tasks2.map((d) => {
-          if (d.depTaskId === taskId && d.status !== 'done') {
-            const start = doneDate;
-            const due = addBusinessDays(start, d.workDays, sched.workweek || [1,2,3,4,5], sched.holidays || []);
-            return { ...d, status: 'inprogress', startDate: start, dueDate: due };
+    updateCourses((cs) => {
+      return cs.map((c) => {
+        if (c.course.id !== courseId) return c;
+        const sched = c.schedule || loadGlobalSchedule();
+        let changedTo = null;
+        const tasks1 = c.tasks.map((t) => {
+          if (t.id !== taskId) return t;
+          let adjusted = { ...patch };
+          if (patch.status && patch.status !== t.status) {
+            changedTo = patch.status;
+            if (patch.status === 'inprogress') { if (!t.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr(); }
+            if (patch.status === 'todo') { adjusted.startDate = ''; adjusted.dueDate = ''; adjusted.completedDate = ''; }
+            if (patch.status === 'done') { adjusted.completedDate = todayStr(); }
           }
-          return d;
+          if ('startDate' in adjusted || 'workDays' in adjusted) adjusted = recomputeDue({ ...t, ...adjusted }, adjusted, sched);
+          return { ...t, ...adjusted };
         });
-      }
-      const tasks3 = propagateDependentForecasts(tasks2, sched);
-      return { ...c, tasks: tasks3 };
+        let tasks2 = tasks1;
+        if (changedTo === 'inprogress') tasks2 = tasks2.map((d) => (d.depTaskId === taskId && d.status !== 'done' ? { ...d, status: 'inprogress' } : d));
+        if (changedTo === 'done') {
+          const doneDate = todayStr();
+          tasks2 = tasks2.map((x) => (x.id === taskId ? { ...x, completedDate: x.completedDate || doneDate } : x));
+          tasks2 = tasks2.map((d) => {
+            if (d.depTaskId === taskId && d.status !== 'done') {
+              const start = doneDate;
+              const due = addBusinessDays(start, d.workDays, sched.workweek || [1,2,3,4,5], sched.holidays || []);
+              return { ...d, status: 'inprogress', startDate: start, dueDate: due };
+            }
+            return d;
+          });
+        }
+        const tasks3 = propagateDependentForecasts(tasks2, sched);
+        return { ...c, tasks: tasks3 };
+      });
     });
     setSaveState('unsaved');
   };
