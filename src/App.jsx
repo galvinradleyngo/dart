@@ -542,7 +542,7 @@ useEffect(() => {
 
   const team = state.team;
   const milestones = useMemo(
-    () => [...state.milestones].sort((a, b) => a.title.localeCompare(b.title)),
+    () => [...state.milestones],
     [state.milestones]
   );
   const tasksRaw = state.tasks;
@@ -664,7 +664,7 @@ useEffect(() => {
   const addMilestone = () =>
     updateCourseState((s) => ({
       ...s,
-      milestones: [...s.milestones, { id: uid(), title: "New Milestone", start: todayStr(), goal: "" }],
+      milestones: [{ id: uid(), title: "New Milestone", start: todayStr(), goal: "" }, ...s.milestones],
     }));
   const addMilestoneFromTemplate = (tplId) =>
     updateCourseState((s) => {
@@ -685,7 +685,7 @@ useEffect(() => {
         dueDate: '',
         completedDate: '',
       }));
-      return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] };
+      return { ...s, milestones: [newMs, ...s.milestones], tasks: [...s.tasks, ...clonedTasks] };
     });
   const deleteMilestone  = (id) =>
     updateCourseState((s) => {
@@ -1284,6 +1284,7 @@ useEffect(() => {
                       onDeleteMilestone={deleteMilestone}
                       onUpdateMilestone={updateMilestone}
                       onSaveAsTemplate={saveMilestoneTemplate}
+                      onAddTask={addTask}
                       onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                       onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
                     />
