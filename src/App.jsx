@@ -565,9 +565,10 @@ useEffect(() => {
       milestoneFilter === "all"
         ? milestones
         : milestones.filter((m) => m.id === milestoneFilter);
-    if (!milestonesCollapsed) return base;
-    return [...base].sort((a, b) => a.title.localeCompare(b.title));
-  }, [milestones, milestoneFilter, milestonesCollapsed]);
+    return [...base].sort((a, b) =>
+      (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" })
+    );
+  }, [milestones, milestoneFilter]);
   const activeFilterLabel = useMemo(() => {
     if (milestoneFilter === "all") return "All milestones";
     const match = milestones.find((m) => m.id === milestoneFilter);
@@ -2187,10 +2188,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       </summary>
                       <div className="p-4 space-y-2">
                         {[...c.milestones]
-                          .sort(
-                            (a, b) =>
-                              c.tasks.filter((t) => t.milestoneId === b.id).length -
-                              c.tasks.filter((t) => t.milestoneId === a.id).length
+                          .sort((a, b) =>
+                            (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: 'base' })
                           )
                           .map((m) => {
                             const tasksForMilestone = c.tasks.filter(
