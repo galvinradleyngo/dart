@@ -8,5 +8,7 @@ describe('seed()', () => {
     expect(Array.isArray(project.tasks)).toBe(true);
     expect(project.milestones).toHaveLength(0);
     expect(project.tasks).toHaveLength(0);
+    expect(Array.isArray(project.linkLibrary)).toBe(true);
+    expect(project.linkLibrary).toHaveLength(0);
   });
 });
