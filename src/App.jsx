@@ -277,6 +277,7 @@ export const seed = ({ withSampleData = false } = {}) => {
     ],
     milestones: [],
     tasks: [],
+    linkLibrary: [],
   };
 
   if (!withSampleData) return base;
@@ -323,6 +324,20 @@ const remapSeed = (s) => {
     const defaultLd = s.course.courseLDIds[0];
     s.tasks = s.tasks.map((t) => ({ ...t, assigneeId: t.assigneeId ?? defaultLd }));
   }
+  const sanitizedLinks = Array.isArray(s.linkLibrary)
+    ? s.linkLibrary
+        .map((link) => {
+          if (!link || typeof link !== "object") return null;
+          const url = typeof link.url === "string" ? link.url : "";
+          if (!url) return null;
+          const label =
+            typeof link.label === "string" && link.label ? link.label : url;
+          const id = typeof link.id === "string" && link.id ? link.id : uid();
+          return { id, label, url };
+        })
+        .filter(Boolean)
+    : [];
+  s.linkLibrary = sanitizedLinks;
   return s;
 };
 
@@ -408,6 +423,9 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [tasksCollapsed, setTasksCollapsed] = useState(true);
   const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
+  const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
+  const [newLinkLabel, setNewLinkLabel] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
   const [saveState, setSaveState] = useState('saved');
   const [history, setHistory] = useState([]);
   const firstRun = useRef(true);
@@ -437,6 +455,17 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
       return rest;
     });
   }, []);
+
+  const toggleLinkLibraryCollapsed = useCallback(() => {
+    setLinkLibraryCollapsed((value) => !value);
+  }, []);
+
+  const persistCourseLinkLibrary = useCallback(
+    (next) => {
+      updateCourseState((s) => ({ ...s, linkLibrary: next }));
+    },
+    [updateCourseState]
+  );
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -578,6 +607,45 @@ useEffect(() => {
   const totals = useMemo(() => {
     const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
   }, [tasksRaw]);
+
+  const linkLibrary = Array.isArray(state.linkLibrary) ? state.linkLibrary : [];
+
+  const handleAddCourseLink = useCallback(
+    (event) => {
+      event.preventDefault();
+      const label = newLinkLabel.trim();
+      const rawUrl = newLinkUrl.trim();
+      if (!rawUrl) return;
+      let parsed;
+      try {
+        parsed = new URL(rawUrl);
+      } catch {
+        try {
+          parsed = new URL(`https://${rawUrl}`);
+        } catch {
+          return;
+        }
+      }
+      if (!parsed) return;
+      const finalUrl = parsed.toString();
+      const entry = {
+        id: uid(),
+        label: label || parsed.hostname || finalUrl,
+        url: finalUrl,
+      };
+      persistCourseLinkLibrary([...linkLibrary, entry]);
+      setNewLinkLabel("");
+      setNewLinkUrl("");
+    },
+    [linkLibrary, newLinkLabel, newLinkUrl, persistCourseLinkLibrary]
+  );
+
+  const handleRemoveCourseLink = useCallback(
+    (id) => {
+      persistCourseLinkLibrary(linkLibrary.filter((link) => link.id !== id));
+    },
+    [linkLibrary, persistCourseLinkLibrary]
+  );
 
 
   const recomputeDue = (t, patch = {}) => { const start = patch.startDate ?? t.startDate; const work = patch.workDays ?? t.workDays; const due = start ? addBusinessDays(start, work, state.schedule.workweek, state.schedule.holidays) : ""; return { ...patch, dueDate: due }; };
@@ -1074,6 +1142,119 @@ useEffect(() => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+        {/* Link Library */}
+        <section className="glass-surface p-4 sm:p-6">
+          <div className="flex flex-col gap-3">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={toggleLinkLibraryCollapsed}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+                  event.preventDefault();
+                  if (!event.repeat) {
+                    toggleLinkLibraryCollapsed();
+                  }
+                }
+              }}
+              aria-expanded={!linkLibraryCollapsed}
+              aria-label={linkLibraryCollapsed ? 'Expand course link library' : 'Collapse course link library'}
+              className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-2xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
+            >
+              <h2 className="text-lg font-semibold flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
+                  <LinkIcon className="icon icon-lg" aria-hidden="true" />
+                </span>
+                <span className="flex items-baseline gap-2">
+                  <span>Link Library</span>
+                  <span className="text-sm font-normal text-slate-600/90">({linkLibrary.length})</span>
+                </span>
+              </h2>
+              <div className="flex items-center gap-2">
+                <span className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11" aria-hidden="true">
+                  {linkLibraryCollapsed ? <ChevronDown className="icon" /> : <ChevronUp className="icon" />}
+                </span>
+              </div>
+            </div>
+            {!linkLibraryCollapsed && (
+              <div className="space-y-4">
+                <form
+                  className="glass-card p-4 space-y-3 sm:space-y-0 sm:flex sm:items-end sm:gap-3"
+                  onSubmit={handleAddCourseLink}
+                >
+                  <label className="flex-1 text-sm text-slate-700">
+                    <span className="font-medium">Label</span>
+                    <input
+                      type="text"
+                      value={newLinkLabel}
+                      onChange={(e) => setNewLinkLabel(e.target.value)}
+                      placeholder="Resource name"
+                      className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    />
+                  </label>
+                  <label className="flex-1 text-sm text-slate-700">
+                    <span className="font-medium">URL</span>
+                    <input
+                      type="url"
+                      value={newLinkUrl}
+                      onChange={(e) => setNewLinkUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    />
+                  </label>
+                  <button type="submit" className="glass-button-primary whitespace-nowrap">
+                    Add Link
+                  </button>
+                </form>
+                {linkLibrary.length === 0 ? (
+                  <div className="glass-card p-4 text-sm text-slate-600/90">
+                    No links yet. Add your go-to resources above.
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {linkLibrary.map((link) => (
+                      <li
+                        key={link.id}
+                        className="glass-card p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-slate-800 hover:underline break-words"
+                          >
+                            {link.label}
+                          </a>
+                          <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="glass-button text-sm"
+                          >
+                            Open
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCourseLink(link.id)}
+                            className="glass-icon-button w-9 h-9 text-rose-500 hover:text-rose-600"
+                            aria-label="Remove link"
+                          >
+                            <X className="icon" />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
         {/* Dashboard Rings */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <DashboardRing
@@ -1125,7 +1306,7 @@ useEffect(() => {
           />
         </section>
 
-        {/* Team Members FIRST */}
+        {/* Team Members */}
         <TeamMembersSection
           team={team}
           people={people}
