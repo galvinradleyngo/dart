@@ -2281,6 +2281,7 @@ export function CoursesHub({
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
   const [linkLibrary, setLinkLibrary] = useState(() => loadLinkLibrary());
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
+  const [workweekCollapsed, setWorkweekCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [membersEditing, setMembersEditing] = useState(false);
@@ -2289,6 +2290,10 @@ export function CoursesHub({
   const toggleLinkLibraryCollapsed = useCallback(() => {
     setLinkLibraryCollapsed((value) => !value);
   }, [setLinkLibraryCollapsed]);
+
+  const toggleWorkweekCollapsed = useCallback(() => {
+    setWorkweekCollapsed((value) => !value);
+  }, []);
 
   const pushHistory = useCallback((snapshot) => {
     setHistory((h) => [JSON.parse(JSON.stringify(snapshot)), ...h].slice(0, 5));
@@ -2863,49 +2868,71 @@ export function CoursesHub({
 
         {/* Global schedule controls */}
         <section className="glass-surface p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
-              Workweek & Holidays
+          <button
+            type="button"
+            id="global-workweek-toggle"
+            onClick={toggleWorkweekCollapsed}
+            className="group mb-2 flex w-full items-center justify-between rounded-2xl px-3 py-2 text-left transition-colors hover:bg-white/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+            aria-expanded={!workweekCollapsed}
+            aria-controls="global-workweek-panel"
+          >
+            <span className="flex items-center gap-2 font-semibold text-indigo-900">
+              <span className="text-base sm:text-lg">Workweek & Holidays</span>
               <span className="text-sm font-normal text-indigo-700">(Global)</span>
-            </h2>
-          </div>
-          <div className="glass-card p-4 text-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="font-medium">Workweek:</div>
-              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => toggleWorkday(idx)}
-                  className={`px-3 py-1.5 rounded-full text-sm transition ${
-                    schedule.workweek.includes(idx)
-                      ? 'bg-slate-900 text-white shadow-[0_14px_30px_-12px_rgba(15,23,42,0.6)] border border-slate-900'
-                      : 'border border-white/60 bg-white/75 text-slate-600 shadow-sm backdrop-blur'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              <div className="ml-2 font-medium">Holidays:</div>
-              <AddHoliday onAdd={addHoliday} />
-              <div className="flex flex-wrap gap-2">
-                {schedule.holidays.map((h) => (
-                  <span
-                    key={h}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-rose-200/80 bg-rose-50/70 text-rose-600 shadow-sm backdrop-blur"
+            </span>
+            <span
+              className={`flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-indigo-800 shadow-sm transition-transform duration-200 ${
+                workweekCollapsed ? '' : 'rotate-180'
+              }`}
+              aria-hidden="true"
+            >
+              <ChevronDown className="icon" />
+            </span>
+          </button>
+          {!workweekCollapsed && (
+            <div
+              className="glass-card p-4 text-sm"
+              id="global-workweek-panel"
+              role="region"
+              aria-labelledby="global-workweek-toggle"
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="font-medium">Workweek:</div>
+                {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => toggleWorkday(idx)}
+                    className={`px-3 py-1.5 rounded-full text-sm transition ${
+                      schedule.workweek.includes(idx)
+                        ? 'bg-slate-900 text-white shadow-[0_14px_30px_-12px_rgba(15,23,42,0.6)] border border-slate-900'
+                        : 'border border-white/60 bg-white/75 text-slate-600 shadow-sm backdrop-blur'
+                    }`}
                   >
-                    {h}
-                    <button
-                      onClick={() => removeHoliday(h)}
-                      title="Remove holiday"
-                      aria-label="Remove holiday"
-                    >
-                      <X className="icon text-rose-500 hover:text-rose-700" />
-                    </button>
-                  </span>
+                    {label}
+                  </button>
                 ))}
+                <div className="ml-2 font-medium">Holidays:</div>
+                <AddHoliday onAdd={addHoliday} />
+                <div className="flex flex-wrap gap-2">
+                  {schedule.holidays.map((h) => (
+                    <span
+                      key={h}
+                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-rose-200/80 bg-rose-50/70 text-rose-600 shadow-sm backdrop-blur"
+                    >
+                      {h}
+                      <button
+                        onClick={() => removeHoliday(h)}
+                        title="Remove holiday"
+                        aria-label="Remove holiday"
+                      >
+                        <X className="icon text-rose-500 hover:text-rose-700" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </section>
       </main>
     </div>
