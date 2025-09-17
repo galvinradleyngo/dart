@@ -688,11 +688,27 @@ useEffect(() => {
       return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] };
     });
   const deleteMilestone  = (id) =>
-    updateCourseState((s) => ({
-      ...s,
-      milestones: s.milestones.filter((m) => m.id !== id),
-      tasks: s.tasks.map((t) => (t.milestoneId === id ? { ...t, milestoneId: null } : t)),
-    }));
+    updateCourseState((s) => {
+      const removedTaskIds = new Set(
+        s.tasks
+          .filter((t) => t.milestoneId === id)
+          .map((t) => t.id)
+      );
+
+      const remainingTasks = s.tasks
+        .filter((t) => t.milestoneId !== id)
+        .map((t) =>
+          removedTaskIds.has(t.depTaskId)
+            ? { ...t, depTaskId: null }
+            : t
+        );
+
+      return {
+        ...s,
+        milestones: s.milestones.filter((m) => m.id !== id),
+        tasks: remainingTasks,
+      };
+    });
   const duplicateMilestone = (id) =>
     updateCourseState((s) => {
       const src = s.milestones.find((m) => m.id === id);
