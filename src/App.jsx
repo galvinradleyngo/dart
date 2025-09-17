@@ -44,6 +44,7 @@ import {
   Kanban,
   ChevronDown,
   ChevronUp,
+  Link as LinkIcon,
   Filter,
   Menu,
   Target,
@@ -212,6 +213,37 @@ const syncPeopleToCourses = (people) => {
   }));
   saveCourses(updated);
   saveCoursesRemote(updated).catch(() => {});
+};
+
+// =====================================================
+// Link Library Store
+// =====================================================
+const LINK_LIBRARY_KEY = "healthPM:linkLibrary:v1";
+const loadLinkLibrary = () => {
+  try {
+    const raw = localStorage.getItem(LINK_LIBRARY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const saveLinkLibrary = (links) => {
+  try {
+    localStorage.setItem(LINK_LIBRARY_KEY, JSON.stringify(links));
+  } catch {}
+};
+const loadLinkLibraryRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'linkLibrary'));
+    return snap.exists() ? snap.data().links || [] : null;
+  } catch {
+    return null;
+  }
+};
+const saveLinkLibraryRemote = async (links) => {
+  try {
+    await setDoc(doc(db, 'app', 'linkLibrary'), { links });
+  } catch {}
 };
 
 // =====================================================
@@ -1549,7 +1581,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, []);
 
   const [saveState, setSaveState] = useState('saved');
-  const [taskQuery, setTaskQuery] = useState('');
   const [courseQuery, setCourseQuery] = useState('');
   const [activeTab, setActiveTab] = useState(() => {
     const stored = localStorage.getItem('userTab');
@@ -1790,20 +1821,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         }
       });
     });
-    return arr
-      .filter(
-        (t) =>
-          t.title.toLowerCase().includes(taskQuery.toLowerCase()) ||
-          t.courseName.toLowerCase().includes(taskQuery.toLowerCase())
-      )
-      .sort((a, b) => {
-        const nameCmp = a.courseName.localeCompare(b.courseName);
-        if (nameCmp !== 0) return nameCmp;
-        const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-        const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-        return da - db;
-      });
-  }, [courses, userId, taskQuery]);
+    return arr.sort((a, b) => {
+      const nameCmp = a.courseName.localeCompare(b.courseName);
+      if (nameCmp !== 0) return nameCmp;
+      const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return da - db;
+    });
+  }, [courses, userId]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], done: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
@@ -2123,19 +2148,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'board' && (
             <SectionCard title="☑ My Tasks – Board View" actions={<button onClick={handleNewTask} className="glass-button">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-slate-600/90">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
+                <div className="text-sm text-slate-600/90">No tasks assigned.</div>
               ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={taskQuery}
-                      onChange={(e) => setTaskQuery(e.target.value)}
-                      placeholder="Search..."
-                      className="flex-1 rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow-sm"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     {[
                       { id: 'todo', label: 'To Do' },
                       { id: 'inprogress', label: 'In Progress' },
@@ -2184,7 +2199,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       </div>
                     ))}
                   </div>
-                </>
               )}
             </SectionCard>
           )}
@@ -2192,30 +2206,19 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'calendar' && (
             <SectionCard title="☑ My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="glass-button">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-slate-600/90">{taskQuery ? 'No tasks match your search.' : 'No tasks assigned.'}</div>
+                <div className="text-sm text-slate-600/90">No tasks assigned.</div>
               ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={taskQuery}
-                      onChange={(e) => setTaskQuery(e.target.value)}
-                      placeholder="Search..."
-                      className="flex-1 rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow-sm"
-                    />
-                  </div>
-                  <CalendarView
-                    monthDate={calMonth}
-                    tasks={myTasks}
-                    milestones={[]}
-                    team={[]}
-                    onPrev={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
-                    onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
-                    onToday={() => setCalMonth(new Date())}
-                    schedule={loadGlobalSchedule()}
-                    onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
-                  />
-                </>
+                <CalendarView
+                  monthDate={calMonth}
+                  tasks={myTasks}
+                  milestones={[]}
+                  team={[]}
+                  onPrev={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1))}
+                  onNext={() => setCalMonth(new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1))}
+                  onToday={() => setCalMonth(new Date())}
+                  schedule={loadGlobalSchedule()}
+                  onTaskClick={(t) => setEditing({ courseId: t.courseId, taskId: t.id })}
+                />
               )}
             </SectionCard>
           )}
@@ -2276,12 +2279,59 @@ export function CoursesHub({
 }) {
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
+  const [linkLibrary, setLinkLibrary] = useState(() => loadLinkLibrary());
+  const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
+  const [newLinkLabel, setNewLinkLabel] = useState("");
+  const [newLinkUrl, setNewLinkUrl] = useState("");
   const [membersEditing, setMembersEditing] = useState(false);
   const [history, setHistory] = useState([]);
 
   const pushHistory = useCallback((snapshot) => {
     setHistory((h) => [JSON.parse(JSON.stringify(snapshot)), ...h].slice(0, 5));
   }, []);
+
+  const persistLinkLibrary = useCallback((next) => {
+    setLinkLibrary(next);
+    saveLinkLibrary(next);
+    saveLinkLibraryRemote(next).catch(() => {});
+  }, []);
+
+  const handleAddLink = useCallback(
+    (event) => {
+      event.preventDefault();
+      const label = newLinkLabel.trim();
+      const rawUrl = newLinkUrl.trim();
+      if (!rawUrl) return;
+      let parsed;
+      try {
+        parsed = new URL(rawUrl);
+      } catch {
+        try {
+          parsed = new URL(`https://${rawUrl}`);
+        } catch {
+          return;
+        }
+      }
+      if (!parsed) return;
+      const finalUrl = parsed.toString();
+      const entry = {
+        id: uid(),
+        label: label || parsed.hostname || finalUrl,
+        url: finalUrl,
+      };
+      persistLinkLibrary([...linkLibrary, entry]);
+      setNewLinkLabel("");
+      setNewLinkUrl("");
+    },
+    [linkLibrary, newLinkLabel, newLinkUrl, persistLinkLibrary]
+  );
+
+  const handleRemoveLink = useCallback(
+    (id) => {
+      persistLinkLibrary(linkLibrary.filter((link) => link.id !== id));
+    },
+    [linkLibrary, persistLinkLibrary]
+  );
 
   const undo = () => {
     setHistory((h) => {
@@ -2296,8 +2346,17 @@ export function CoursesHub({
 
   useEffect(() => {
     const onSchedStorage = (e) => {
-      if (e.key === GLOBAL_SCHEDULE_KEY && e.newValue) {
-        try { setSchedule(JSON.parse(e.newValue)); } catch {}
+      if (e.key === GLOBAL_SCHEDULE_KEY) {
+        if (e.newValue) {
+          try { setSchedule(JSON.parse(e.newValue)); } catch {}
+        }
+      }
+      if (e.key === LINK_LIBRARY_KEY) {
+        if (e.newValue) {
+          try { setLinkLibrary(JSON.parse(e.newValue)); } catch {}
+        } else {
+          setLinkLibrary([]);
+        }
       }
     };
     window.addEventListener('storage', onSchedStorage);
@@ -2334,6 +2393,15 @@ export function CoursesHub({
           onPeopleChange(localPeople);
           savePeopleRemote(localPeople).catch(() => {});
         }
+      }
+      const remoteLinks = await loadLinkLibraryRemote();
+      if (remoteLinks) {
+        saveLinkLibrary(remoteLinks);
+        setLinkLibrary(remoteLinks);
+      } else {
+        const localLinks = loadLinkLibrary();
+        setLinkLibrary(localLinks);
+        if (localLinks.length) saveLinkLibraryRemote(localLinks).catch(() => {});
       }
       const remoteTpl = await loadTemplateRemote();
       if (remoteTpl) saveTemplate(remoteTpl);
@@ -2606,51 +2674,107 @@ export function CoursesHub({
           )}
         </section>
 
-
-        {/* Global schedule controls */}
+        {/* Link Library */}
         <section className="glass-surface p-4 sm:p-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
-              Workweek & Holidays
-              <span className="text-sm font-normal text-indigo-700">(Global)</span>
-            </h2>
-          </div>
-          <div className="glass-card p-4 text-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="font-medium">Workweek:</div>
-              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <h2 className="text-lg font-semibold flex items-center gap-3">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
+                  <LinkIcon className="icon icon-lg" aria-hidden="true" />
+                </span>
+                <span className="flex items-baseline gap-2">
+                  <span>Link Library</span>
+                  <span className="text-sm font-normal text-slate-600/90">({linkLibrary.length})</span>
+                </span>
+              </h2>
+              <div className="flex items-center gap-2">
                 <button
-                  key={idx}
-                  onClick={() => toggleWorkday(idx)}
-                  className={`px-3 py-1.5 rounded-full text-sm transition ${
-                    schedule.workweek.includes(idx)
-                      ? 'bg-slate-900 text-white shadow-[0_14px_30px_-12px_rgba(15,23,42,0.6)] border border-slate-900'
-                      : 'border border-white/60 bg-white/75 text-slate-600 shadow-sm backdrop-blur'
-                  }`}
+                  type="button"
+                  onClick={() => setLinkLibraryCollapsed((v) => !v)}
+                  aria-expanded={!linkLibraryCollapsed}
+                  aria-label={linkLibraryCollapsed ? 'Expand link library' : 'Collapse link library'}
+                  className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
                 >
-                  {label}
+                  {linkLibraryCollapsed ? <ChevronDown className="icon" /> : <ChevronUp className="icon" />}
                 </button>
-              ))}
-              <div className="ml-2 font-medium">Holidays:</div>
-              <AddHoliday onAdd={addHoliday} />
-              <div className="flex flex-wrap gap-2">
-                {schedule.holidays.map((h) => (
-                  <span
-                    key={h}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-rose-200/80 bg-rose-50/70 text-rose-600 shadow-sm backdrop-blur"
-                  >
-                    {h}
-                    <button
-                      onClick={() => removeHoliday(h)}
-                      title="Remove holiday"
-                      aria-label="Remove holiday"
-                    >
-                      <X className="icon text-rose-500 hover:text-rose-700" />
-                    </button>
-                  </span>
-                ))}
               </div>
             </div>
+            {!linkLibraryCollapsed && (
+              <div className="space-y-4">
+                <form
+                  className="glass-card p-4 space-y-3 sm:space-y-0 sm:flex sm:items-end sm:gap-3"
+                  onSubmit={handleAddLink}
+                >
+                  <label className="flex-1 text-sm text-slate-700">
+                    <span className="font-medium">Label</span>
+                    <input
+                      type="text"
+                      value={newLinkLabel}
+                      onChange={(e) => setNewLinkLabel(e.target.value)}
+                      placeholder="Resource name"
+                      className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    />
+                  </label>
+                  <label className="flex-1 text-sm text-slate-700">
+                    <span className="font-medium">URL</span>
+                    <input
+                      type="url"
+                      value={newLinkUrl}
+                      onChange={(e) => setNewLinkUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                    />
+                  </label>
+                  <button type="submit" className="glass-button-primary whitespace-nowrap">
+                    Add Link
+                  </button>
+                </form>
+                {linkLibrary.length === 0 ? (
+                  <div className="glass-card p-4 text-sm text-slate-600/90">
+                    No links yet. Add your go-to resources above.
+                  </div>
+                ) : (
+                  <ul className="space-y-2">
+                    {linkLibrary.map((link) => (
+                      <li
+                        key={link.id}
+                        className="glass-card p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-slate-800 hover:underline break-words"
+                          >
+                            {link.label}
+                          </a>
+                          <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="glass-button text-sm"
+                          >
+                            Open
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLink(link.id)}
+                            className="glass-icon-button w-9 h-9 text-rose-500 hover:text-rose-600"
+                            aria-label="Remove link"
+                          >
+                            <X className="icon" />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -2722,6 +2846,53 @@ export function CoursesHub({
               })}
             </div>
           )}
+        </section>
+
+        {/* Global schedule controls */}
+        <section className="glass-surface p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold flex items-center gap-2 text-indigo-900">
+              Workweek & Holidays
+              <span className="text-sm font-normal text-indigo-700">(Global)</span>
+            </h2>
+          </div>
+          <div className="glass-card p-4 text-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="font-medium">Workweek:</div>
+              {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((label, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => toggleWorkday(idx)}
+                  className={`px-3 py-1.5 rounded-full text-sm transition ${
+                    schedule.workweek.includes(idx)
+                      ? 'bg-slate-900 text-white shadow-[0_14px_30px_-12px_rgba(15,23,42,0.6)] border border-slate-900'
+                      : 'border border-white/60 bg-white/75 text-slate-600 shadow-sm backdrop-blur'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="ml-2 font-medium">Holidays:</div>
+              <AddHoliday onAdd={addHoliday} />
+              <div className="flex flex-wrap gap-2">
+                {schedule.holidays.map((h) => (
+                  <span
+                    key={h}
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full border border-rose-200/80 bg-rose-50/70 text-rose-600 shadow-sm backdrop-blur"
+                  >
+                    {h}
+                    <button
+                      onClick={() => removeHoliday(h)}
+                      title="Remove holiday"
+                      aria-label="Remove holiday"
+                    >
+                      <X className="icon text-rose-500 hover:text-rose-700" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
       </main>
     </div>
