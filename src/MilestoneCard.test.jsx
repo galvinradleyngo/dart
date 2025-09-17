@@ -30,5 +30,19 @@ describe('MilestoneCard', () => {
     const bar = screen.getByTestId('progress-fill');
     expect(bar.getAttribute('style')).toContain(`background-color: ${color}`);
   });
+
+  it('adds tasks from the collapsed summary button', () => {
+    const onAddTask = vi.fn();
+    const { container } = render(
+      <MilestoneCard milestone={milestone} onAddTask={onAddTask} />,
+    );
+
+    const addButton = screen.getByLabelText(/add task/i);
+    fireEvent.click(addButton);
+
+    expect(onAddTask).toHaveBeenCalledWith('m1');
+    const details = container.querySelector('details');
+    expect(details?.open).toBe(true);
+  });
 });
 
