@@ -80,13 +80,13 @@ describe('CoursePMApp milestones collapse ordering', () => {
       .map((el) => el.textContent.trim())
       .filter(Boolean);
 
-  it('preserves manual ordering when expanded and sorts alphabetically when collapsed', () => {
+  it('sorts milestones alphabetically regardless of collapse state', () => {
     renderApp();
     const heading = screen.getByRole('heading', { name: 'Milestones' });
     const section = heading.closest('section');
     expect(section).not.toBeNull();
 
-    expect(getMilestoneTitles(section)).toEqual(['Gamma', 'Alpha', 'Beta']);
+    expect(getMilestoneTitles(section)).toEqual(['Alpha', 'Beta', 'Gamma']);
 
     const collapseButton = screen.getByRole('button', { name: /collapse milestones/i });
     fireEvent.click(collapseButton);
