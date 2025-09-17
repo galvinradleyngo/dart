@@ -862,21 +862,23 @@ useEffect(() => {
       <button
         type="button"
         onClick={handleSave}
-        className="glass-icon-button"
+        className="glass-button inline-flex items-center gap-2"
         title="Save"
         aria-label="Save"
       >
         <Save className="icon" aria-hidden="true" />
+        <span>Save</span>
       </button>
       <button
         type="button"
         onClick={undo}
         disabled={!history.length}
-        className="glass-icon-button disabled:opacity-50 disabled:cursor-not-allowed"
+        className="glass-button inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         title="Undo"
         aria-label="Undo"
       >
         <Undo2 className="icon" aria-hidden="true" />
+        <span>Undo</span>
       </button>
       <span className="text-sm font-medium text-slate-600/90 whitespace-nowrap px-3 py-1 rounded-full bg-white/80 border border-white/60 shadow-sm">
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
@@ -918,61 +920,66 @@ useEffect(() => {
       >
         <History className="icon" aria-hidden="true" />
       </button>
-      <label
-        className="glass-icon-button cursor-pointer"
-        title="Import JSON"
-        aria-label="Import JSON"
-      >
-        <Upload className="icon" aria-hidden="true" />
-        <span className="sr-only">Import JSON</span>
-        <input
-          type="file"
-          accept="application/json"
-          className="hidden"
-          onChange={(e) =>
-            e.target.files?.[0] &&
-            (() => {
-              const reader = new FileReader();
-              reader.onload = () => {
-                try {
-                  const incoming = remapSeed(JSON.parse(reader.result));
-                  updateCourseState(() => ({
-                    ...incoming,
-                    schedule: loadGlobalSchedule(),
-                  }));
-                } catch {
-                  alert("Invalid JSON");
-                }
+      {isTemplateLabel && (
+        <>
+          <label
+            className="glass-button inline-flex items-center gap-2 cursor-pointer"
+            title="Import JSON"
+            aria-label="Import JSON"
+          >
+            <Upload className="icon" aria-hidden="true" />
+            <span>Import JSON</span>
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) =>
+                e.target.files?.[0] &&
+                (() => {
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    try {
+                      const incoming = remapSeed(JSON.parse(reader.result));
+                      updateCourseState(() => ({
+                        ...incoming,
+                        schedule: loadGlobalSchedule(),
+                      }));
+                    } catch {
+                      alert("Invalid JSON");
+                    }
+                  };
+                  reader.readAsText(e.target.files[0]);
+                })()
+              }
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => {
+              const { schedule, ...rest } = state;
+              const toSave = {
+                ...rest,
+                schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
               };
-              reader.readAsText(e.target.files[0]);
-            })()
-          }
-        />
-      </label>
-      <button
-        type="button"
-        onClick={() => {
-          const { schedule, ...rest } = state;
-          const toSave = {
-            ...rest,
-            schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
-          };
-          const blob = new Blob([JSON.stringify(toSave, null, 2)], {
-            type: "application/json",
-          });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `course-pm-${Date.now()}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-        }}
-        className="glass-icon-button"
-        title="Export JSON"
-        aria-label="Export JSON"
-      >
-        <Download className="icon" aria-hidden="true" />
-      </button>
+              const blob = new Blob([JSON.stringify(toSave, null, 2)], {
+                type: "application/json",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `course-pm-${Date.now()}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="glass-button inline-flex items-center gap-2"
+            title="Export JSON"
+            aria-label="Export JSON"
+          >
+            <Download className="icon" aria-hidden="true" />
+            <span>Export JSON</span>
+          </button>
+        </>
+      )}
     </div>
   );
 
