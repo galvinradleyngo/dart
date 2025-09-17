@@ -38,6 +38,7 @@ import {
   RotateCcw,
   Copy,
   History,
+  Undo2,
   Trash2,
   StickyNote,
   BookOpen,
@@ -389,7 +390,7 @@ function IconBadge({ children, className = "" }) {
 // Course Dashboard (formerly default export)
 // =====================================================
 function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], milestoneTemplates = [], onChangeMilestoneTemplates, onOpenUser }) {
-  const [state, setState] = useState(() => {
+  const [state, setCourseState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
     let base;
@@ -408,18 +409,60 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
   const [saveState, setSaveState] = useState('saved');
+  const [history, setHistory] = useState([]);
   const firstRun = useRef(true);
   const milestoneFilterRef = useRef(null);
 
+  const updateCourseState = useCallback((updater, options = {}) => {
+    const { capture = true } = options;
+    let applied = null;
+    setCourseState((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (next === prev) return prev;
+      if (capture) {
+        const snapshot = JSON.parse(JSON.stringify(prev));
+        setHistory((h) => [snapshot, ...h].slice(0, 10));
+      }
+      applied = next;
+      return next;
+    });
+    return applied;
+  }, []);
+
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      if (!h.length) return h;
+      const [latest, ...rest] = h;
+      setCourseState(latest);
+      return rest;
+    });
+  }, []);
+
   useEffect(() => {
-    setState((s) => ({
-      ...s,
-      team: s.team.map((m) => {
-        const p = people.find((p) => p.id === m.id);
-        return p ? { ...m, ...p } : m;
+    const handleKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        const target = event.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+        event.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo]);
+
+  useEffect(() => {
+    updateCourseState(
+      (s) => ({
+        ...s,
+        team: s.team.map((m) => {
+          const p = people.find((p) => p.id === m.id);
+          return p ? { ...m, ...p } : m;
+        }),
       }),
-    }));
-  }, [people]);
+      { capture: false }
+    );
+  }, [people, updateCourseState]);
 
   // Persist
   useEffect(() => { localStorage.setItem("healthPM:state:v8", JSON.stringify(state)); }, [state]);
@@ -482,17 +525,17 @@ useEffect(() => {
       if (e.key === GLOBAL_SCHEDULE_KEY && e.newValue) {
         try {
           const sched = JSON.parse(e.newValue);
-          setState((s) => {
+          updateCourseState((s) => {
             let tasks = s.tasks.map((t) => t.startDate ? { ...t, dueDate: addBusinessDays(t.startDate, t.workDays, sched.workweek, sched.holidays) } : t);
             tasks = propagateDependentForecasts(tasks, sched);
             return { ...s, schedule: sched, tasks };
-          });
+          }, { capture: false });
         } catch {}
       }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [updateCourseState]);
 
   // Capture current content once as initial template (only if not already captured)
   useEffect(() => { try { const flag = localStorage.getItem("healthPM:template:captured"); if (!flag) { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(state)); localStorage.setItem("healthPM:template:captured","1"); } } catch {} }, []);
@@ -534,7 +577,7 @@ useEffect(() => {
 
   const updateTask = (id, patch) => {
     let nextState = null;
-    setState((s) => {
+    updateCourseState((s) => {
       let changedTo = null;
       const tasks1 = s.tasks.map((t) => {
         if (t.id !== id) return t;
@@ -572,7 +615,7 @@ useEffect(() => {
   };
 
   const addTask = (milestoneId = null) =>
-    setState((s) => {
+    updateCourseState((s) => {
       const desiredId = milestoneId ?? null;
       const validMilestoneId = desiredId && s.milestones.some((m) => m.id === desiredId) ? desiredId : null;
       return {
@@ -598,16 +641,16 @@ useEffect(() => {
         ],
       };
     });
-  const duplicateTask = (id) => setState((s) => { const orig = s.tasks.find((t)=>t.id===id); if(!orig) return s; const clone = { ...orig, id: uid(), order: s.tasks.length, title: `${orig.title} (copy)`, status: "todo", startDate: "", dueDate: "", completedDate: "", depTaskId: null }; return { ...s, tasks: [...s.tasks, clone] }; });
+  const duplicateTask = (id) => updateCourseState((s) => { const orig = s.tasks.find((t)=>t.id===id); if(!orig) return s; const clone = { ...orig, id: uid(), order: s.tasks.length, title: `${orig.title} (copy)`, status: "todo", startDate: "", dueDate: "", completedDate: "", depTaskId: null }; return { ...s, tasks: [...s.tasks, clone] }; });
   const patchTaskLinks = (id, op, payload) =>
-    setState((s) => ({
+    updateCourseState((s) => ({
       ...s,
       tasks: applyLinkPatch(s.tasks, id, op, payload),
     }));
-  const deleteTask = (id) => setState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
+  const deleteTask = (id) => updateCourseState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
   const handleDeleteUnassignedTasksClick = () => {
     if (!window.confirm("Delete all unassigned tasks? This action cannot be undone.")) return;
-    setState((s) => {
+    updateCourseState((s) => {
       const validIds = new Set(s.milestones.map((m) => m.id));
       const remaining = s.tasks.filter((t) => {
         const id = t.milestoneId;
@@ -617,14 +660,14 @@ useEffect(() => {
     });
   };
 
-  const updateMilestone  = (id, patch) => setState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
+  const updateMilestone  = (id, patch) => updateCourseState((s)=>({ ...s, milestones: s.milestones.map((m)=>(m.id===id?{...m,...patch}:m)) }));
   const addMilestone = () =>
-    setState((s) => ({
+    updateCourseState((s) => ({
       ...s,
       milestones: [...s.milestones, { id: uid(), title: "New Milestone", start: todayStr(), goal: "" }],
     }));
   const addMilestoneFromTemplate = (tplId) =>
-    setState((s) => {
+    updateCourseState((s) => {
       const tpl = milestoneTemplates.find((t) => t.id === tplId);
       if (!tpl) return s;
       const newMsId = uid();
@@ -645,13 +688,13 @@ useEffect(() => {
       return { ...s, milestones: [...s.milestones, newMs], tasks: [...s.tasks, ...clonedTasks] };
     });
   const deleteMilestone  = (id) =>
-    setState((s) => ({
+    updateCourseState((s) => ({
       ...s,
       milestones: s.milestones.filter((m) => m.id !== id),
       tasks: s.tasks.map((t) => (t.milestoneId === id ? { ...t, milestoneId: null } : t)),
     }));
   const duplicateMilestone = (id) =>
-    setState((s) => {
+    updateCourseState((s) => {
       const src = s.milestones.find((m) => m.id === id);
       if (!src) return s;
 
@@ -731,7 +774,7 @@ useEffect(() => {
     dragMilestoneId.current = null;
     setDragMilestoneOverId(null);
     if (!srcId || srcId === targetId) return;
-    setState((s) => {
+    updateCourseState((s) => {
       const ms = [...s.milestones];
       const from = ms.findIndex((m) => m.id === srcId);
       if (from === -1) return s;
@@ -744,17 +787,17 @@ useEffect(() => {
   };
 
   // Members
-  const updateMember = (id, patch) => setState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
-  const addMember    = () => setState((s)=>({ ...s, team: [...s.team, { id: uid(), name: nextMemberName(s.team), roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
-  const addExistingMember = (pid) => setState((s)=>{
+  const updateMember = (id, patch) => updateCourseState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
+  const addMember    = () => updateCourseState((s)=>({ ...s, team: [...s.team, { id: uid(), name: nextMemberName(s.team), roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
+  const addExistingMember = (pid) => updateCourseState((s)=>{
     if (s.team.some((m)=>m.id===pid)) return s;
     const person = people.find((p)=>p.id===pid);
     if (!person) return s;
     return { ...s, team: [...s.team, { ...person }] };
   });
-  const deleteMember = (id) => setState((s)=>({ ...s, team: s.team.filter((m)=>m.id!==id), course: { ...s.course, courseLDIds: s.course.courseLDIds.filter((mId)=>mId!==id), courseSMEIds: s.course.courseSMEIds.filter((mId)=>mId!==id) }, tasks: s.tasks.map((t)=>(t.assigneeId===id?{...t, assigneeId:null}:t)) }));
+  const deleteMember = (id) => updateCourseState((s)=>({ ...s, team: s.team.filter((m)=>m.id!==id), course: { ...s.course, courseLDIds: s.course.courseLDIds.filter((mId)=>mId!==id), courseSMEIds: s.course.courseSMEIds.filter((mId)=>mId!==id) }, tasks: s.tasks.map((t)=>(t.assigneeId===id?{...t, assigneeId:null}:t)) }));
   const toggleCourseWide = (kind, id) =>
-    setState((s) => {
+    updateCourseState((s) => {
       const key = kind === "LD" ? "courseLDIds" : "courseSMEIds";
       const list = new Set(s.course[key]);
       list.has(id) ? list.delete(id) : list.add(id);
@@ -825,13 +868,23 @@ useEffect(() => {
       >
         <Save className="icon" aria-hidden="true" />
       </button>
+      <button
+        type="button"
+        onClick={undo}
+        disabled={!history.length}
+        className="glass-icon-button disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Undo"
+        aria-label="Undo"
+      >
+        <Undo2 className="icon" aria-hidden="true" />
+      </button>
       <span className="text-sm font-medium text-slate-600/90 whitespace-nowrap px-3 py-1 rounded-full bg-white/80 border border-white/60 shadow-sm">
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
       </span>
       <button
         type="button"
         onClick={() => {
-          if (confirm("Reset to fresh sample data?")) setState(remapSeed(seedWithSampleData()));
+          if (confirm("Reset to fresh sample data?")) updateCourseState(remapSeed(seedWithSampleData()));
         }}
         className="glass-icon-button"
         title="Reset sample data"
@@ -856,7 +909,7 @@ useEffect(() => {
         onClick={async () => {
           const tpl = (await loadTemplateRemote()) || loadTemplate();
           if (tpl)
-            setState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
+            updateCourseState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
           else alert("No template saved yet.");
         }}
         className="glass-icon-button"
@@ -883,7 +936,7 @@ useEffect(() => {
               reader.onload = () => {
                 try {
                   const incoming = remapSeed(JSON.parse(reader.result));
-                  setState((s) => ({
+                  updateCourseState(() => ({
                     ...incoming,
                     schedule: loadGlobalSchedule(),
                   }));
@@ -969,14 +1022,14 @@ useEffect(() => {
         {/* Secondary row: course title and template pill */}
         <div className="max-w-7xl mx-auto px-4 pb-4 -mt-1 space-y-2 sm:space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-base sm:text-xl font-semibold leading-tight flex-1 min-w-0 text-slate-800"><InlineText className="break-words" value={state.course.name} onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
+            <h1 className="text-base sm:text-xl font-semibold leading-tight flex-1 min-w-0 text-slate-800"><InlineText className="break-words" value={state.course.name} onChange={(v)=>updateCourseState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
             {isTemplateLabel && <span className="text-sm font-medium px-3 py-1 rounded-full bg-violet-100/80 text-violet-700 border border-violet-200/70 shadow-[0_10px_18px_rgba(79,70,229,0.18)] whitespace-nowrap">Course Template</span>}
           </div>
           <div className="flex flex-col gap-2 text-sm sm:mt-0 sm:flex-row sm:items-center sm:gap-4">
             <p className="text-slate-600/90 leading-snug sm:flex-1 sm:min-w-[280px]">
               <InlineText
                 value={state.course.description}
-                onChange={(v)=>setState((s)=>({ ...s, course: { ...s.course, description: v } }))}
+                onChange={(v)=>updateCourseState((s)=>({ ...s, course: { ...s.course, description: v } }))}
               />
             </p>
             {hasCourseRoleBadges && (
@@ -1581,12 +1634,29 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, []);
 
   const [saveState, setSaveState] = useState('saved');
+  const [history, setHistory] = useState([]);
   const [courseQuery, setCourseQuery] = useState('');
   const [activeTab, setActiveTab] = useState(() => {
     const stored = localStorage.getItem('userTab');
     const validTabs = new Set(['deadlines','courses','milestones','board','calendar']);
     return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
+
+  const updateCourses = useCallback((updater, options = {}) => {
+    const { capture = true } = options;
+    let applied = null;
+    setCourses((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      if (next === prev) return prev;
+      if (capture) {
+        const snapshot = JSON.parse(JSON.stringify(prev));
+        setHistory((h) => [snapshot, ...h].slice(0, 10));
+      }
+      applied = next;
+      return next;
+    });
+    return applied;
+  }, []);
 
   const dashboardTabs = [
     { id: 'deadlines', label: 'Overview', Icon: Home },
@@ -1619,7 +1689,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
 
   const updateTask = (courseId, taskId, patch) => {
-    setCourses((cs) => cs.map((c) => {
+    updateCourses((cs) => cs.map((c) => {
       if (c.course.id !== courseId) return c;
       const sched = c.schedule || loadGlobalSchedule();
       let changedTo = null;
@@ -1666,7 +1736,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
 
   const patchTaskLinks = (courseId, id, op, payload) => {
-    setCourses((cs) =>
+    updateCourses((cs) =>
       cs.map((c) => {
         if (c.course.id !== courseId) return c;
         return {
@@ -1679,7 +1749,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
 
   const duplicateTask = (courseId, id) => {
-    setCourses((cs) => cs.map((c) => {
+    updateCourses((cs) => cs.map((c) => {
       if (c.course.id !== courseId) return c;
       const orig = c.tasks.find((t) => t.id === id);
       if (!orig) return c;
@@ -1699,11 +1769,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
 
   const deleteTask = (courseId, id) => {
-    setCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.filter((t) => t.id !== id) } : c));
+    updateCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.filter((t) => t.id !== id) } : c));
     setSaveState('unsaved');
   };
   const changeTaskCourse = (fromCourseId, taskId, toCourseId) => {
-    setCourses((cs) => {
+    updateCourses((cs) => {
       const from = cs.find((c) => c.course.id === fromCourseId);
       const to = cs.find((c) => c.course.id === toCourseId);
       if (!from || !to) return cs;
@@ -1743,7 +1813,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       depTaskId: null,
       completedDate: '',
     };
-    setCourses((cs) => cs.map((c) => c.course.id === cid ? { ...c, tasks: [...c.tasks, newTask] } : c));
+    updateCourses((cs) => cs.map((c) => c.course.id === cid ? { ...c, tasks: [...c.tasks, newTask] } : c));
     setEditing({ courseId: cid, taskId: newTask.id });
     setSaveState('unsaved');
   };
@@ -1763,6 +1833,31 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [calMonth, setCalMonth] = useState(() => new Date());
   const [editing, setEditing] = useState(null);
   const [linkPrompt, setLinkPrompt] = useState(null);
+
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      if (!h.length) return h;
+      const [latest, ...rest] = h;
+      setCourses(latest);
+      setEditing(null);
+      setLinkPrompt(null);
+      setSaveState('unsaved');
+      return rest;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        const target = event.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+        event.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo]);
   const statusPriority = { inprogress: 0, todo: 1, done: 2 };
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const statusListClasses = {
@@ -1928,6 +2023,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             <select value={userId} onChange={(e)=>setUserId(e.target.value)} className="text-sm rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm">
               {members.map((m)=> (<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}
             </select>
+            <button
+              onClick={undo}
+              disabled={!history.length}
+              className="glass-button disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Undo
+            </button>
             <button
               onClick={handleSave}
               className="glass-button"
@@ -2296,7 +2398,7 @@ export function CoursesHub({
   }, []);
 
   const pushHistory = useCallback((snapshot) => {
-    setHistory((h) => [JSON.parse(JSON.stringify(snapshot)), ...h].slice(0, 5));
+    setHistory((h) => [JSON.parse(JSON.stringify(snapshot)), ...h].slice(0, 10));
   }, []);
 
   const persistLinkLibrary = useCallback((next) => {
@@ -2342,7 +2444,7 @@ export function CoursesHub({
     [linkLibrary, persistLinkLibrary]
   );
 
-  const undo = () => {
+  const undo = useCallback(() => {
     setHistory((h) => {
       if (!h.length) return h;
       const [latest, ...rest] = h;
@@ -2351,7 +2453,20 @@ export function CoursesHub({
       setCourses(latest);
       return rest;
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+        const target = event.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+        event.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo]);
 
   useEffect(() => {
     const onSchedStorage = (e) => {
