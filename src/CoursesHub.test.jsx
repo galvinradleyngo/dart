@@ -71,8 +71,8 @@ describe('CoursesHub undo functionality', () => {
     expect(undoButton).toBeDisabled();
   });
 
-  it('supports undoing up to five steps', async () => {
-    const courses = Array.from({ length: 5 }, (_, i) => ({
+  it('supports undoing up to ten steps', async () => {
+    const courses = Array.from({ length: 10 }, (_, i) => ({
       id: `c${i + 1}`,
       course: { id: `c${i + 1}`, name: `Course ${i + 1}`, description: '' },
       tasks: [],
@@ -86,7 +86,7 @@ describe('CoursesHub undo functionality', () => {
 
     const undoButton = screen.getByRole('button', { name: 'Undo' });
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const del = screen.getAllByRole('button', { name: 'Delete' })[0];
       fireEvent.click(del);
     }
@@ -94,11 +94,11 @@ describe('CoursesHub undo functionality', () => {
     expect(screen.queryAllByRole('button', { name: 'Open' })).toHaveLength(0);
     expect(undoButton).not.toBeDisabled();
 
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       fireEvent.click(undoButton);
     }
 
-    expect(await screen.findAllByRole('button', { name: 'Open' })).toHaveLength(5);
+    expect(await screen.findAllByRole('button', { name: 'Open' })).toHaveLength(10);
     expect(undoButton).toBeDisabled();
   });
 });
