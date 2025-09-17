@@ -560,7 +560,14 @@ useEffect(() => {
       return id === null || id === undefined || id === "" || !validIds.has(id);
     });
   }, [tasksRaw, milestones]);
-  const filteredMilestones = useMemo(() => (milestoneFilter === "all" ? milestones : milestones.filter((m) => m.id === milestoneFilter)), [milestones, milestoneFilter]);
+  const filteredMilestones = useMemo(() => {
+    const base =
+      milestoneFilter === "all"
+        ? milestones
+        : milestones.filter((m) => m.id === milestoneFilter);
+    if (!milestonesCollapsed) return base;
+    return [...base].sort((a, b) => a.title.localeCompare(b.title));
+  }, [milestones, milestoneFilter, milestonesCollapsed]);
   const activeFilterLabel = useMemo(() => {
     if (milestoneFilter === "all") return "All milestones";
     const match = milestones.find((m) => m.id === milestoneFilter);
@@ -3083,6 +3090,8 @@ export function CoursesHub({
 // =====================================================
 // Root App – switches between Hub and Course Dashboard
 // =====================================================
+export { CoursePMApp };
+
 export default function PMApp() {
   const [view, setView] = useState(() => {
     const hasCourses = loadCourses().length > 0; return hasCourses ? "hub" : "hub"; // start at hub
