@@ -170,128 +170,136 @@ export default function BlockDialog({
             <X className="icon" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
           {isResolveMode ? (
-            <>
-              <div className="glass-card border border-emerald-200/40 p-4 text-sm text-emerald-900/90">
-                <div className="text-sm font-semibold uppercase tracking-wide text-emerald-900/80">
-                  Reported Block
+            <div className="space-y-6 sm:grid sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] sm:gap-6 sm:space-y-0">
+              <div className="space-y-4">
+                <div className="glass-card border border-emerald-200/40 p-4 text-sm text-emerald-900/90">
+                  <div className="text-sm font-semibold uppercase tracking-wide text-emerald-900/80">
+                    Reported Block
+                  </div>
+                  <div className="mt-2 leading-relaxed text-emerald-900/80">
+                    {block?.description || "No description provided."}
+                  </div>
+                  <div className="mt-3 text-xs font-medium uppercase tracking-wide text-emerald-900/70">
+                    Reported by {reporterMember?.name || "Unknown"}
+                    {block?.reportedAt ? ` on ${block.reportedAt}` : ""}
+                  </div>
+                  {taggedMembers.length > 0 && (
+                    <div className="mt-1 text-xs text-emerald-900/70">
+                      Tagged: {taggedMembers.join(", ")}
+                    </div>
+                  )}
                 </div>
-                <div className="mt-2 leading-relaxed text-emerald-900/80">
-                  {block?.description || "No description provided."}
-                </div>
-                <div className="mt-3 text-xs font-medium uppercase tracking-wide text-emerald-900/70">
-                  Reported by {reporterMember?.name || "Unknown"}
-                  {block?.reportedAt ? ` on ${block.reportedAt}` : ""}
-                </div>
-                {taggedMembers.length > 0 && (
-                  <div className="mt-1 text-xs text-emerald-900/70">
-                    Tagged: {taggedMembers.join(", ")}
+                {block?.resolvedAt && block?.resolution && (
+                  <div className="glass-card border border-emerald-200/40 p-4 text-xs text-emerald-900/80">
+                    <div className="text-sm font-semibold text-emerald-900/90">Previous Resolution</div>
+                    <div className="mt-2 leading-relaxed">{block.resolution}</div>
+                    <div className="mt-2 text-[11px] font-medium uppercase tracking-wide">
+                      Resolved by {resolverMember?.name || "Unknown"}
+                      {block.resolvedAt ? ` on ${block.resolvedAt}` : ""}
+                    </div>
                   </div>
                 )}
               </div>
-              <div>
-                <label htmlFor="block-resolution" className="text-sm font-semibold text-slate-800/90">
-                  Resolution notes
-                </label>
-                <textarea
-                  id="block-resolution"
-                  ref={resolutionRef}
-                  value={resolution}
-                  onChange={(event) => setResolution(event.target.value)}
-                  rows={4}
-                  className={`mt-2 ${sharedFieldClasses} ${resolveFieldFocus}`}
-                  placeholder="How was this block resolved?"
-                />
-              </div>
-              <div>
-                <label htmlFor="block-resolver" className="text-sm font-semibold text-slate-800/90">
-                  Resolved by
-                </label>
-                <select
-                  id="block-resolver"
-                  value={resolverId}
-                  onChange={(event) => setResolverId(event.target.value)}
-                  className={`mt-2 ${sharedFieldClasses} ${resolveFieldFocus}`}
-                >
-                  <option value="">Select a resolver</option>
-                  {team.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.name} ({member.roleType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {block?.resolvedAt && block?.resolution && (
-                <div className="glass-card border border-emerald-200/40 p-4 text-xs text-emerald-900/80">
-                  <div className="text-sm font-semibold text-emerald-900/90">Previous Resolution</div>
-                  <div className="mt-2 leading-relaxed">{block.resolution}</div>
-                  <div className="mt-2 text-[11px] font-medium uppercase tracking-wide">
-                    Resolved by {resolverMember?.name || "Unknown"}
-                    {block.resolvedAt ? ` on ${block.resolvedAt}` : ""}
-                  </div>
+              <div className="space-y-4 sm:mt-0">
+                <div>
+                  <label htmlFor="block-resolution" className="text-sm font-semibold text-slate-800/90">
+                    Resolution notes
+                  </label>
+                  <textarea
+                    id="block-resolution"
+                    ref={resolutionRef}
+                    value={resolution}
+                    onChange={(event) => setResolution(event.target.value)}
+                    rows={4}
+                    className={`mt-2 ${sharedFieldClasses} ${resolveFieldFocus}`}
+                    placeholder="How was this block resolved?"
+                  />
                 </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div>
-                <label htmlFor="block-description" className="text-sm font-semibold text-slate-800/90">
-                  Block description
-                </label>
-                <textarea
-                  id="block-description"
-                  ref={descriptionRef}
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  rows={4}
-                  className={`mt-2 ${sharedFieldClasses} ${reportFieldFocus}`}
-                  placeholder="What is blocking progress?"
-                />
-              </div>
-              <div>
-                <label htmlFor="block-reporter" className="text-sm font-semibold text-slate-800/90">
-                  Reported by
-                </label>
-                <select
-                  id="block-reporter"
-                  value={reporterId}
-                  onChange={(event) => setReporterId(event.target.value)}
-                  className={`mt-2 ${sharedFieldClasses} ${reportFieldFocus}`}
-                >
-                  <option value="">Select a reporter</option>
-                  {team.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.name} ({member.roleType})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-slate-800/90">Notify team members</div>
-                {team.length === 0 ? (
-                  <p className="mt-2 text-sm text-slate-500/80">No team members available.</p>
-                ) : (
-                  <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto glass-card p-3">
+                <div>
+                  <label htmlFor="block-resolver" className="text-sm font-semibold text-slate-800/90">
+                    Resolved by
+                  </label>
+                  <select
+                    id="block-resolver"
+                    value={resolverId}
+                    onChange={(event) => setResolverId(event.target.value)}
+                    className={`mt-2 ${sharedFieldClasses} ${resolveFieldFocus}`}
+                  >
+                    <option value="">Select a resolver</option>
                     {team.map((member) => (
-                      <li key={member.id}>
-                        <label className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
-                          <input
-                            type="checkbox"
-                            checked={taggedIds.includes(member.id)}
-                            onChange={() => toggleTagged(member.id)}
-                            className="h-4 w-4 rounded border-white/70 bg-white/70 text-indigo-500 focus:ring-indigo-400/80 focus:ring-offset-0"
-                          />
-                          <span className="truncate">
-                            {member.name} ({member.roleType})
-                          </span>
-                        </label>
-                      </li>
+                      <option key={member.id} value={member.id}>
+                        {member.name} ({member.roleType})
+                      </option>
                     ))}
-                  </ul>
-                )}
+                  </select>
+                </div>
               </div>
-            </>
+            </div>
+          ) : (
+            <div className="space-y-6 sm:grid sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] sm:gap-6 sm:space-y-0">
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="block-description" className="text-sm font-semibold text-slate-800/90">
+                    Block description
+                  </label>
+                  <textarea
+                    id="block-description"
+                    ref={descriptionRef}
+                    value={description}
+                    onChange={(event) => setDescription(event.target.value)}
+                    rows={4}
+                    className={`mt-2 ${sharedFieldClasses} ${reportFieldFocus}`}
+                    placeholder="What is blocking progress?"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="block-reporter" className="text-sm font-semibold text-slate-800/90">
+                    Reported by
+                  </label>
+                  <select
+                    id="block-reporter"
+                    value={reporterId}
+                    onChange={(event) => setReporterId(event.target.value)}
+                    className={`mt-2 ${sharedFieldClasses} ${reportFieldFocus}`}
+                  >
+                    <option value="">Select a reporter</option>
+                    {team.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name} ({member.roleType})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-4 sm:mt-0">
+                <div className="space-y-3">
+                  <div className="text-sm font-semibold text-slate-800/90">Notify team members</div>
+                  {team.length === 0 ? (
+                    <p className="text-sm text-slate-500/80">No team members available.</p>
+                  ) : (
+                    <ul className="max-h-48 overflow-y-auto glass-card p-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {team.map((member) => (
+                        <li key={member.id} className="min-w-0">
+                          <label className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
+                            <input
+                              type="checkbox"
+                              checked={taggedIds.includes(member.id)}
+                              onChange={() => toggleTagged(member.id)}
+                              className="h-4 w-4 rounded border-white/70 bg-white/70 text-indigo-500 focus:ring-indigo-400/80 focus:ring-offset-0"
+                            />
+                            <span className="truncate">
+                              {member.name} ({member.roleType})
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
           <div className="flex items-center justify-end gap-2">
             <button
