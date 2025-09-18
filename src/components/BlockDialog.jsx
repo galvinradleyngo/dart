@@ -143,14 +143,15 @@ export default function BlockDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="block-dialog-title"
-        className="w-full max-w-xl max-h-[calc(100vh_-_3rem)] overflow-y-auto glass-surface p-5 sm:overflow-y-visible sm:p-6"
+        className="w-full max-w-xl glass-surface overflow-hidden rounded-[28px] shadow-[0_38px_90px_-42px_rgba(15,23,42,0.58)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <h2
-              id="block-dialog-title"
-              className="text-lg font-semibold text-slate-900 drop-shadow-[0_10px_30px_rgba(15,23,42,0.18)]"
+        <div className="max-h-[calc(100vh_-_3rem)] overflow-y-auto p-5 sm:overflow-y-visible sm:p-6">
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <h2
+                id="block-dialog-title"
+                className="text-lg font-semibold text-slate-900 drop-shadow-[0_10px_30px_rgba(15,23,42,0.18)]"
             >
               {isResolveMode ? "Resolve Block" : "Mark as Blocked"}
             </h2>
@@ -313,6 +314,7 @@ export default function BlockDialog({
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );
