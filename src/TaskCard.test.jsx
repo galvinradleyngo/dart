@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import TaskCard from './TaskCard';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
@@ -214,5 +214,52 @@ describe('TaskCard', () => {
     expect(onUpdate).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText('No link'));
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'done' });
+  });
+
+  it('does not fire confetti when mounting a completed task', async () => {
+    render(
+      <TaskCard
+        task={{ ...sampleTask, status: 'done', links: ['https://example.com'] }}
+        milestones={milestones}
+        onUpdate={() => {}}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-confetti]')).toBeNull();
+    });
+  });
+
+  it('fires confetti when status transitions to done', async () => {
+    const { rerender, unmount } = render(
+      <TaskCard
+        task={{ ...sampleTask, status: 'inprogress', links: ['https://example.com'] }}
+        milestones={milestones}
+        onUpdate={() => {}}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+
+    expect(document.querySelector('[data-confetti]')).toBeNull();
+
+    rerender(
+      <TaskCard
+        task={{ ...sampleTask, status: 'done', links: ['https://example.com'] }}
+        milestones={milestones}
+        onUpdate={() => {}}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-confetti]')).not.toBeNull();
+    });
+
+    unmount();
+    expect(document.querySelector('[data-confetti]')).toBeNull();
   });
 });
