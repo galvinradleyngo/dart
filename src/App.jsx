@@ -1395,7 +1395,7 @@ useEffect(() => {
             color="#ef4444"
             mode="count"
             icon={(
-              <IconBadge className="bg-rose-100 text-rose-600 shadow-[0_16px_32px_-18px_rgba(244,63,94,0.55)]">
+              <IconBadge className="bg-red-100 text-red-600 shadow-[0_16px_32px_-18px_rgba(239,68,68,0.55)]">
                 <AlarmClock className="icon icon-lg" />
               </IconBadge>
             )}
@@ -1806,10 +1806,12 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
       return n;
     });
   const statusPillClass = (status) => {
-    if (status === "done") return "bg-pink-100 text-pink-800 border-pink-200";
-    if (status === "inprogress") return "bg-emerald-100 text-emerald-900 border-emerald-200";
-    return "bg-white text-slate-700 border-slate-300";
+    if (status === "done") return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    if (status === "inprogress") return "bg-amber-100 text-amber-800 border-amber-200";
+    return "bg-sky-100 text-sky-800 border-sky-200";
   };
+  const columnBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', done: 'bg-emerald-50' };
+  const cardBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', done: 'bg-emerald-50' };
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const renderStatusControl = (task) => {
     if (!isMobile) {
@@ -1860,14 +1862,14 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
     <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {cols.map((c) => (
-          <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
+          <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${columnBackground[c.id] || 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
             <div className="space-y-2 min-h-[140px]">
               {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
                   <motion.div
                     key={t.id}
                     data-testid="task-card"
-                    className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm sm:text-[14px] ${c.id==='inprogress' ? 'bg-emerald-50' : 'bg-white'}`}
+                    className={`rounded-lg border border-black/10 p-2 sm:p-3 shadow-sm text-sm sm:text-[14px] ${cardBackground[c.id] || 'bg-white'}`}
                     draggable={!isMobile}
                     onDragStart={!isMobile ? onDragStart(t.id) : undefined}
                     style={isMobile ? { touchAction: 'pan-y' } : undefined}
@@ -2172,14 +2174,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const statusPriority = { inprogress: 0, todo: 1, done: 2 };
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
   const statusListClasses = {
-    todo: 'bg-white/80 border-white/60 text-slate-700',
-    inprogress: 'bg-emerald-50/70 border-emerald-200/80 text-emerald-700',
-    done: 'bg-pink-50/70 border-pink-200/80 text-pink-700',
+    todo: 'bg-sky-50/80 border-sky-200/80 text-sky-700',
+    inprogress: 'bg-amber-50/80 border-amber-200/80 text-amber-700',
+    done: 'bg-emerald-50/80 border-emerald-200/80 text-emerald-700',
   };
   const statusBadgeClasses = {
-    todo: 'bg-white/80 text-slate-600 border-white/60',
-    inprogress: 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80',
-    done: 'bg-pink-100/80 text-pink-700 border-pink-200/80',
+    todo: 'bg-sky-100/80 text-sky-700 border-sky-200/80',
+    inprogress: 'bg-amber-100/80 text-amber-700 border-amber-200/80',
+    done: 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80',
   };
 
   const members = useMemo(() => {
@@ -2258,12 +2260,12 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const isOverdue = t.dueDate < today;
     const isDueToday = t.dueDate === today;
     const containerTone = isOverdue
-      ? 'border-rose-200/80 bg-rose-50/70 text-rose-700/90'
+      ? 'border-red-200/80 bg-red-50/70 text-red-700/90'
       : isDueToday
       ? 'border-amber-200/80 bg-amber-50/70 text-amber-700/90'
       : 'border-white/60 bg-white/80 text-slate-700';
     const pillTone = isOverdue
-      ? 'bg-rose-100/80 text-rose-700 border-rose-200/80'
+      ? 'bg-red-100/80 text-red-700 border-red-200/80'
       : isDueToday
       ? 'bg-amber-100/80 text-amber-700 border-amber-200/80'
       : 'bg-white/80 text-slate-600 border-white/60';
@@ -2490,7 +2492,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                             );
                             const total = counts.todo + counts.inprogress + counts.done;
                             const pct = total ? Math.round((counts.done / total) * 100) : 0;
-                            const progressColor = `hsl(${330 + (pct / 100) * (120 - 330)}, 70%, 50%)`;
+                            const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
                             return (
                               <details key={m.id} className="group glass-card">
                                 <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">

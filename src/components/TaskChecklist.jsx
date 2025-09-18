@@ -60,12 +60,12 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                   const isOverdue = !!dueDate && dueDate < today;
                   const isDueToday = !!dueDate && dueKey === todayKey;
                   const containerTone = isOverdue
-                    ? "border-rose-200/80 bg-rose-50/80 text-rose-700/90"
+                    ? "border-red-200/80 bg-red-50/80 text-red-700/90"
                     : isDueToday
                     ? "border-amber-200/80 bg-amber-50/80 text-amber-700/90"
                     : "border-white/60 bg-white/80 text-slate-700";
                   const pillTone = isOverdue
-                    ? "bg-rose-100/80 text-rose-700 border-rose-200/80"
+                    ? "bg-red-100/80 text-red-700 border-red-200/80"
                     : isDueToday
                     ? "bg-amber-100/80 text-amber-700 border-amber-200/80"
                     : t.dueDate

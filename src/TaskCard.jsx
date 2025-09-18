@@ -20,7 +20,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const soundEnabled = useContext(SoundContext);
   const audioCtxRef = useRef(null);
   const controls = useAnimation();
-  const statusColors = { todo: '#ffffff', inprogress: '#dcfce7', done: '#fce7f3' };
+  const statusColors = { todo: '#bfdbfe', inprogress: '#fef3c7', done: '#dcfce7' };
   useEffect(() => { controls.set({ backgroundColor: statusColors[t.status], scale: 1 }); }, []);
   useEffect(() => {
     controls.start({
@@ -59,9 +59,9 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     if (collapsed) setMilestoneEdit(false);
   }, [collapsed]);
   const statusPillClass = (status) => {
-    if (status === 'done') return 'bg-pink-100/70 text-pink-700 border-pink-200/80';
-    if (status === 'inprogress') return 'bg-emerald-100/70 text-emerald-700 border-emerald-200/80';
-    return 'bg-white/80 text-slate-700 border-white/60';
+    if (status === 'done') return 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80';
+    if (status === 'inprogress') return 'bg-amber-100/80 text-amber-700 border-amber-200/80';
+    return 'bg-sky-100/80 text-sky-700 border-sky-200/80';
   };
   const statusPillBase = 'min-w-[10rem] px-3 pr-10 py-1.5 rounded-full border font-semibold text-sm shadow-sm backdrop-blur';
   const handleStatusChange = (value) => {
