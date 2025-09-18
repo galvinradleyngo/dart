@@ -135,7 +135,7 @@ export default function BlockDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 px-4 py-6"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 px-4 py-10 backdrop-blur-sm backdrop-saturate-150 sm:items-center sm:py-6"
       onClick={() => onCancel?.()}
     >
       <div
@@ -143,7 +143,7 @@ export default function BlockDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="block-dialog-title"
-        className="w-full max-w-xl max-h-[calc(100vh_-_3rem)] glass-surface p-5 sm:p-6"
+        className="w-full max-w-xl max-h-[calc(100vh_-_3rem)] overflow-y-auto glass-surface p-5 sm:overflow-y-visible sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
