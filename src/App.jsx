@@ -19,6 +19,7 @@ import TaskModal from "./components/TaskModal.jsx";
 import TaskChecklist from "./components/TaskChecklist.jsx";
 import TaskCard from "./TaskCard.jsx";
 import LinkReminderModal from "./components/LinkReminderModal.jsx";
+import BlockDialog from "./components/BlockDialog.jsx";
 import { applyLinkPatch } from "./linkUtils.js";
 import { SoundContext } from "./sound-context.js";
 import pkg from "../package.json";
@@ -260,11 +261,11 @@ const createSampleMilestones = (today) => ([
 ]);
 
 const createSampleTasks = (today) => ([
-  { id: uid(), order: 0, title: "Draft course outcomes", details: "Bloom + alignment checks", note: "", links: [], assigneeId: null, milestoneId: 0, status: "todo",       startDate: "",      workDays: 3, dueDate: "",                          depTaskId: null, completedDate: "" },
-  { id: uid(), order: 1, title: "Collect source materials", details: "Slides, readings, datasets", note: "", links: [], assigneeId: null, milestoneId: 0, status: "inprogress", startDate: today, workDays: 2, dueDate: addBusinessDays(today,2), depTaskId: null, completedDate: "" },
-  { id: uid(), order: 2, title: "Storyboard videos",    details: "3 explainer videos", note: "", links: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 5, dueDate: "",                          depTaskId: null, completedDate: "" },
-  { id: uid(), order: 3, title: "Build Canvas shell",   details: "Modules, pages, nav", note: "", links: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 4, dueDate: "",                          depTaskId: null, completedDate: "" },
-  { id: uid(), order: 4, title: "SME review: A–D",      details: "Async comments", note: "", links: [], assigneeId: null, milestoneId: 0, status: "done",        startDate: today, workDays: 1, dueDate: addBusinessDays(today,1), depTaskId: null, completedDate: today },
+  { id: uid(), order: 0, title: "Draft course outcomes", details: "Bloom + alignment checks", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 0, status: "todo",       startDate: "",      workDays: 3, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 1, title: "Collect source materials", details: "Slides, readings, datasets", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 0, status: "inprogress", startDate: today, workDays: 2, dueDate: addBusinessDays(today,2), depTaskId: null, completedDate: "" },
+  { id: uid(), order: 2, title: "Storyboard videos",    details: "3 explainer videos", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 5, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 3, title: "Build Canvas shell",   details: "Modules, pages, nav", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 4, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 4, title: "SME review: A–D",      details: "Async comments", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 0, status: "done",        startDate: today, workDays: 1, dueDate: addBusinessDays(today,1), depTaskId: null, completedDate: today },
 ]);
 
 export const seed = ({ withSampleData = false } = {}) => {
@@ -313,9 +314,51 @@ const remapSeed = (s) => {
     let dueDate = t.dueDate || "";
     const links = Array.isArray(t.links) ? t.links : [];
     const note = t.note ?? "";
+    const blocks = Array.isArray(t.blocks)
+      ? t.blocks
+          .map((block) => {
+            if (!block || typeof block !== 'object') return null;
+            const taggedMemberIds = Array.isArray(block.taggedMemberIds)
+              ? block.taggedMemberIds.filter((id) => typeof id === 'string' && id)
+              : [];
+            const description =
+              typeof block.description === 'string' ? block.description : '';
+            const reportedAt =
+              typeof block.reportedAt === 'string' && block.reportedAt
+                ? block.reportedAt
+                : todayStr();
+            const reportedBy =
+              typeof block.reportedBy === 'string' && block.reportedBy
+                ? block.reportedBy
+                : null;
+            const resolvedAt =
+              typeof block.resolvedAt === 'string' && block.resolvedAt
+                ? block.resolvedAt
+                : null;
+            const resolvedBy =
+              typeof block.resolvedBy === 'string' && block.resolvedBy
+                ? block.resolvedBy
+                : null;
+            const resolution =
+              typeof block.resolution === 'string' ? block.resolution : '';
+            const id =
+              typeof block.id === 'string' && block.id ? block.id : uid();
+            return {
+              id,
+              reportedAt,
+              reportedBy,
+              description,
+              taggedMemberIds,
+              resolvedAt,
+              resolvedBy,
+              resolution,
+            };
+          })
+          .filter(Boolean)
+      : [];
     if (t.status === "todo") { startDate = ""; dueDate = ""; }
     if (!dueDate && startDate) dueDate = addBusinessDays(startDate, workDays, s.schedule.workweek, s.schedule.holidays);
-    return { ...t, milestoneId, workDays, startDate, dueDate, links, note, depTaskId: t.depTaskId ?? null, completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : "") };
+    return { ...t, milestoneId, workDays, startDate, dueDate, links, note, blocks, depTaskId: t.depTaskId ?? null, completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : "") };
   });
   s.milestones = s.milestones.map((m) => { const { due, ...rest } = m; return rest; });
   s.team = s.team.map((m) => ({ ...m, color: roleColor(m.roleType), avatar: m.avatar || "" }));
@@ -766,6 +809,7 @@ useEffect(() => {
             details: "",
             note: "",
             links: [],
+            blocks: [],
             depTaskId: null,
             assigneeId: s.course.courseLDIds[0] || (s.team.find((m) => m.roleType === 'LD')?.id ?? null),
             milestoneId: validMilestoneId,
@@ -793,6 +837,7 @@ useEffect(() => {
         dueDate: "",
         completedDate: "",
         depTaskId: null,
+        blocks: Array.isArray(orig.blocks) ? orig.blocks.map((b) => ({ ...b })) : [],
       };
       return { ...s, tasks: [...s.tasks, clone] };
     });
@@ -838,6 +883,7 @@ useEffect(() => {
         startDate: '',
         dueDate: '',
         completedDate: '',
+        blocks: Array.isArray(t.blocks) ? t.blocks.map((b) => ({ ...b })) : [],
       }));
       return { ...s, milestones: [newMs, ...s.milestones], tasks: [...s.tasks, ...clonedTasks] };
     });
@@ -1606,6 +1652,7 @@ useEffect(() => {
                       onAddTask={addTask}
                       onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                       onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                      reporter={null}
                     />
                   </motion.div>
                 ))}
@@ -1645,6 +1692,7 @@ useEffect(() => {
                           onDuplicate={duplicateTask}
                           onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                           onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                          reporter={null}
                         />
                       ))}
                     </div>
@@ -1723,6 +1771,7 @@ useEffect(() => {
                   onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
                   onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
                   onDuplicate={duplicateTask}
+                  reporter={null}
                 />
               ) : (
                 <CalendarView
@@ -1751,6 +1800,7 @@ useEffect(() => {
           onAddLink={(id, url)=>patchTaskLinks(id,'add',url)}
           onRemoveLink={(id, idx)=>patchTaskLinks(id,'remove',idx)}
           onClose={()=>setEditing(null)}
+          reporter={null}
         />
       )}
       </main>
@@ -1811,7 +1861,7 @@ function Toggle({ value, onChange, options }) {
   );
 }
 
-export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
+export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate, reporter = null }) {
   const cols = [
     { id: "todo", title: "To Do" },
     { id: "inprogress", title: "In Progress" },
@@ -1831,6 +1881,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   const isMobile = useIsMobile();
   const { fireOnDone } = useCompletionConfetti();
   const [statusOpenId, setStatusOpenId] = React.useState(null);
+  const [blockDialog, setBlockDialog] = React.useState(null);
   React.useEffect(() => {
     setCollapsedIds((prev) => {
       const next = new Set(prev);
@@ -1862,6 +1913,10 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
           value={task.status}
           onChange={(e) => {
             const nextStatus = e.target.value;
+            if (nextStatus === "blocked") {
+              setBlockDialog({ taskId: task.id, prevStatus: task.status });
+              return;
+            }
             fireOnDone(task.status, nextStatus);
             onUpdate(task.id, { status: nextStatus });
           }}
@@ -1881,6 +1936,11 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
         value={task.status}
         onChange={(e) => {
           const nextStatus = e.target.value;
+          if (nextStatus === "blocked") {
+            setBlockDialog({ taskId: task.id, prevStatus: task.status });
+            setStatusOpenId(null);
+            return;
+          }
           fireOnDone(task.status, nextStatus);
           onUpdate(task.id, { status: nextStatus });
           setStatusOpenId(null);
@@ -1962,11 +2022,32 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   </>
                 )}
                   </motion.div>
-              ); })}
+                ); })}
             </div>
           </div>
         ))}
       </div>
+      <BlockDialog
+        open={!!blockDialog}
+        task={blockDialog ? tasks.find((t) => t.id === blockDialog.taskId) : null}
+        team={team}
+        reporter={reporter}
+        onSubmit={(entry) => {
+          if (!blockDialog) return;
+          const target = tasks.find((t) => t.id === blockDialog.taskId);
+          if (!target) {
+            setBlockDialog(null);
+            return;
+          }
+          const blocks = Array.isArray(target.blocks) ? target.blocks : [];
+          fireOnDone(blockDialog.prevStatus, "blocked");
+          onUpdate(blockDialog.taskId, { status: "blocked", blocks: [...blocks, entry] });
+          setBlockDialog(null);
+        }}
+        onCancel={() => {
+          setBlockDialog(null);
+        }}
+      />
     </div>
   );
 }
@@ -2091,6 +2172,16 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const updateTaskStatus = (courseId, taskId, status) => {
     const c = courses.find((x) => x.course.id === courseId);
     const task = c?.tasks.find((t) => t.id === taskId);
+    if (status === 'blocked') {
+      if (!c || !task) return;
+      setBlockDialogRequest({
+        courseId,
+        taskId,
+        previousStatus: task.status,
+        reporter: user || null,
+      });
+      return;
+    }
     if (status === 'done' && (!task?.links || task.links.length === 0)) {
       setLinkPrompt({ courseId, taskId });
       return;
@@ -2099,6 +2190,33 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       fireOnDone(task.status, status);
     }
     updateTask(courseId, taskId, { status });
+  };
+
+  const handleBlockDialogSubmit = (entry) => {
+    if (!blockDialogRequest) return;
+    const { courseId, taskId, previousStatus } = blockDialogRequest;
+    const course = courses.find((x) => x.course.id === courseId);
+    const task = course?.tasks.find((t) => t.id === taskId);
+    if (!course || !task) {
+      setBlockDialogRequest(null);
+      return;
+    }
+    const blocks = Array.isArray(task.blocks) ? task.blocks : [];
+    fireOnDone(previousStatus, 'blocked');
+    updateTask(courseId, taskId, { status: 'blocked', blocks: [...blocks, entry] });
+    setBlockDialogRequest(null);
+  };
+
+  const handleBlockDialogCancel = () => {
+    if (blockDialogRequest) {
+      const { courseId, taskId, previousStatus } = blockDialogRequest;
+      const course = courses.find((x) => x.course.id === courseId);
+      const task = course?.tasks.find((t) => t.id === taskId);
+      if (task && task.status !== previousStatus) {
+        updateTask(courseId, taskId, { status: previousStatus, __skipAutoStart: true });
+      }
+    }
+    setBlockDialogRequest(null);
   };
 
   const patchTaskLinks = (courseId, id, op, payload) => {
@@ -2129,6 +2247,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         dueDate: '',
         completedDate: '',
         depTaskId: null,
+        blocks: Array.isArray(orig.blocks) ? orig.blocks.map((b) => ({ ...b })) : [],
       };
       return { ...c, tasks: [...c.tasks, clone] };
     }));
@@ -2171,6 +2290,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       details: '',
       note: '',
       links: [],
+      blocks: [],
       assigneeId: userId || null,
       milestoneId: null,
       status: 'todo',
@@ -2201,6 +2321,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [calMonth, setCalMonth] = useState(() => new Date());
   const [editing, setEditing] = useState(null);
   const [linkPrompt, setLinkPrompt] = useState(null);
+  const [blockDialogRequest, setBlockDialogRequest] = useState(null);
 
   const undo = useCallback(() => {
     setHistory((h) => {
@@ -2669,6 +2790,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                     e.dataTransfer.setData('text/course', t.courseId);
                                   },
                                 }}
+                                reporter={user || null}
                               />
                             );
                           })}
@@ -2718,6 +2840,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
               onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
               onClose={() => setEditing(null)}
+              reporter={user || null}
             />
           );
         })()}
@@ -2738,6 +2861,21 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             }}
           />
         )}
+        {blockDialogRequest && (() => {
+          const course = courses.find((c) => c.course.id === blockDialogRequest.courseId);
+          const task = course?.tasks.find((t) => t.id === blockDialogRequest.taskId) || null;
+          const team = course?.team || [];
+          return (
+            <BlockDialog
+              open
+              task={task}
+              team={team}
+              reporter={blockDialogRequest.reporter}
+              onSubmit={handleBlockDialogSubmit}
+              onCancel={handleBlockDialogCancel}
+            />
+          );
+        })()}
       </main>
     </div>
   );

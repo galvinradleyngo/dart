@@ -18,6 +18,7 @@ export default function MilestoneCard({
   onUpdateMilestone,
   onSaveAsTemplate,
   onAddTask,
+  reporter = null,
 }) {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(milestone.title);
@@ -177,6 +178,7 @@ export default function MilestoneCard({
               onDuplicate={onDuplicate}
               onAddLink={onAddLink}
               onRemoveLink={onRemoveLink}
+              reporter={reporter}
             />
           ))}
         </div>
