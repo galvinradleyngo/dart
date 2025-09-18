@@ -2085,6 +2085,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   });
   const { fireOnDone } = useCompletionConfetti();
 
+  const [calMonth, setCalMonth] = useState(() => new Date());
+  const [editing, setEditing] = useState(null);
+  const [linkPrompt, setLinkPrompt] = useState(null);
+  const [blockDialogRequest, setBlockDialogRequest] = useState(null);
+  const [resolveBlockRequest, setResolveBlockRequest] = useState(null);
+  const [blocksCollapsed, setBlocksCollapsed] = useState(true);
+  const [blocksTab, setBlocksTab] = useState("active");
+
   const updateCourses = useCallback((updater, options = {}) => {
     const { capture = true } = options;
     let applied = null;
@@ -2319,14 +2327,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, [saveState, handleSave]);
   const cycleStatus = (s) =>
     s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'blocked' : s === 'blocked' ? 'done' : 'todo';
-  const [calMonth, setCalMonth] = useState(() => new Date());
-  const [editing, setEditing] = useState(null);
-  const [linkPrompt, setLinkPrompt] = useState(null);
-  const [blockDialogRequest, setBlockDialogRequest] = useState(null);
-  const [resolveBlockRequest, setResolveBlockRequest] = useState(null);
-  const [blocksCollapsed, setBlocksCollapsed] = useState(true);
-  const [blocksTab, setBlocksTab] = useState("active");
-
   const undo = useCallback(() => {
     setHistory((h) => {
       if (!h.length) return h;
