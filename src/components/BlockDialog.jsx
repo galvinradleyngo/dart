@@ -42,6 +42,10 @@ export default function BlockDialog({
   const descriptionRef = useRef(null);
   const resolutionRef = useRef(null);
   const teamLookup = useMemo(() => new Map(team.map((member) => [member.id, member])), [team]);
+  const sharedFieldClasses =
+    "w-full rounded-2xl border border-white/60 bg-white/55 px-3.5 py-2.5 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.4)] backdrop-blur placeholder:text-slate-500/70 focus:outline-none focus:ring-2";
+  const reportFieldFocus = "focus:ring-indigo-200/70 focus:border-indigo-300";
+  const resolveFieldFocus = "focus:ring-emerald-200/70 focus:border-emerald-300";
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +135,7 @@ export default function BlockDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 px-4 py-6"
       onClick={() => onCancel?.()}
     >
       <div
@@ -139,16 +143,19 @@ export default function BlockDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="block-dialog-title"
-        className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl"
+        className="w-full max-w-xl glass-surface p-5 sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <div>
-            <h2 id="block-dialog-title" className="text-base font-semibold text-slate-800">
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <h2
+              id="block-dialog-title"
+              className="text-lg font-semibold text-slate-900 drop-shadow-[0_10px_30px_rgba(15,23,42,0.18)]"
+            >
               {isResolveMode ? "Resolve Block" : "Mark as Blocked"}
             </h2>
             {task && (
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600/90">
                 {task.title || "Untitled task"}
               </p>
             )}
@@ -162,15 +169,17 @@ export default function BlockDialog({
             <X className="icon" />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {isResolveMode ? (
             <>
-              <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-3 text-sm text-emerald-900">
-                <div className="font-semibold">Reported Block</div>
-                <div className="mt-1 text-emerald-900/80">
+              <div className="glass-card border border-emerald-200/40 p-4 text-sm text-emerald-900/90">
+                <div className="text-sm font-semibold uppercase tracking-wide text-emerald-900/80">
+                  Reported Block
+                </div>
+                <div className="mt-2 leading-relaxed text-emerald-900/80">
                   {block?.description || "No description provided."}
                 </div>
-                <div className="mt-2 text-xs text-emerald-900/70">
+                <div className="mt-3 text-xs font-medium uppercase tracking-wide text-emerald-900/70">
                   Reported by {reporterMember?.name || "Unknown"}
                   {block?.reportedAt ? ` on ${block.reportedAt}` : ""}
                 </div>
@@ -181,7 +190,7 @@ export default function BlockDialog({
                 )}
               </div>
               <div>
-                <label htmlFor="block-resolution" className="text-sm font-medium text-slate-700">
+                <label htmlFor="block-resolution" className="text-sm font-semibold text-slate-800/90">
                   Resolution notes
                 </label>
                 <textarea
@@ -190,19 +199,19 @@ export default function BlockDialog({
                   value={resolution}
                   onChange={(event) => setResolution(event.target.value)}
                   rows={4}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  className={`mt-2 ${sharedFieldClasses} ${resolveFieldFocus}`}
                   placeholder="How was this block resolved?"
                 />
               </div>
               <div>
-                <label htmlFor="block-resolver" className="text-sm font-medium text-slate-700">
+                <label htmlFor="block-resolver" className="text-sm font-semibold text-slate-800/90">
                   Resolved by
                 </label>
                 <select
                   id="block-resolver"
                   value={resolverId}
                   onChange={(event) => setResolverId(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                  className={`mt-2 ${sharedFieldClasses} ${resolveFieldFocus}`}
                 >
                   <option value="">Select a resolver</option>
                   {team.map((member) => (
@@ -213,10 +222,10 @@ export default function BlockDialog({
                 </select>
               </div>
               {block?.resolvedAt && block?.resolution && (
-                <div className="rounded-lg border border-emerald-100 bg-white/70 p-3 text-xs text-emerald-800">
-                  <div className="font-medium">Previous Resolution</div>
-                  <div className="mt-1">{block.resolution}</div>
-                  <div className="mt-1">
+                <div className="glass-card border border-emerald-200/40 p-4 text-xs text-emerald-900/80">
+                  <div className="text-sm font-semibold text-emerald-900/90">Previous Resolution</div>
+                  <div className="mt-2 leading-relaxed">{block.resolution}</div>
+                  <div className="mt-2 text-[11px] font-medium uppercase tracking-wide">
                     Resolved by {resolverMember?.name || "Unknown"}
                     {block.resolvedAt ? ` on ${block.resolvedAt}` : ""}
                   </div>
@@ -226,7 +235,7 @@ export default function BlockDialog({
           ) : (
             <>
               <div>
-                <label htmlFor="block-description" className="text-sm font-medium text-slate-700">
+                <label htmlFor="block-description" className="text-sm font-semibold text-slate-800/90">
                   Block description
                 </label>
                 <textarea
@@ -235,19 +244,19 @@ export default function BlockDialog({
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   rows={4}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className={`mt-2 ${sharedFieldClasses} ${reportFieldFocus}`}
                   placeholder="What is blocking progress?"
                 />
               </div>
               <div>
-                <label htmlFor="block-reporter" className="text-sm font-medium text-slate-700">
+                <label htmlFor="block-reporter" className="text-sm font-semibold text-slate-800/90">
                   Reported by
                 </label>
                 <select
                   id="block-reporter"
                   value={reporterId}
                   onChange={(event) => setReporterId(event.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  className={`mt-2 ${sharedFieldClasses} ${reportFieldFocus}`}
                 >
                   <option value="">Select a reporter</option>
                   {team.map((member) => (
@@ -258,19 +267,19 @@ export default function BlockDialog({
                 </select>
               </div>
               <div>
-                <div className="text-sm font-medium text-slate-700">Notify team members</div>
+                <div className="text-sm font-semibold text-slate-800/90">Notify team members</div>
                 {team.length === 0 ? (
-                  <p className="mt-1 text-sm text-slate-500">No team members available.</p>
+                  <p className="mt-2 text-sm text-slate-500/80">No team members available.</p>
                 ) : (
-                  <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                  <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto glass-card p-3">
                     {team.map((member) => (
                       <li key={member.id}>
-                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                        <label className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
                           <input
                             type="checkbox"
                             checked={taggedIds.includes(member.id)}
                             onChange={() => toggleTagged(member.id)}
-                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            className="h-4 w-4 rounded border-white/70 bg-white/70 text-indigo-500 focus:ring-indigo-400/80 focus:ring-offset-0"
                           />
                           <span className="truncate">
                             {member.name} ({member.roleType})
