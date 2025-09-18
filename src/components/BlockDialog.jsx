@@ -143,7 +143,7 @@ export default function BlockDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="block-dialog-title"
-        className="w-full max-w-xl glass-surface p-5 sm:p-6"
+        className="w-full max-w-xl max-h-[calc(100vh_-_3rem)] glass-surface p-5 sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-5 flex items-start justify-between gap-3">
