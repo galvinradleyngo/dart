@@ -623,7 +623,23 @@ useEffect(() => {
   }, [milestoneFilter, milestones]);
 
   const totals = useMemo(() => {
-    const total = tasksRaw.length; const done = tasksRaw.filter((t)=>t.status==="done").length; const inprog = tasksRaw.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const overdue = tasksRaw.filter((t)=>t.status!=="done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())).length; return { total, done, inprog, todo, overdue, pct: total ? Math.round((done/total)*100) : 0 };
+    const total = tasksRaw.length;
+    const done = tasksRaw.filter((t) => t.status === "done").length;
+    const inprog = tasksRaw.filter((t) => t.status === "inprogress").length;
+    const blocked = tasksRaw.filter((t) => t.status === "blocked").length;
+    const todo = tasksRaw.filter((t) => t.status === "todo").length;
+    const overdue = tasksRaw.filter(
+      (t) => t.status !== "done" && t.dueDate && new Date(t.dueDate) < new Date(todayStr())
+    ).length;
+    return {
+      total,
+      done,
+      inprog,
+      blocked,
+      todo,
+      overdue,
+      pct: total ? Math.round((done / total) * 100) : 0,
+    };
   }, [tasksRaw]);
 
   const linkLibrary = Array.isArray(state.linkLibrary) ? state.linkLibrary : [];
@@ -762,7 +778,24 @@ useEffect(() => {
         ],
       };
     });
-  const duplicateTask = (id) => updateCourseState((s) => { const orig = s.tasks.find((t)=>t.id===id); if(!orig) return s; const clone = { ...orig, id: uid(), order: s.tasks.length, title: `${orig.title} (copy)`, status: "todo", startDate: "", dueDate: "", completedDate: "", depTaskId: null }; return { ...s, tasks: [...s.tasks, clone] }; });
+  const duplicateTask = (id) =>
+    updateCourseState((s) => {
+      const orig = s.tasks.find((t) => t.id === id);
+      if (!orig) return s;
+      const cloneStatus = orig.status === "done" ? "todo" : orig.status === "blocked" ? "blocked" : "todo";
+      const clone = {
+        ...orig,
+        id: uid(),
+        order: s.tasks.length,
+        title: `${orig.title} (copy)`,
+        status: cloneStatus,
+        startDate: "",
+        dueDate: "",
+        completedDate: "",
+        depTaskId: null,
+      };
+      return { ...s, tasks: [...s.tasks, clone] };
+    });
   const patchTaskLinks = (id, op, payload) =>
     updateCourseState((s) => ({
       ...s,
@@ -1779,7 +1812,12 @@ function Toggle({ value, onChange, options }) {
 }
 
 export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragStart, onDragOverCol, onDropToCol, onAddLink, onRemoveLink, onDuplicate }) {
-  const cols = [ { id: "todo", title: "To Do" }, { id: "inprogress", title: "In Progress" }, { id: "done", title: "Done" } ];
+  const cols = [
+    { id: "todo", title: "To Do" },
+    { id: "inprogress", title: "In Progress" },
+    { id: "blocked", title: "Blocked" },
+    { id: "done", title: "Done" }
+  ];
   const taskAssignableMembers = team;
   const byCol = (id) =>
     tasks
@@ -1809,12 +1847,13 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
     });
   const statusPillClass = (status) => {
     if (status === "done") return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    if (status === "blocked") return "bg-orange-100 text-orange-800 border-orange-200";
     if (status === "inprogress") return "bg-amber-100 text-amber-800 border-amber-200";
     return "bg-sky-100 text-sky-800 border-sky-200";
   };
-  const columnBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', done: 'bg-emerald-50' };
-  const cardBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', done: 'bg-emerald-50' };
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
+  const columnBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', blocked: 'bg-orange-50', done: 'bg-emerald-50' };
+  const cardBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', blocked: 'bg-orange-50', done: 'bg-emerald-50' };
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done' };
   const renderStatusControl = (task) => {
     if (!isMobile) {
       return (
@@ -1830,6 +1869,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
         >
           <option value="todo">To Do</option>
           <option value="inprogress">In Progress</option>
+          <option value="blocked">Blocked</option>
           <option value="done">Done</option>
         </select>
       );
@@ -1851,6 +1891,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
       >
         <option value="todo">To Do</option>
         <option value="inprogress">In Progress</option>
+        <option value="blocked">Blocked</option>
         <option value="done">Done</option>
       </select>
     ) : (
@@ -1868,7 +1909,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   };
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {cols.map((c) => (
           <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${columnBackground[c.id] || 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
@@ -2078,11 +2119,12 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       if (c.course.id !== courseId) return c;
       const orig = c.tasks.find((t) => t.id === id);
       if (!orig) return c;
+      const cloneStatus = orig.status === 'done' ? 'todo' : orig.status === 'blocked' ? 'blocked' : 'todo';
       const clone = {
         ...orig,
         id: uid(),
         title: `${orig.title} (copy)`,
-        status: 'todo',
+        status: cloneStatus,
         startDate: '',
         dueDate: '',
         completedDate: '',
@@ -2154,7 +2196,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const t = setTimeout(handleSave, 1500);
     return () => clearTimeout(t);
   }, [saveState, handleSave]);
-  const cycleStatus = (s) => (s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'done' : 'todo');
+  const cycleStatus = (s) =>
+    s === 'todo' ? 'inprogress' : s === 'inprogress' ? 'blocked' : s === 'blocked' ? 'done' : 'todo';
   const [calMonth, setCalMonth] = useState(() => new Date());
   const [editing, setEditing] = useState(null);
   const [linkPrompt, setLinkPrompt] = useState(null);
@@ -2183,16 +2226,18 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo]);
-  const statusPriority = { inprogress: 0, todo: 1, done: 2 };
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
+  const statusPriority = { inprogress: 0, blocked: 1, todo: 2, done: 3 };
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done' };
   const statusListClasses = {
     todo: 'bg-sky-50/80 border-sky-200/80 text-sky-700',
     inprogress: 'bg-amber-50/80 border-amber-200/80 text-amber-700',
+    blocked: 'bg-orange-50/80 border-orange-200/80 text-orange-700',
     done: 'bg-emerald-50/80 border-emerald-200/80 text-emerald-700',
   };
   const statusBadgeClasses = {
     todo: 'bg-sky-100/80 text-sky-700 border-sky-200/80',
     inprogress: 'bg-amber-100/80 text-amber-700 border-amber-200/80',
+    blocked: 'bg-orange-100/80 text-orange-700 border-orange-200/80',
     done: 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80',
   };
 
@@ -2250,7 +2295,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     });
   }, [courses, userId]);
   const groupedTasks = useMemo(() => {
-    const g = { todo: [], inprogress: [], done: [] };
+    const g = { todo: [], inprogress: [], blocked: [], done: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
     return g;
   }, [myTasks]);
@@ -2575,15 +2620,22 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               {myTasks.length === 0 ? (
                 <div className="text-sm text-slate-600/90">No tasks assigned.</div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {[
                       { id: 'todo', label: 'To Do' },
                       { id: 'inprogress', label: 'In Progress' },
+                      { id: 'blocked', label: 'Blocked' },
                       { id: 'done', label: 'Done' },
                     ].map(({ id, label }) => (
                       <div
                         key={id}
-                        className={`glass-card p-3 ${id==='inprogress' ? 'ring-1 ring-emerald-200/70' : ''}`}
+                        className={`glass-card p-3 ${
+                          id === 'inprogress'
+                            ? 'ring-1 ring-emerald-200/70'
+                            : id === 'blocked'
+                            ? 'ring-1 ring-orange-200/70'
+                            : ''
+                        }`}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={(e) => {
                           const tid = e.dataTransfer.getData('text/task');
@@ -2695,7 +2747,18 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 // Courses Hub (NEW)
 // =====================================================
 function computeTotals(state) {
-  const tasks = state.tasks || []; const total = tasks.length; const done = tasks.filter((t)=>t.status==="done").length; const inprog = tasks.filter((t)=>t.status==="inprogress").length; const todo = total - done - inprog; const pct = total ? Math.round((done/total)*100) : 0; const nextDue = tasks.filter((t)=>t.status!=="done" && t.dueDate).sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate))[0]?.dueDate || null; return { total, done, inprog, todo, pct, nextDue };
+  const tasks = state.tasks || [];
+  const total = tasks.length;
+  const done = tasks.filter((t) => t.status === "done").length;
+  const inprog = tasks.filter((t) => t.status === "inprogress").length;
+  const blocked = tasks.filter((t) => t.status === "blocked").length;
+  const todo = tasks.filter((t) => t.status === "todo").length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  const nextDue =
+    tasks
+      .filter((t) => t.status !== "done" && t.dueDate)
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0]?.dueDate || null;
+  return { total, done, inprog, blocked, todo, pct, nextDue };
 }
 export function CoursesHub({
   onOpenCourse,

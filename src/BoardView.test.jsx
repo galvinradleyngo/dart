@@ -46,6 +46,13 @@ describe('BoardView mobile status selection', () => {
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'inprogress' });
   });
 
+  it('changes from todo to blocked', () => {
+    const onUpdate = vi.fn();
+    renderBoard('todo', onUpdate);
+    fireEvent.change(openSelect(), { target: { value: 'blocked' } });
+    expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'blocked' });
+  });
+
   it('changes from inprogress to done', () => {
     const onUpdate = vi.fn();
     renderBoard('inprogress', onUpdate);
@@ -65,6 +72,13 @@ describe('BoardView mobile status selection', () => {
     renderBoard('done', onUpdate);
     fireEvent.change(openSelect(), { target: { value: 'inprogress' } });
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'inprogress' });
+  });
+
+  it('shows blocked pill styling on board', () => {
+    const onUpdate = vi.fn();
+    renderBoard('blocked', onUpdate);
+    const trigger = screen.getByRole('button', { name: /status: blocked/i });
+    expect(trigger).toHaveClass('bg-orange-100');
   });
 
   it('updates button text after selection', async () => {
@@ -97,6 +111,12 @@ describe('BoardView mobile status selection', () => {
       target: { value: 'inprogress' },
     });
     await screen.findByRole('button', { name: /status: in progress/i });
+  });
+
+  it('renders blocked column header', () => {
+    const onUpdate = vi.fn();
+    renderBoard('todo', onUpdate);
+    expect(screen.getByText('Blocked')).toBeInTheDocument();
   });
 
   it('allows editing start date when status is todo', () => {

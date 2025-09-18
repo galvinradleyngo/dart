@@ -10,6 +10,7 @@ import { useCompletionConfetti } from "../hooks/use-completion-confetti.js";
 
 function statusBg(status) {
   if (status === "done") return "bg-emerald-50";
+  if (status === "blocked") return "bg-orange-50";
   if (status === "inprogress") return "bg-amber-50";
   return "bg-sky-50";
 }
@@ -140,6 +141,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
           >
             <option value="todo">To Do</option>
             <option value="inprogress">In Progress</option>
+            <option value="blocked">Blocked</option>
             <option value="done">Done</option>
           </select>
           <div className="flex items-center gap-2">

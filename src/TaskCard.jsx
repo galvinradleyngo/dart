@@ -16,16 +16,16 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const [collapsed, setCollapsed] = useState(true);
   const isMobile = useIsMobile();
   const dragProps = isMobile ? {} : dragHandlers;
-  const statusList = ['todo', 'inprogress', 'done'];
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', done: 'Done' };
+  const statusList = ['todo', 'inprogress', 'blocked', 'done'];
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done' };
   const soundEnabled = useContext(SoundContext);
   const audioCtxRef = useRef(null);
   const controls = useAnimation();
-  const statusColors = { todo: '#bfdbfe', inprogress: '#fef3c7', done: '#dcfce7' };
-  useEffect(() => { controls.set({ backgroundColor: statusColors[t.status], scale: 1 }); }, []);
+  const statusColors = { todo: '#bfdbfe', inprogress: '#fef3c7', blocked: '#fed7aa', done: '#dcfce7' };
+  useEffect(() => { controls.set({ backgroundColor: statusColors[t.status] || statusColors.todo, scale: 1 }); }, []);
   useEffect(() => {
     controls.start({
-      backgroundColor: statusColors[t.status],
+      backgroundColor: statusColors[t.status] || statusColors.todo,
       scale: [1.02, 1],
       transition: { duration: 0.2 }
     });
@@ -65,6 +65,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   }, [collapsed]);
   const statusPillClass = (status) => {
     if (status === 'done') return 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80';
+    if (status === 'blocked') return 'bg-orange-100/80 text-orange-700 border-orange-200/80';
     if (status === 'inprogress') return 'bg-amber-100/80 text-amber-700 border-amber-200/80';
     return 'bg-sky-100/80 text-sky-700 border-sky-200/80';
   };
@@ -141,6 +142,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 >
                   <option value="todo">To Do</option>
                   <option value="inprogress">In Progress</option>
+                  <option value="blocked">Blocked</option>
                   <option value="done">Done</option>
                 </select>
               ) : (
@@ -164,6 +166,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               >
                 <option value="todo">To Do</option>
                 <option value="inprogress">In Progress</option>
+                <option value="blocked">Blocked</option>
                 <option value="done">Done</option>
               </select>
             )}
@@ -227,9 +230,10 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   className={`${statusPillBase} ${statusPillClass(t.status)}`}
                   autoFocus
                 >
-                  <option value="todo">To Do</option>
-                  <option value="inprogress">In Progress</option>
-                  <option value="done">Done</option>
+        <option value="todo">To Do</option>
+        <option value="inprogress">In Progress</option>
+        <option value="blocked">Blocked</option>
+        <option value="done">Done</option>
                 </select>
               ) : (
                 <button

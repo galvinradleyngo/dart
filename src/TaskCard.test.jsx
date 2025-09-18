@@ -152,6 +152,13 @@ describe('TaskCard', () => {
       expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
     });
 
+    it('changes from todo to blocked', () => {
+      const onUpdate = vi.fn();
+      const select = renderWithStatus('todo', onUpdate);
+      fireEvent.change(select, { target: { value: 'blocked' } });
+      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'blocked' });
+    });
+
     it('changes from inprogress to done', () => {
       const onUpdate = vi.fn();
       const select = renderWithStatus('inprogress', onUpdate);
@@ -195,6 +202,21 @@ describe('TaskCard', () => {
         target: { value: 'inprogress' },
       });
       await screen.findByRole('button', { name: /status: in progress/i });
+    });
+
+    it('shows blocked pill styling', () => {
+      const onUpdate = vi.fn();
+      render(
+        <TaskCard
+          task={{ ...sampleTask, status: 'blocked' }}
+          milestones={milestones}
+          onUpdate={onUpdate}
+          onDelete={() => {}}
+          onDuplicate={() => {}}
+        />
+      );
+      const trigger = screen.getByRole('button', { name: /status: blocked/i });
+      expect(trigger).toHaveClass('bg-orange-100/80');
     });
   });
 
