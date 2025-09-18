@@ -38,43 +38,65 @@ export function useCompletionConfetti({ status, auto = false } = {}) {
     container.style.zIndex = '9999';
     container.style.transform = 'translateZ(0)';
 
-    const colors = ['#22c55e', '#2dd4bf', '#38bdf8', '#fbbf24', '#f97316', '#ef4444'];
+    const colors = [
+      '#22c55e',
+      '#2dd4bf',
+      '#38bdf8',
+      '#fbbf24',
+      '#f97316',
+      '#ef4444',
+      '#d946ef',
+      '#f472b6',
+    ];
     const originX = window.innerWidth / 2;
     const originY = window.innerHeight / 3;
-    const particleCount = 80;
-    const gravity = 0.45;
-    const drag = 0.92;
-    const terminalVelocity = 6;
-    const duration = 1600;
+    const particleCount = 160;
+    const gravity = 0.5;
+    const drag = 0.9;
+    const terminalVelocity = 8;
+    const duration = 2200;
+    const radialSpread = Math.PI * 0.85;
+    const burstCount = 3;
+    const burstDelay = 120;
 
-    const particles = Array.from({ length: particleCount }, () => {
+    const particles = Array.from({ length: particleCount }, (_, index) => {
       const element = document.createElement('div');
-      const size = Math.random() * 8 + 6;
+      const size = Math.random() * 12 + 8;
       element.style.width = `${size}px`;
       element.style.height = `${size * 0.6}px`;
       element.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      element.style.borderRadius = '2px';
+      element.style.borderRadius = Math.random() > 0.7 ? `${size / 2}px` : '2px';
       element.style.position = 'absolute';
       element.style.top = '0';
       element.style.left = '0';
       element.style.willChange = 'transform, opacity';
-      element.style.transform = `translate3d(${originX}px, ${originY}px, 0)`;
-      element.style.opacity = '1';
-      container.appendChild(element);
 
-      const angle = Math.random() * Math.PI - Math.PI / 2;
-      const speed = Math.random() * 6 + 3;
+      const burstIndex = index % burstCount;
+      const angleOffset = (Math.random() - 0.5) * radialSpread;
+      const baseAngle = Math.random() * Math.PI - Math.PI / 2;
+      const angle = baseAngle + angleOffset;
+      const radialOffset = Math.random() * 20 - 10;
+      const startX = originX + Math.cos(angle) * radialOffset;
+      const startY = originY + Math.sin(angle) * radialOffset;
+
+      element.style.transform = `translate3d(${startX}px, ${startY}px, 0)`;
+      element.style.opacity = '1';
+      element.style.boxShadow = `0 0 12px rgba(255, 255, 255, ${Math.random() * 0.6})`;
+      container.appendChild(element);
+      const speed = Math.random() * 9 + 6;
+      const startDelay = burstIndex * burstDelay + Math.random() * 60;
 
       return {
         element,
-        x: originX,
-        y: originY,
+        x: startX,
+        y: startY,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         rotation: Math.random() * Math.PI,
         rotationSpeed: Math.random() * 0.3 - 0.15,
         wobble: Math.random() * 10,
         wobbleSpeed: Math.random() * 0.2 + 0.05,
+        startDelay,
       };
     });
 
@@ -105,12 +127,19 @@ export function useCompletionConfetti({ status, auto = false } = {}) {
       const elapsed = time - start;
       const fade = Math.max(1 - elapsed / duration, 0);
       particles.forEach((p) => {
+        if (elapsed < p.startDelay) {
+          return;
+        }
+
+        const progress = Math.max(elapsed - p.startDelay, 0);
+        const easedProgress = Math.min(progress / duration, 1);
+
         p.vy = Math.min(p.vy + gravity, terminalVelocity);
         p.vx *= drag;
-        p.x += p.vx + Math.cos(p.wobble) * 0.5;
-        p.y += p.vy;
+        p.x += p.vx + Math.cos(p.wobble) * 0.6;
+        p.y += p.vy + Math.sin(p.wobble * 0.8);
         p.wobble += p.wobbleSpeed;
-        p.rotation += p.rotationSpeed;
+        p.rotation += p.rotationSpeed * (1 + easedProgress * 0.6);
         p.element.style.opacity = `${fade}`;
         p.element.style.transform = `translate3d(${p.x}px, ${p.y}px, 0) rotate(${p.rotation}rad)`;
       });
