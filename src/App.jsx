@@ -2058,6 +2058,9 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
 // =====================================================
 export const UPCOMING_DAYS = 15;
 
+const ensureArray = (value) => (Array.isArray(value) ? value : []);
+const courseIdOf = (course) => course?.course?.id ?? course?.id ?? null;
+
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
@@ -2141,48 +2144,67 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
   const updateTask = (courseId, taskId, patch) => {
     updateCourses((cs) => {
-      return cs.map((c) => {
-        if (c.course.id !== courseId) return c;
-        const sched = c.schedule || loadGlobalSchedule();
+      return cs.map((course) => {
+        const currentId = courseIdOf(course);
+        if (currentId !== courseId) return course;
+        const sched = course.schedule || loadGlobalSchedule();
         let changedTo = null;
-        const tasks1 = c.tasks.map((t) => {
-          if (t.id !== taskId) return t;
+        const tasks1 = ensureArray(course.tasks).map((task) => {
+          if (task.id !== taskId) return task;
           let adjusted = { ...patch };
-          if (patch.status && patch.status !== t.status) {
+          if (patch.status && patch.status !== task.status) {
             changedTo = patch.status;
-            if (patch.status === 'inprogress') { if (!t.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr(); }
-            if (patch.status === 'todo') { adjusted.startDate = ''; adjusted.dueDate = ''; adjusted.completedDate = ''; }
-            if (patch.status === 'done') { adjusted.completedDate = todayStr(); }
+            if (patch.status === 'inprogress') {
+              if (!task.startDate && !patch.__skipAutoStart) adjusted.startDate = todayStr();
+            }
+            if (patch.status === 'todo') {
+              adjusted.startDate = '';
+              adjusted.dueDate = '';
+              adjusted.completedDate = '';
+            }
+            if (patch.status === 'done') {
+              adjusted.completedDate = todayStr();
+            }
           }
-          if ('startDate' in adjusted || 'workDays' in adjusted) adjusted = recomputeDue({ ...t, ...adjusted }, adjusted, sched);
-          return { ...t, ...adjusted };
+          if ('startDate' in adjusted || 'workDays' in adjusted) {
+            adjusted = recomputeDue({ ...task, ...adjusted }, adjusted, sched);
+          }
+          return { ...task, ...adjusted };
         });
         let tasks2 = tasks1;
-        if (changedTo === 'inprogress') tasks2 = tasks2.map((d) => (d.depTaskId === taskId && d.status !== 'done' ? { ...d, status: 'inprogress' } : d));
+        if (changedTo === 'inprogress') {
+          tasks2 = tasks2.map((item) =>
+            item.depTaskId === taskId && item.status !== 'done'
+              ? { ...item, status: 'inprogress' }
+              : item
+          );
+        }
         if (changedTo === 'done') {
           const doneDate = todayStr();
-          tasks2 = tasks2.map((x) => (x.id === taskId ? { ...x, completedDate: x.completedDate || doneDate } : x));
-          tasks2 = tasks2.map((d) => {
-            if (d.depTaskId === taskId && d.status !== 'done') {
+          tasks2 = tasks2.map((item) =>
+            item.id === taskId ? { ...item, completedDate: item.completedDate || doneDate } : item
+          );
+          tasks2 = tasks2.map((item) => {
+            if (item.depTaskId === taskId && item.status !== 'done') {
               const start = doneDate;
-              const due = addBusinessDays(start, d.workDays, sched.workweek || [1,2,3,4,5], sched.holidays || []);
-              return { ...d, status: 'inprogress', startDate: start, dueDate: due };
+              const due = addBusinessDays(start, item.workDays, sched.workweek || [1, 2, 3, 4, 5], sched.holidays || []);
+              return { ...item, status: 'inprogress', startDate: start, dueDate: due };
             }
-            return d;
+            return item;
           });
         }
         const tasks3 = propagateDependentForecasts(tasks2, sched);
-        return { ...c, tasks: tasks3 };
+        return { ...course, tasks: tasks3 };
       });
     });
     setSaveState('unsaved');
   };
 
   const updateTaskStatus = (courseId, taskId, status) => {
-    const c = courses.find((x) => x.course.id === courseId);
-    const task = c?.tasks.find((t) => t.id === taskId);
+    const courseEntry = courses.find((entry) => courseIdOf(entry) === courseId);
+    const task = ensureArray(courseEntry?.tasks).find((item) => item.id === taskId);
     if (status === 'blocked') {
-      if (!c || !task) return;
+      if (!courseEntry || !task) return;
       setBlockDialogRequest({
         courseId,
         taskId,
@@ -2204,8 +2226,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const handleBlockDialogSubmit = (entry) => {
     if (!blockDialogRequest) return;
     const { courseId, taskId, previousStatus } = blockDialogRequest;
-    const course = courses.find((x) => x.course.id === courseId);
-    const task = course?.tasks.find((t) => t.id === taskId);
+    const course = courses.find((entry) => courseIdOf(entry) === courseId);
+    const task = ensureArray(course?.tasks).find((item) => item.id === taskId);
     if (!course || !task) {
       setBlockDialogRequest(null);
       return;
@@ -2219,8 +2241,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const handleBlockDialogCancel = () => {
     if (blockDialogRequest) {
       const { courseId, taskId, previousStatus } = blockDialogRequest;
-      const course = courses.find((x) => x.course.id === courseId);
-      const task = course?.tasks.find((t) => t.id === taskId);
+      const course = courses.find((entry) => courseIdOf(entry) === courseId);
+      const task = ensureArray(course?.tasks).find((item) => item.id === taskId);
       if (task && task.status !== previousStatus) {
         updateTask(courseId, taskId, { status: previousStatus, __skipAutoStart: true });
       }
@@ -2230,11 +2252,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
   const patchTaskLinks = (courseId, id, op, payload) => {
     updateCourses((cs) =>
-      cs.map((c) => {
-        if (c.course.id !== courseId) return c;
+      cs.map((course) => {
+        if (courseIdOf(course) !== courseId) return course;
         return {
-          ...c,
-          tasks: applyLinkPatch(c.tasks, id, op, payload),
+          ...course,
+          tasks: applyLinkPatch(ensureArray(course.tasks), id, op, payload),
         };
       })
     );
@@ -2242,46 +2264,63 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
 
   const duplicateTask = (courseId, id) => {
-    updateCourses((cs) => cs.map((c) => {
-      if (c.course.id !== courseId) return c;
-      const orig = c.tasks.find((t) => t.id === id);
-      if (!orig) return c;
-      const cloneStatus = orig.status === 'done' ? 'todo' : orig.status === 'blocked' ? 'blocked' : 'todo';
-      const clone = {
-        ...orig,
-        id: uid(),
-        title: `${orig.title} (copy)`,
-        status: cloneStatus,
-        startDate: '',
-        dueDate: '',
-        completedDate: '',
-        depTaskId: null,
-        blocks: Array.isArray(orig.blocks) ? orig.blocks.map((b) => ({ ...b })) : [],
-      };
-      return { ...c, tasks: [...c.tasks, clone] };
-    }));
+    updateCourses((cs) =>
+      cs.map((course) => {
+        if (courseIdOf(course) !== courseId) return course;
+        const tasks = ensureArray(course.tasks);
+        const orig = tasks.find((task) => task.id === id);
+        if (!orig) return course;
+        const cloneStatus = orig.status === 'done' ? 'todo' : orig.status === 'blocked' ? 'blocked' : 'todo';
+        const clone = {
+          ...orig,
+          id: uid(),
+          title: `${orig.title} (copy)`,
+          status: cloneStatus,
+          startDate: '',
+          dueDate: '',
+          completedDate: '',
+          depTaskId: null,
+          blocks: Array.isArray(orig.blocks) ? orig.blocks.map((b) => ({ ...b })) : [],
+        };
+        return { ...course, tasks: [...tasks, clone] };
+      })
+    );
     setSaveState('unsaved');
   };
 
   const deleteTask = (courseId, id) => {
-    updateCourses((cs) => cs.map((c) => c.course.id === courseId ? { ...c, tasks: c.tasks.filter((t) => t.id !== id) } : c));
+    updateCourses((cs) =>
+      cs.map((course) =>
+        courseIdOf(course) === courseId
+          ? { ...course, tasks: ensureArray(course.tasks).filter((task) => task.id !== id) }
+          : course
+      )
+    );
     setSaveState('unsaved');
   };
   const changeTaskCourse = (fromCourseId, taskId, toCourseId) => {
     updateCourses((cs) => {
-      const from = cs.find((c) => c.course.id === fromCourseId);
-      const to = cs.find((c) => c.course.id === toCourseId);
+      const from = cs.find((course) => courseIdOf(course) === fromCourseId);
+      const to = cs.find((course) => courseIdOf(course) === toCourseId);
       if (!from || !to) return cs;
-      const task = from.tasks.find((t) => t.id === taskId);
+      const fromTasks = ensureArray(from.tasks);
+      const task = fromTasks.find((item) => item.id === taskId);
       if (!task) return cs;
-      return cs.map((c) => {
-        if (c.course.id === fromCourseId) {
-          return { ...c, tasks: c.tasks.filter((t) => t.id !== taskId) };
+      return cs.map((course) => {
+        const currentId = courseIdOf(course);
+        if (currentId === fromCourseId) {
+          return {
+            ...course,
+            tasks: ensureArray(course.tasks).filter((item) => item.id !== taskId),
+          };
         }
-        if (c.course.id === toCourseId) {
-          return { ...c, tasks: [...c.tasks, task] };
+        if (currentId === toCourseId) {
+          return {
+            ...course,
+            tasks: [...ensureArray(course.tasks), task],
+          };
         }
-        return c;
+        return course;
       });
     });
     setEditing({ courseId: toCourseId, taskId });
@@ -2289,12 +2328,15 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   };
   const handleNewTask = () => {
     if (myCoursesAll.length === 0) return;
-    const cid = myCoursesAll[0].course.id;
-    const targetCourse = courses.find((c) => c.course.id === cid);
+    const firstCourse = myCoursesAll[0];
+    const cid = courseIdOf(firstCourse);
+    if (!cid) return;
+    const targetCourse = courses.find((course) => courseIdOf(course) === cid);
     if (!targetCourse) return;
+    const existingTasks = ensureArray(targetCourse.tasks);
     const newTask = {
       id: uid(),
-      order: targetCourse.tasks.length,
+      order: existingTasks.length,
       title: '',
       details: '',
       note: '',
@@ -2309,7 +2351,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       depTaskId: null,
       completedDate: '',
     };
-    updateCourses((cs) => cs.map((c) => c.course.id === cid ? { ...c, tasks: [...c.tasks, newTask] } : c));
+    updateCourses((cs) =>
+      cs.map((course) =>
+        courseIdOf(course) === cid
+          ? { ...course, tasks: [...ensureArray(course.tasks), newTask] }
+          : course
+      )
+    );
     setEditing({ courseId: cid, taskId: newTask.id });
     setSaveState('unsaved');
   };
@@ -2368,7 +2416,12 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
   const members = useMemo(() => {
     const map = new Map();
-    courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
+    ensureArray(courses).forEach((course) => {
+      ensureArray(course?.team).forEach((member) => {
+        if (!member || !member.id || map.has(member.id)) return;
+        map.set(member.id, member);
+      });
+    });
     return Array.from(map.values());
   }, [courses]);
 
@@ -2463,34 +2516,44 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const user = members.find((m) => m.id === userId);
 
   const myCoursesAll = useMemo(
-    () => courses.filter((c) => c.team.some((m) => m.id === userId)),
+    () =>
+      ensureArray(courses).filter((course) => {
+        const courseId = courseIdOf(course);
+        if (!courseId) return false;
+        return ensureArray(course?.team).some((member) => member?.id === userId);
+      }),
     [courses, userId]
   );
   const myCourses = useMemo(
     () =>
-      myCoursesAll.filter((c) =>
-        c.course.name.toLowerCase().includes(courseQuery.toLowerCase())
+      myCoursesAll.filter((course) =>
+        (course.course?.name || "")
+          .toLowerCase()
+          .includes(courseQuery.toLowerCase())
       ),
     [myCoursesAll, courseQuery]
   );
   const myTasks = useMemo(() => {
     const arr = [];
-    courses.forEach((c) => {
-      c.tasks.forEach((t) => {
-        if (t.assigneeId === userId) {
-          const milestoneName =
-            c.milestones.find((m) => m.id === t.milestoneId)?.title || "";
-          arr.push({
-            ...t,
-            courseId: c.course.id,
-            courseName: c.course.name,
-            milestoneName,
-          });
-        }
+    ensureArray(courses).forEach((course) => {
+      const courseId = courseIdOf(course);
+      if (!courseId) return;
+      const courseName = course?.course?.name ?? course?.name ?? "Untitled course";
+      const milestones = ensureArray(course?.milestones);
+      ensureArray(course?.tasks).forEach((task) => {
+        if (!task || task.assigneeId !== userId) return;
+        const milestoneName =
+          milestones.find((m) => m.id === task.milestoneId)?.title || "";
+        arr.push({
+          ...task,
+          courseId,
+          courseName,
+          milestoneName,
+        });
       });
     });
     return arr.sort((a, b) => {
-      const nameCmp = a.courseName.localeCompare(b.courseName);
+      const nameCmp = (a.courseName || "").localeCompare(b.courseName || "");
       if (nameCmp !== 0) return nameCmp;
       const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
       const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
@@ -2880,18 +2943,29 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 <div className="text-sm text-slate-600/90">No courses</div>
               ) : (
                 <ul className="grid gap-2 sm:grid-cols-2">
-                  {myCourses.map((c) => {
-                    const tTotal = c.tasks.filter((t) => t.assigneeId === userId).length;
-                    const tDone = c.tasks.filter((t) => t.assigneeId === userId && t.status === 'done').length;
+                  {myCourses.map((c, index) => {
+                    const tasks = ensureArray(c?.tasks);
+                    const courseId = c?.course?.id ?? c?.id ?? '';
+                    const courseName = c?.course?.name ?? c?.name ?? 'Untitled course';
+                    const tTotal = tasks.filter((t) => t?.assigneeId === userId).length;
+                    const tDone = tasks.filter(
+                      (t) => t?.assigneeId === userId && t?.status === 'done'
+                    ).length;
                     const pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
                     return (
-                      <li key={c.course.id} className="glass-card p-4 flex flex-col gap-2">
+                      <li key={courseId || index} className="glass-card p-4 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <div className="min-w-0">
-                            <div className="font-medium truncate">{c.course.name}</div>
+                            <div className="font-medium truncate">{courseName}</div>
                             <div className="text-sm text-slate-600/90 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
                           </div>
-                          <button onClick={()=>onOpenCourse(c.course.id)} className="glass-button-primary">Open</button>
+                          <button
+                            onClick={() => courseId && onOpenCourse(courseId)}
+                            className="glass-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!courseId}
+                          >
+                            Open
+                          </button>
                         </div>
                         <div className="h-2 bg-slate-100 rounded">
                           <div className="h-2 bg-emerald-500 rounded" style={{width:`${pct}%`}} />
@@ -2910,102 +2984,112 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 <div className="text-sm text-slate-600/90">No milestones</div>
               ) : (
                 <div className="space-y-4">
-                  {myCourses.map((c) => (
-                    <details key={c.course.id} className="group glass-card">
-                      <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
-                        <div className="flex items-center gap-2">
-                          <ChevronDown className="icon transition-transform group-open:rotate-180" />
-                          <div className="font-medium">{c.course.name}</div>
-                        </div>
-                      </summary>
-                      <div className="p-4 space-y-2">
-                        {[...c.milestones]
-                          .sort((a, b) =>
-                            (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: 'base' })
-                          )
-                          .map((m) => {
-                            const tasksForMilestone = c.tasks.filter(
-                              (t) => t.milestoneId === m.id && t.assigneeId === userId
-                            );
-                            const sortedTasks = [...tasksForMilestone].sort((a, b) => {
-                              const statusDiff = (statusPriority[a.status] ?? 1) - (statusPriority[b.status] ?? 1);
-                              if (statusDiff !== 0) return statusDiff;
-                              const da = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-                              const db = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-                              return da - db;
-                            });
-                            const counts = sortedTasks.reduce(
-                              (acc, task) => {
-                                const key = task.status;
-                                if (acc[key] !== undefined) acc[key] += 1;
-                                else acc.todo += 1;
-                                return acc;
-                              },
-                              { todo: 0, inprogress: 0, done: 0 }
-                            );
-                            const total = counts.todo + counts.inprogress + counts.done;
-                            const pct = total ? Math.round((counts.done / total) * 100) : 0;
-                            const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
-                            return (
-                              <details key={m.id} className="group glass-card">
-                                <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
-                                  <div className="flex items-center gap-2">
-                                    <ChevronDown className="icon transition-transform group-open:rotate-180" />
-                                    <div>
-                                      <div className="font-medium">{m.title}</div>
-                                      <div className="text-xs text-slate-600/80">
-                                        {counts.inprogress} in progress • {counts.todo} to do • {counts.done} done
-                                      </div>
-                                      <div className="h-2 bg-black/10 rounded-full mt-1 overflow-hidden">
-                                        <div className="h-full" style={{ width: `${pct}%`, backgroundColor: progressColor }} />
+                  {myCourses.map((c, index) => {
+                    const courseId = courseIdOf(c) || '';
+                    const courseName = c?.course?.name ?? c?.name ?? 'Untitled course';
+                    const courseTasks = ensureArray(c?.tasks);
+                    const milestones = ensureArray(c?.milestones);
+                    return (
+                      <details key={courseId || index} className="group glass-card">
+                        <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className="icon transition-transform group-open:rotate-180" />
+                            <div className="font-medium">{courseName}</div>
+                          </div>
+                        </summary>
+                        <div className="p-4 space-y-2">
+                          {[...milestones]
+                            .sort((a, b) =>
+                              (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: 'base' })
+                            )
+                            .map((m) => {
+                              const tasksForMilestone = courseTasks.filter(
+                                (t) => t?.milestoneId === m.id && t?.assigneeId === userId
+                              );
+                              const sortedTasks = [...tasksForMilestone].sort((a, b) => {
+                                const statusDiff =
+                                  (statusPriority[a?.status] ?? 1) - (statusPriority[b?.status] ?? 1);
+                                if (statusDiff !== 0) return statusDiff;
+                                const da = a?.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+                                const db = b?.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+                                return da - db;
+                              });
+                              const counts = sortedTasks.reduce(
+                                (acc, task) => {
+                                  const key = task?.status;
+                                  if (acc[key] !== undefined) acc[key] += 1;
+                                  else acc.todo += 1;
+                                  return acc;
+                                },
+                                { todo: 0, inprogress: 0, done: 0 }
+                              );
+                              const total = counts.todo + counts.inprogress + counts.done;
+                              const pct = total ? Math.round((counts.done / total) * 100) : 0;
+                              const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
+                              return (
+                                <details key={m.id} className="group glass-card">
+                                  <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                                    <div className="flex items-center gap-2">
+                                      <ChevronDown className="icon transition-transform group-open:rotate-180" />
+                                      <div>
+                                        <div className="font-medium">{m.title}</div>
+                                        <div className="text-xs text-slate-600/80">
+                                          {counts.inprogress} in progress • {counts.todo} to do • {counts.done} done
+                                        </div>
+                                        <div className="h-2 bg-black/10 rounded-full mt-1 overflow-hidden">
+                                          <div className="h-full" style={{ width: `${pct}%`, backgroundColor: progressColor }} />
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                </summary>
-                                <div className="p-4 space-y-3">
-                                  {m.goal && <p className="text-sm text-slate-600/90">{m.goal}</p>}
-                                  {sortedTasks.length === 0 ? (
-                                    <div className="text-sm text-slate-600/90">No tasks assigned to you.</div>
-                                  ) : (
-                                    <ul className="space-y-2">
-                                      {sortedTasks.map((t) => (
-                                        <li
-                                          key={t.id}
-                                          className={`rounded-xl border px-3 py-2 ${statusListClasses[t.status] || statusListClasses.todo}`}
-                                        >
-                                          <button
-                                            type="button"
-                                            onClick={() => setEditing({ courseId: c.course.id, taskId: t.id })}
-                                            className="flex w-full items-center justify-between gap-3 text-left"
+                                  </summary>
+                                  <div className="p-4 space-y-3">
+                                    {m.goal && <p className="text-sm text-slate-600/90">{m.goal}</p>}
+                                    {sortedTasks.length === 0 ? (
+                                      <div className="text-sm text-slate-600/90">No tasks assigned to you.</div>
+                                    ) : (
+                                      <ul className="space-y-2">
+                                        {sortedTasks.map((t) => (
+                                          <li
+                                            key={t.id}
+                                            className={`rounded-xl border px-3 py-2 ${statusListClasses[t?.status] || statusListClasses.todo}`}
                                           >
-                                            <div className="min-w-0">
-                                              <div className="font-medium truncate">{t.title || 'Untitled task'}</div>
-                                              <div className="text-xs text-slate-600/80 truncate">
-                                                {t.dueDate
-                                                  ? `Due ${new Date(t.dueDate).toLocaleDateString(undefined, {
-                                                      month: 'short',
-                                                      day: 'numeric',
-                                                    })}`
-                                                  : 'No due date'}
-                                              </div>
-                                            </div>
-                                            <span
-                                              className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadgeClasses[t.status] || statusBadgeClasses.todo}`}
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                courseId &&
+                                                setEditing({ courseId, taskId: t.id })
+                                              }
+                                              className="flex w-full items-center justify-between gap-3 text-left"
                                             >
-                                              {statusLabel[t.status] || t.status}
-                                            </span>
-                                          </button>
-                                        </li>
-                                      ))}
-                                    </ul>
+                                              <div className="min-w-0">
+                                                <div className="font-medium truncate">{t?.title || 'Untitled task'}</div>
+                                                <div className="text-xs text-slate-600/80 truncate">
+                                                  {t?.dueDate
+                                                    ? `Due ${new Date(t.dueDate).toLocaleDateString(undefined, {
+                                                        month: 'short',
+                                                        day: 'numeric',
+                                                      })}`
+                                                    : 'No due date'}
+                                                </div>
+                                              </div>
+                                              <span
+                                                className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadgeClasses[t?.status] || statusBadgeClasses.todo}`}
+                                              >
+                                                {statusLabel[t?.status] || t?.status || 'Unknown'}
+                                              </span>
+                                            </button>
+                                          </li>
+                                        ))}
+                                      </ul>
                                   )}
                                 </div>
                               </details>
                             );
                           })}
-                      </div>
-                    </details>
-                  ))}
+                        </div>
+                      </details>
+                    );
+                  })}
                 </div>
               )}
             </SectionCard>
@@ -3044,20 +3128,26 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         </div>
                         <div className="space-y-2 min-h-[140px]">
                           {groupedTasks[id].map((t) => {
-                            const c = courses.find((x) => x.course.id === t.courseId);
-                            if (!c) return null;
+                            const courseEntry = courses.find((x) => courseIdOf(x) === t.courseId);
+                            if (!courseEntry) return null;
+                            const courseId = courseIdOf(courseEntry);
+                            if (!courseId) return null;
                             return (
                               <TaskCard
                                 key={t.id}
                                 task={t}
-                                tasks={c.tasks}
-                                team={c.team}
-                                milestones={c.milestones}
-                                onUpdate={(tid, patch) => updateTask(c.course.id, tid, patch)}
-                                onDelete={(tid) => deleteTask(c.course.id, tid)}
-                                onDuplicate={(tid) => duplicateTask(c.course.id, tid)}
-                                onAddLink={(tid, url) => patchTaskLinks(c.course.id, tid, 'add', url)}
-                                onRemoveLink={(tid, idx) => patchTaskLinks(c.course.id, tid, 'remove', idx)}
+                                tasks={ensureArray(courseEntry?.tasks)}
+                                team={ensureArray(courseEntry?.team)}
+                                milestones={ensureArray(courseEntry?.milestones)}
+                                onUpdate={(tid, patch) => updateTask(courseId, tid, patch)}
+                                onDelete={(tid) => deleteTask(courseId, tid)}
+                                onDuplicate={(tid) => duplicateTask(courseId, tid)}
+                                onAddLink={(tid, url) =>
+                                  patchTaskLinks(courseId, tid, 'add', url)
+                                }
+                                onRemoveLink={(tid, idx) =>
+                                  patchTaskLinks(courseId, tid, 'remove', idx)
+                                }
                                 dragHandlers={{
                                   draggable: true,
                                   onDragStart: (e) => {
@@ -3098,22 +3188,26 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
         </div>
         {editing && (() => {
-          const c = courses.find((x) => x.course.id === editing.courseId);
-          const task = c?.tasks.find((t) => t.id === editing.taskId);
-          if (!c || !task) return null;
+          const courseEntry = courses.find((x) => courseIdOf(x) === editing.courseId);
+          const courseId = courseIdOf(courseEntry);
+          const task = ensureArray(courseEntry?.tasks).find((item) => item.id === editing.taskId);
+          if (!courseEntry || !task || !courseId) return null;
           return (
             <TaskModal
               task={task}
-              courseId={c.course.id}
+              courseId={courseId}
               courses={myCoursesAll}
-              onChangeCourse={(toId) => changeTaskCourse(c.course.id, task.id, toId)}
-              tasks={c.tasks}
-              team={c.team}
-              milestones={c.milestones}
-              onUpdate={(id, patch) => updateTask(c.course.id, id, patch)}
-              onDelete={(id) => { deleteTask(c.course.id, id); setEditing(null); }}
-              onAddLink={(id, url) => patchTaskLinks(c.course.id, id, 'add', url)}
-              onRemoveLink={(id, idx) => patchTaskLinks(c.course.id, id, 'remove', idx)}
+              onChangeCourse={(toId) => changeTaskCourse(courseId, task.id, toId)}
+              tasks={ensureArray(courseEntry.tasks)}
+              team={ensureArray(courseEntry.team)}
+              milestones={ensureArray(courseEntry.milestones)}
+              onUpdate={(id, patch) => updateTask(courseId, id, patch)}
+              onDelete={(id) => {
+                deleteTask(courseId, id);
+                setEditing(null);
+              }}
+              onAddLink={(id, url) => patchTaskLinks(courseId, id, 'add', url)}
+              onRemoveLink={(id, idx) => patchTaskLinks(courseId, id, 'remove', idx)}
               onClose={() => setEditing(null)}
               reporter={user || null}
             />
@@ -3126,8 +3220,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               setEditing({ courseId: linkPrompt.courseId, taskId: linkPrompt.taskId });
             }}
             onNoLink={() => {
-              const course = courses.find((c) => c.course.id === linkPrompt.courseId);
-              const task = course?.tasks.find((t) => t.id === linkPrompt.taskId);
+              const course = courses.find((entry) => courseIdOf(entry) === linkPrompt.courseId);
+              const task = ensureArray(course?.tasks).find((item) => item.id === linkPrompt.taskId);
               if (task) {
                 fireOnDone(task.status, 'done');
               }
@@ -3150,9 +3244,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           />
         )}
         {blockDialogRequest && (() => {
-          const course = courses.find((c) => c.course.id === blockDialogRequest.courseId);
-          const task = course?.tasks.find((t) => t.id === blockDialogRequest.taskId) || null;
-          const team = course?.team || [];
+          const course = courses.find((c) => courseIdOf(c) === blockDialogRequest.courseId);
+          const task = ensureArray(course?.tasks).find((t) => t.id === blockDialogRequest.taskId) || null;
+          const team = ensureArray(course?.team);
           return (
             <BlockDialog
               open
