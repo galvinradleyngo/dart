@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef, Fragment, useCallback } from "react";
 import { useIsMobile } from "./hooks/use-is-mobile.js";
+import { useCompletionConfetti } from "./hooks/use-completion-confetti.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
@@ -1790,6 +1791,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
       });
   const [collapsedIds, setCollapsedIds] = React.useState(() => new Set(tasks.map((t) => t.id)));
   const isMobile = useIsMobile();
+  const { fireOnDone } = useCompletionConfetti();
   const [statusOpenId, setStatusOpenId] = React.useState(null);
   React.useEffect(() => {
     setCollapsedIds((prev) => {
@@ -1819,7 +1821,11 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
         <select
           aria-label="Status"
           value={task.status}
-          onChange={(e) => onUpdate(task.id, { status: e.target.value })}
+          onChange={(e) => {
+            const nextStatus = e.target.value;
+            fireOnDone(task.status, nextStatus);
+            onUpdate(task.id, { status: nextStatus });
+          }}
           className={`px-2 py-1 rounded-full border font-semibold text-sm ${statusPillClass(task.status)}`}
         >
           <option value="todo">To Do</option>
@@ -1834,7 +1840,9 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
         aria-label="Status"
         value={task.status}
         onChange={(e) => {
-          onUpdate(task.id, { status: e.target.value });
+          const nextStatus = e.target.value;
+          fireOnDone(task.status, nextStatus);
+          onUpdate(task.id, { status: nextStatus });
           setStatusOpenId(null);
         }}
         onBlur={() => setStatusOpenId(null)}
@@ -1952,6 +1960,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const validTabs = new Set(['deadlines','courses','milestones','board','calendar']);
     return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
+  const { fireOnDone } = useCompletionConfetti();
 
   const updateCourses = useCallback((updater, options = {}) => {
     const { capture = true } = options;
@@ -2044,6 +2053,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     if (status === 'done' && (!task?.links || task.links.length === 0)) {
       setLinkPrompt({ courseId, taskId });
       return;
+    }
+    if (task) {
+      fireOnDone(task.status, status);
     }
     updateTask(courseId, taskId, { status });
   };
@@ -2664,6 +2676,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               setEditing({ courseId: linkPrompt.courseId, taskId: linkPrompt.taskId });
             }}
             onNoLink={() => {
+              const course = courses.find((c) => c.course.id === linkPrompt.courseId);
+              const task = course?.tasks.find((t) => t.id === linkPrompt.taskId);
+              if (task) {
+                fireOnDone(task.status, 'done');
+              }
               updateTask(linkPrompt.courseId, linkPrompt.taskId, { status: 'done' });
               setLinkPrompt(null);
             }}

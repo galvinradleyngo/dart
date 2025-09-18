@@ -1,9 +1,11 @@
 import React, { useMemo } from "react";
+import { useCompletionConfetti } from "../hooks/use-completion-confetti.js";
 
 export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdit }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayKey = today.toDateString();
+  const { fireOnDone } = useCompletionConfetti();
   const { activeGroups, doneTasks } = useMemo(() => {
     const upcoming = [];
     const completed = [];
@@ -88,7 +90,11 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                           className="h-5 w-5 shrink-0 rounded-full border-2 border-slate-300 text-emerald-500 focus:ring-2 focus:ring-emerald-300"
                           aria-label={`${t.title} for ${milestone ? milestone.title : "Unassigned"}`}
                           checked={t.status === "done"}
-                          onChange={(e) => onUpdate(t.id, { status: e.target.checked ? "done" : "todo" })}
+                          onChange={(e) => {
+                            const nextStatus = e.target.checked ? "done" : "todo";
+                            fireOnDone(t.status, nextStatus);
+                            onUpdate(t.id, { status: nextStatus });
+                          }}
                         />
                         <button
                           type="button"
@@ -133,7 +139,11 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                       className="h-5 w-5 shrink-0 rounded-full border-2 border-emerald-300 text-emerald-600 focus:ring-2 focus:ring-emerald-300"
                       aria-label={`${t.title} for ${milestone ? milestone.title : "Unassigned"}`}
                       checked
-                      onChange={(e) => onUpdate(t.id, { status: e.target.checked ? "done" : "todo" })}
+                      onChange={(e) => {
+                        const nextStatus = e.target.checked ? "done" : "todo";
+                        fireOnDone(t.status, nextStatus);
+                        onUpdate(t.id, { status: nextStatus });
+                      }}
                     />
                     <button
                       type="button"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useIsMobile } from './hooks/use-is-mobile.js';
 import { motion, useAnimation } from 'framer-motion';
 import InlineText from './components/InlineText.jsx';
@@ -10,6 +10,7 @@ import DepPicker from './components/DepPicker.jsx';
 import LinkReminderModal from './components/LinkReminderModal.jsx';
 import { SoundContext } from './sound-context.js';
 import { Plus, Minus, Copy, Trash2, Pencil, StickyNote } from 'lucide-react';
+import { useCompletionConfetti } from './hooks/use-completion-confetti.js';
 
 export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -21,9 +22,6 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const audioCtxRef = useRef(null);
   const controls = useAnimation();
   const statusColors = { todo: '#bfdbfe', inprogress: '#fef3c7', done: '#dcfce7' };
-  const confettiCleanupRef = useRef(null);
-  const confettiFrameRef = useRef(null);
-  const prevStatusRef = useRef(t.status);
   useEffect(() => { controls.set({ backgroundColor: statusColors[t.status], scale: 1 }); }, []);
   useEffect(() => {
     controls.start({
@@ -32,104 +30,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       transition: { duration: 0.2 }
     });
   }, [t.status, controls]);
-  const launchConfetti = useCallback(() => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') return;
-
-    if (confettiCleanupRef.current) {
-      confettiCleanupRef.current();
-    }
-
-    const container = document.createElement('div');
-    container.setAttribute('data-confetti', 'true');
-    container.style.position = 'fixed';
-    container.style.top = '0';
-    container.style.left = '0';
-    container.style.width = '100%';
-    container.style.height = '100%';
-    container.style.pointerEvents = 'none';
-    container.style.overflow = 'hidden';
-    container.style.zIndex = '9999';
-    container.style.transform = 'translateZ(0)';
-
-    const colors = ['#22c55e', '#2dd4bf', '#38bdf8', '#fbbf24', '#f97316', '#ef4444'];
-    const originX = window.innerWidth / 2;
-    const originY = window.innerHeight / 3;
-    const particleCount = 80;
-    const gravity = 0.45;
-    const drag = 0.92;
-    const terminalVelocity = 6;
-    const duration = 1600;
-
-    const particles = Array.from({ length: particleCount }, () => {
-      const element = document.createElement('div');
-      const size = Math.random() * 8 + 6;
-      element.style.width = `${size}px`;
-      element.style.height = `${size * 0.6}px`;
-      element.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-      element.style.borderRadius = '2px';
-      element.style.position = 'absolute';
-      element.style.top = '0';
-      element.style.left = '0';
-      element.style.willChange = 'transform, opacity';
-      element.style.transform = `translate3d(${originX}px, ${originY}px, 0)`;
-      element.style.opacity = '1';
-      container.appendChild(element);
-
-      const angle = Math.random() * Math.PI - Math.PI / 2;
-      const speed = Math.random() * 6 + 3;
-
-      return {
-        element,
-        x: originX,
-        y: originY,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        rotation: Math.random() * Math.PI,
-        rotationSpeed: Math.random() * 0.3 - 0.15,
-        wobble: Math.random() * 10,
-        wobbleSpeed: Math.random() * 0.2 + 0.05
-      };
-    });
-
-    document.body.appendChild(container);
-
-    const cleanup = () => {
-      if (confettiFrameRef.current) {
-        window.cancelAnimationFrame(confettiFrameRef.current);
-        confettiFrameRef.current = null;
-      }
-      particles.forEach((p) => {
-        if (p.element.parentNode) p.element.parentNode.removeChild(p.element);
-      });
-      if (container.parentNode) container.parentNode.removeChild(container);
-      confettiCleanupRef.current = null;
-    };
-
-    const start = performance.now();
-    const update = (time) => {
-      const elapsed = time - start;
-      const fade = Math.max(1 - elapsed / duration, 0);
-      particles.forEach((p) => {
-        p.vy = Math.min(p.vy + gravity, terminalVelocity);
-        p.vx *= drag;
-        p.x += p.vx + Math.cos(p.wobble) * 0.5;
-        p.y += p.vy;
-        p.wobble += p.wobbleSpeed;
-        p.rotation += p.rotationSpeed;
-        p.element.style.opacity = `${fade}`;
-        p.element.style.transform = `translate3d(${p.x}px, ${p.y}px, 0) rotate(${p.rotation}rad)`;
-      });
-
-      if (elapsed < duration) {
-        confettiFrameRef.current = window.requestAnimationFrame(update);
-      } else {
-        cleanup();
-      }
-    };
-
-    confettiCleanupRef.current = cleanup;
-    confettiFrameRef.current = window.requestAnimationFrame(update);
-  }, []);
+  const { fireOnDone } = useCompletionConfetti({ status: t.status, auto: true });
   const playSound = () => {
     if (!soundEnabled) return;
     try {
@@ -148,6 +49,9 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     } catch {}
   };
   const update = (id, patch) => {
+    if (patch?.status) {
+      fireOnDone(t.status, patch.status);
+    }
     onUpdate?.(id, patch);
     playSound();
   };
@@ -173,19 +77,6 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     }
     update(t.id, { status: value });
   };
-
-  useEffect(() => {
-    if (prevStatusRef.current !== 'done' && t.status === 'done') {
-      launchConfetti();
-    }
-    prevStatusRef.current = t.status;
-  }, [t.status, launchConfetti]);
-
-  useEffect(() => () => {
-    if (confettiCleanupRef.current) {
-      confettiCleanupRef.current();
-    }
-  }, []);
 
   return (
     <motion.div

@@ -6,6 +6,7 @@ import { LinkChips } from "./LinksEditor.jsx";
 import DepPicker from "./DepPicker.jsx";
 import DuePill from "./DuePill.jsx";
 import { X } from "lucide-react";
+import { useCompletionConfetti } from "../hooks/use-completion-confetti.js";
 
 function statusBg(status) {
   if (status === "done") return "bg-emerald-50";
@@ -16,6 +17,7 @@ function statusBg(status) {
 export default function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
   const dialogRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const { fireOnDone } = useCompletionConfetti();
 
   useEffect(() => {
     if (task) {
@@ -129,7 +131,11 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
           </div>
           <select
             value={task.status}
-            onChange={(e) => onUpdate(task.id, { status: e.target.value })}
+            onChange={(e) => {
+              const nextStatus = e.target.value;
+              fireOnDone(task.status, nextStatus);
+              onUpdate(task.id, { status: nextStatus });
+            }}
             className={statusBg(task.status)}
           >
             <option value="todo">To Do</option>
