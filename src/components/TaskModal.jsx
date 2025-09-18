@@ -9,8 +9,8 @@ import { X } from "lucide-react";
 
 function statusBg(status) {
   if (status === "done") return "bg-emerald-50";
-  if (status === "inprogress") return "bg-emerald-50";
-  return "bg-white";
+  if (status === "inprogress") return "bg-amber-50";
+  return "bg-sky-50";
 }
 
 export default function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {

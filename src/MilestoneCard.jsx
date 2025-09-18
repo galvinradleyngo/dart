@@ -43,7 +43,7 @@ export default function MilestoneCard({
     return { done, pct, tasksSorted };
   }, [tasks]);
 
-  const progressColor = `hsl(${330 + (pct / 100) * (120 - 330)}, 70%, 50%)`;
+  const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
 
   const triggerAddTask = () => {
     if (detailsRef.current) {
