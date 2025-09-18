@@ -75,8 +75,9 @@ import {
   isHoliday,
   isWorkday,
   addBusinessDays,
-  normalizeUrl
+  normalizeUrl,
 } from "./utils.js";
+import { aggregateBlocksByCourse, applyBlockResolution } from "./blockUtils.js";
 
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
@@ -2322,6 +2323,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [editing, setEditing] = useState(null);
   const [linkPrompt, setLinkPrompt] = useState(null);
   const [blockDialogRequest, setBlockDialogRequest] = useState(null);
+  const [resolveBlockRequest, setResolveBlockRequest] = useState(null);
+  const [blocksCollapsed, setBlocksCollapsed] = useState(true);
+  const [blocksTab, setBlocksTab] = useState("active");
 
   const undo = useCallback(() => {
     setHistory((h) => {
@@ -2367,6 +2371,84 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     courses.forEach((c) => c.team.forEach((m) => { if (!map.has(m.id)) map.set(m.id, m); }));
     return Array.from(map.values());
   }, [courses]);
+
+  const blockAggregatesDashboard = useMemo(
+    () => aggregateBlocksByCourse(courses, members),
+    [courses, members]
+  );
+  const activeBlocks = blockAggregatesDashboard.active;
+  const resolvedBlocks = blockAggregatesDashboard.resolved;
+  const myActiveBlocks = useMemo(
+    () =>
+      activeBlocks.filter((block) => block.reportedBy && block.reportedBy === userId),
+    [activeBlocks, userId]
+  );
+  const assistBlocks = useMemo(
+    () =>
+      activeBlocks.filter((block) => {
+        if (!Array.isArray(block.taggedMemberIds)) return false;
+        if (block.reportedBy && block.reportedBy === userId) return false;
+        return block.taggedMemberIds.includes(userId);
+      }),
+    [activeBlocks, userId]
+  );
+  const resolvedHistory = useMemo(
+    () =>
+      resolvedBlocks.filter((block) => {
+        if (block.reportedBy === userId) return true;
+        if (!Array.isArray(block.taggedMemberIds)) return false;
+        return block.taggedMemberIds.includes(userId);
+      }),
+    [resolvedBlocks, userId]
+  );
+
+  const openResolveBlock = useCallback((entry) => {
+    setResolveBlockRequest(entry);
+  }, []);
+
+  const resolveBlockContext = useMemo(() => {
+    if (!resolveBlockRequest) return null;
+    const course = courses.find(
+      (item) => (item.course?.id ?? item.id) === resolveBlockRequest.courseId
+    );
+    if (!course) return null;
+    const task = Array.isArray(course.tasks)
+      ? course.tasks.find((t) => t.id === resolveBlockRequest.taskId)
+      : null;
+    if (!task) return null;
+    const block = Array.isArray(task.blocks)
+      ? task.blocks.find((b) => b.id === resolveBlockRequest.blockId)
+      : null;
+    if (!block) return null;
+    return { course, task, block };
+  }, [resolveBlockRequest, courses]);
+
+  const handleResolveBlock = useCallback(
+    ({ resolution, resolvedBy, resolvedAt }) => {
+      if (!resolveBlockRequest) return;
+      let changed = false;
+      updateCourses((prev) => {
+        const next = applyBlockResolution(prev, {
+          courseId: resolveBlockRequest.courseId,
+          taskId: resolveBlockRequest.taskId,
+          blockId: resolveBlockRequest.blockId,
+          resolution,
+          resolvedBy,
+          resolvedAt,
+        });
+        if (next !== prev) {
+          changed = true;
+          return next;
+        }
+        return prev;
+      });
+      if (changed) {
+        setSaveState("unsaved");
+      }
+      setResolveBlockRequest(null);
+    },
+    [resolveBlockRequest, updateCourses, setSaveState]
+  );
 
   const [userId, setUserId] = useState(() => localStorage.getItem('userId') || initialUserId || '');
   useEffect(() => {
@@ -2558,38 +2640,231 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         </div>
         <div className="grid grid-cols-1 gap-6">
           {activeTab === 'deadlines' && (
-            <SectionCard title="Upcoming Deadlines">
-              {!hasUpcomingTasks ? (
-                <div className="text-sm text-slate-600/90">No tasks due in the next 2 weeks.</div>
-              ) : (
-                <ul className="space-y-3">
-                  {upcoming
-                    .filter(({ tasks }) => tasks.length > 0)
-                    .map(({ date, tasks }) => (
-                      <li
-                        key={fmt(date)}
-                        className="glass-card p-4"
+            <>
+              <SectionCard title="Upcoming Deadlines">
+                {!hasUpcomingTasks ? (
+                  <div className="text-sm text-slate-600/90">No tasks due in the next 2 weeks.</div>
+                ) : (
+                  <ul className="space-y-3">
+                    {upcoming
+                      .filter(({ tasks }) => tasks.length > 0)
+                      .map(({ date, tasks }) => (
+                        <li
+                          key={fmt(date)}
+                          className="glass-card p-4"
+                        >
+                          <div className="flex items-baseline justify-between gap-3">
+                            <div className="text-sm font-semibold text-slate-800">
+                              {date.toLocaleDateString(undefined, {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </div>
+                            <div className="text-xs font-medium text-slate-500/80">
+                              {tasks.length} task{tasks.length === 1 ? '' : 's'}
+                            </div>
+                          </div>
+                          <ul className="mt-3 space-y-2">
+                            {tasks.map((t) => renderUpcomingTask(t))}
+                          </ul>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </SectionCard>
+              <SectionCard
+                title="Blocks"
+                actions={
+                  <button
+                    onClick={() => setBlocksCollapsed((value) => !value)}
+                    className="glass-button"
+                  >
+                    {blocksCollapsed ? 'Show' : 'Hide'}
+                  </button>
+                }
+              >
+                {blocksCollapsed ? (
+                  <div className="text-sm text-slate-600/90">Panel collapsed. Select “Show” to review blocks.</div>
+                ) : !userId ? (
+                  <div className="text-sm text-slate-600/90">Select a user to view block assignments.</div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className={`${
+                          blocksTab === 'active' ? 'glass-button-primary' : 'glass-button'
+                        } min-w-[6rem] justify-center`}
+                        onClick={() => setBlocksTab('active')}
                       >
-                        <div className="flex items-baseline justify-between gap-3">
-                          <div className="text-sm font-semibold text-slate-800">
-                            {date.toLocaleDateString(undefined, {
-                              weekday: 'short',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </div>
-                          <div className="text-xs font-medium text-slate-500/80">
-                            {tasks.length} task{tasks.length === 1 ? '' : 's'}
-                          </div>
+                        Active ({myActiveBlocks.length + assistBlocks.length})
+                      </button>
+                      <button
+                        type="button"
+                        className={`${
+                          blocksTab === 'resolved' ? 'glass-button-primary' : 'glass-button'
+                        } min-w-[6rem] justify-center`}
+                        onClick={() => setBlocksTab('resolved')}
+                      >
+                        Resolved ({resolvedHistory.length})
+                      </button>
+                    </div>
+                    {blocksTab === 'active' ? (
+                      <div className="space-y-6">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-700/90">My Blocks</h3>
+                          {myActiveBlocks.length === 0 ? (
+                            <div className="mt-2 rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                              All clear! You haven’t reported any active blocks.
+                            </div>
+                          ) : (
+                            <ul className="mt-2 space-y-3">
+                              {myActiveBlocks.map((block) => {
+                                const milestoneTitle = block.milestone?.title || 'No milestone';
+                                const tagNames = block.taggedMembers?.length
+                                  ? block.taggedMembers.map((member) => member.name)
+                                  : block.taggedMemberIds;
+                                return (
+                                  <li
+                                    key={block.id}
+                                    className="rounded-xl border border-orange-200/70 bg-white/85 p-3 shadow-sm"
+                                  >
+                                    <div className="text-sm font-semibold text-slate-800">
+                                      {block.task.title || 'Untitled task'}
+                                    </div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      {block.course.name} · {milestoneTitle} · Reported {block.reportedAt || '—'}
+                                    </div>
+                                    <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                                      {block.description}
+                                    </div>
+                                    {tagNames && tagNames.length > 0 && (
+                                      <div className="mt-2 text-xs text-slate-500">
+                                        Tagged: {tagNames.join(', ')}
+                                      </div>
+                                    )}
+                                    <div className="mt-3 flex justify-end">
+                                      <button
+                                        type="button"
+                                        className="glass-button-success"
+                                        onClick={() => openResolveBlock(block)}
+                                      >
+                                        Resolve
+                                      </button>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
                         </div>
-                        <ul className="mt-3 space-y-2">
-                          {tasks.map((t) => renderUpcomingTask(t))}
-                        </ul>
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </SectionCard>
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-700/90">Blocks I Can Help Address</h3>
+                          {assistBlocks.length === 0 ? (
+                            <div className="mt-2 rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                              No blocks are currently tagging you.
+                            </div>
+                          ) : (
+                            <ul className="mt-2 space-y-3">
+                              {assistBlocks.map((block) => {
+                                const milestoneTitle = block.milestone?.title || 'No milestone';
+                                const reporterName = block.reporter?.name || 'Unknown';
+                                const tagNames = block.taggedMembers?.length
+                                  ? block.taggedMembers.map((member) => member.name)
+                                  : block.taggedMemberIds;
+                                return (
+                                  <li
+                                    key={block.id}
+                                    className="rounded-xl border border-sky-200/70 bg-white/85 p-3 shadow-sm"
+                                  >
+                                    <div className="text-sm font-semibold text-slate-800">
+                                      {block.task.title || 'Untitled task'}
+                                    </div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      {block.course.name} · {milestoneTitle}
+                                    </div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      Reported by {reporterName}{block.reportedAt ? ` on ${block.reportedAt}` : ''}
+                                    </div>
+                                    <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                                      {block.description}
+                                    </div>
+                                    {tagNames && tagNames.length > 0 && (
+                                      <div className="mt-2 text-xs text-slate-500">
+                                        Tagged members: {tagNames.join(', ')}
+                                      </div>
+                                    )}
+                                    <div className="mt-3 flex justify-end">
+                                      <button
+                                        type="button"
+                                        className="glass-button-success"
+                                        onClick={() => openResolveBlock(block)}
+                                      >
+                                        Resolve
+                                      </button>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    ) : resolvedHistory.length === 0 ? (
+                      <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                        No resolved blocks tracked yet.
+                      </div>
+                    ) : (
+                      <ul className="space-y-3">
+                        {resolvedHistory.map((block) => {
+                          const milestoneTitle = block.milestone?.title || 'No milestone';
+                          const resolverName = block.resolver?.name || 'Unknown';
+                          const reporterName = block.reporter?.name || 'Unknown';
+                          const tagNames = block.taggedMembers?.length
+                            ? block.taggedMembers.map((member) => member.name)
+                            : block.taggedMemberIds;
+                          return (
+                            <li
+                              key={block.id}
+                              className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 shadow-sm"
+                            >
+                              <div className="text-sm font-semibold text-emerald-900">
+                                {block.task.title || 'Untitled task'}
+                              </div>
+                              <div className="mt-1 text-xs text-emerald-900/70">
+                                {block.course.name} · {milestoneTitle}
+                              </div>
+                              <div className="mt-1 text-xs text-emerald-900/70">
+                                Reported by {reporterName}
+                                {block.reportedAt ? ` on ${block.reportedAt}` : ''}
+                              </div>
+                              <div className="mt-1 text-xs text-emerald-900/70">
+                                Resolved by {resolverName}
+                                {block.resolvedAt ? ` on ${block.resolvedAt}` : ''}
+                              </div>
+                              <div className="mt-2 whitespace-pre-wrap text-sm text-emerald-900/90">
+                                {block.description}
+                              </div>
+                              {tagNames && tagNames.length > 0 && (
+                                <div className="mt-1 text-xs text-emerald-900/70">
+                                  Tagged members: {tagNames.join(', ')}
+                                </div>
+                              )}
+                              {block.resolution && (
+                                <div className="mt-2 rounded-lg bg-white/80 p-2 text-sm text-emerald-900">
+                                  <span className="font-medium">Resolution:</span> {block.resolution}
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </SectionCard>
+            </>
           )}
 
           {activeTab === 'courses' && (
@@ -2861,6 +3136,19 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             }}
           />
         )}
+        {resolveBlockContext && (
+          <BlockDialog
+            open
+            mode="resolve"
+            task={resolveBlockContext.task}
+            team={resolveBlockContext.course?.team ?? []}
+            reporter={resolveBlockRequest?.reporter ?? null}
+            resolver={resolveBlockRequest?.resolver ?? null}
+            block={resolveBlockContext.block}
+            onResolve={handleResolveBlock}
+            onCancel={() => setResolveBlockRequest(null)}
+          />
+        )}
         {blockDialogRequest && (() => {
           const course = courses.find((c) => c.course.id === blockDialogRequest.courseId);
           const task = course?.tasks.find((t) => t.id === blockDialogRequest.taskId) || null;
@@ -2920,6 +3208,9 @@ export function CoursesHub({
   const [editingLinkUrl, setEditingLinkUrl] = useState("");
   const [membersEditing, setMembersEditing] = useState(false);
   const [history, setHistory] = useState([]);
+  const [blockPanels, setBlockPanels] = useState({});
+  const [blockTabs, setBlockTabs] = useState({});
+  const [resolveRequest, setResolveRequest] = useState(null);
 
   const toggleLinkLibraryCollapsed = useCallback(() => {
     setLinkLibraryCollapsed((value) => !value);
@@ -3013,6 +3304,72 @@ export function CoursesHub({
       persistLinkLibrary,
       handleCancelEditLink,
     ]
+  );
+
+  const blockAggregates = useMemo(
+    () => aggregateBlocksByCourse(courses, people),
+    [courses, people]
+  );
+
+  const toggleCourseBlockPanel = useCallback((courseId) => {
+    setBlockPanels((prev) => ({ ...prev, [courseId]: !prev[courseId] }));
+  }, []);
+
+  const setCourseBlockTab = useCallback((courseId, tab) => {
+    setBlockTabs((prev) => ({ ...prev, [courseId]: tab }));
+  }, []);
+
+  const openResolveBlock = useCallback((entry) => {
+    setResolveRequest({
+      courseId: entry.courseId,
+      taskId: entry.taskId,
+      blockId: entry.id,
+      context: entry,
+    });
+  }, []);
+
+  const resolveContext = useMemo(() => {
+    if (!resolveRequest) return null;
+    const course = courses.find(
+      (item) => (item.course?.id ?? item.id) === resolveRequest.courseId
+    );
+    if (!course) return null;
+    const task = Array.isArray(course.tasks)
+      ? course.tasks.find((t) => t.id === resolveRequest.taskId)
+      : null;
+    if (!task) return null;
+    const block = Array.isArray(task.blocks)
+      ? task.blocks.find((b) => b.id === resolveRequest.blockId)
+      : null;
+    if (!block) return null;
+    const milestone = Array.isArray(course.milestones)
+      ? course.milestones.find((m) => m.id === task.milestoneId) ?? null
+      : null;
+    return { course, task, block, milestone };
+  }, [resolveRequest, courses]);
+
+  const handleResolveBlock = useCallback(
+    ({ resolution, resolvedBy, resolvedAt }) => {
+      if (!resolveRequest) return;
+      const next = applyBlockResolution(courses, {
+        courseId: resolveRequest.courseId,
+        taskId: resolveRequest.taskId,
+        blockId: resolveRequest.blockId,
+        resolution,
+        resolvedBy,
+        resolvedAt,
+      });
+      if (next === courses) {
+        setResolveRequest(null);
+        return;
+      }
+      pushHistory(courses);
+      saveCourses(next);
+      saveCoursesRemote(next).catch(() => {});
+      setCourses(next);
+      setResolveRequest(null);
+    },
+    [resolveRequest, courses, pushHistory]
   );
 
   const undo = useCallback(() => {
@@ -3553,6 +3910,14 @@ export function CoursesHub({
               {courses.map((c) => {
                 const courseId = c.course?.id ?? c.id;
                 const t = computeTotals(c);
+                const blockGroup = blockAggregates.byCourse.get(courseId) ?? {
+                  active: [],
+                  resolved: [],
+                };
+                const panelOpen = blockPanels[courseId] ?? false;
+                const activeBlocks = blockGroup.active;
+                const resolvedBlocks = blockGroup.resolved;
+                const blockTab = blockTabs[courseId] ?? "active";
                 return (
                   <motion.div
                     key={courseId}
@@ -3600,6 +3965,132 @@ export function CoursesHub({
                       >
                         <Trash2 className="icon" />
                       </button>
+                    </div>
+                    <div className="mt-4 border-t border-white/60 pt-3">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleCourseBlockPanel(courseId);
+                        }}
+                        className="glass-button w-full justify-between"
+                        aria-expanded={panelOpen}
+                      >
+                        <span className="font-semibold text-slate-700">Blocks</span>
+                        <span className="text-xs text-slate-500">
+                          Active {activeBlocks.length} · Resolved {resolvedBlocks.length}
+                        </span>
+                      </button>
+                      {panelOpen && (
+                        <div className="mt-3 space-y-3" onClick={(event) => event.stopPropagation()}>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              className={`${
+                                blockTab === "active" ? "glass-button-primary" : "glass-button"
+                              } min-w-[6rem] justify-center`}
+                              onClick={() => setCourseBlockTab(courseId, "active")}
+                            >
+                              Active ({activeBlocks.length})
+                            </button>
+                            <button
+                              type="button"
+                              className={`${
+                                blockTab === "resolved" ? "glass-button-primary" : "glass-button"
+                              } min-w-[6rem] justify-center`}
+                              onClick={() => setCourseBlockTab(courseId, "resolved")}
+                            >
+                              Resolved ({resolvedBlocks.length})
+                            </button>
+                          </div>
+                          {blockTab === "active" ? (
+                            activeBlocks.length === 0 ? (
+                              <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                                No active blocks for this course.
+                              </div>
+                            ) : (
+                              <ul className="space-y-3">
+                                {activeBlocks.map((block) => {
+                                  const reporterName = block.reporter?.name || "Unknown";
+                                  const milestoneTitle = block.milestone?.title || "No milestone";
+                                  const tagNames = block.taggedMembers?.length
+                                    ? block.taggedMembers.map((member) => member.name)
+                                    : block.taggedMemberIds;
+                                  return (
+                                    <li
+                                      key={block.id}
+                                      className="rounded-xl border border-emerald-100 bg-white/80 p-3 shadow-sm"
+                                    >
+                                      <div className="text-sm font-semibold text-slate-800">
+                                        {block.task.title || "Untitled task"}
+                                      </div>
+                                      <div className="mt-1 text-xs text-slate-500">
+                                        {milestoneTitle} · Reported by {reporterName}
+                                        {block.reportedAt ? ` on ${block.reportedAt}` : ""}
+                                      </div>
+                                      <div className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
+                                        {block.description}
+                                      </div>
+                                      {tagNames && tagNames.length > 0 && (
+                                        <div className="mt-2 text-xs text-slate-500">
+                                          Tagged: {tagNames.join(", ")}
+                                        </div>
+                                      )}
+                                      <div className="mt-3 flex justify-end">
+                                        <button
+                                          type="button"
+                                          className="glass-button-success"
+                                          onClick={() => openResolveBlock(block)}
+                                        >
+                                          Resolve
+                                        </button>
+                                      </div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )
+                          ) : resolvedBlocks.length === 0 ? (
+                            <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                              No resolved blocks yet.
+                            </div>
+                          ) : (
+                            <ul className="space-y-3">
+                              {resolvedBlocks.map((block) => {
+                                const reporterName = block.reporter?.name || "Unknown";
+                                const resolverName = block.resolver?.name || "Unknown";
+                                const milestoneTitle = block.milestone?.title || "No milestone";
+                                return (
+                                  <li
+                                    key={block.id}
+                                    className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 shadow-sm"
+                                  >
+                                    <div className="text-sm font-semibold text-emerald-900">
+                                      {block.task.title || "Untitled task"}
+                                    </div>
+                                    <div className="mt-1 text-xs text-emerald-900/70">
+                                      {milestoneTitle} · Reported by {reporterName}
+                                      {block.reportedAt ? ` on ${block.reportedAt}` : ""}
+                                    </div>
+                                    <div className="mt-1 text-xs text-emerald-900/70">
+                                      Resolved by {resolverName}
+                                      {block.resolvedAt ? ` on ${block.resolvedAt}` : ""}
+                                    </div>
+                                    <div className="mt-2 whitespace-pre-wrap text-sm text-emerald-900/90">
+                                      {block.description}
+                                    </div>
+                                    {block.resolution && (
+                                      <div className="mt-2 rounded-lg bg-white/80 p-2 text-sm text-emerald-900">
+                                        <span className="font-medium">Resolution:</span> {block.resolution}
+                                      </div>
+                                    )}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 );
@@ -3676,6 +4167,18 @@ export function CoursesHub({
             </div>
           )}
         </section>
+
+        <BlockDialog
+          open={!!resolveContext}
+          mode="resolve"
+          task={resolveContext?.task ?? null}
+          team={resolveContext?.course?.team ?? []}
+          reporter={resolveRequest?.context?.reporter ?? null}
+          resolver={resolveRequest?.context?.resolver ?? null}
+          block={resolveContext?.block ?? null}
+          onResolve={handleResolveBlock}
+          onCancel={() => setResolveRequest(null)}
+        />
       </main>
     </div>
   );

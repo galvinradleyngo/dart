@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 import { CoursesHub } from './App.jsx';
 
@@ -100,6 +100,94 @@ describe('CoursesHub undo functionality', () => {
 
     expect(await screen.findAllByRole('button', { name: 'Open' })).toHaveLength(10);
     expect(undoButton).toBeDisabled();
+  });
+
+  it('shows course blocks and resolves them', async () => {
+    const courses = [
+      {
+        id: 'c1',
+        course: { id: 'c1', name: 'Course 1', description: '' },
+        milestones: [{ id: 'm1', title: 'Milestone 1' }],
+        tasks: [
+          {
+            id: 't1',
+            title: 'Task 1',
+            status: 'blocked',
+            milestoneId: 'm1',
+            blocks: [
+              {
+                id: 'b1',
+                reportedAt: '2024-01-01',
+                reportedBy: 'u1',
+                description: 'Need approval',
+                taggedMemberIds: ['u2'],
+                resolvedAt: null,
+                resolvedBy: null,
+                resolution: '',
+              },
+              {
+                id: 'b2',
+                reportedAt: '2024-01-02',
+                reportedBy: 'u2',
+                description: 'Resolved earlier',
+                taggedMemberIds: [],
+                resolvedAt: '2024-01-03',
+                resolvedBy: 'u3',
+                resolution: 'Shared reference deck',
+              },
+            ],
+          },
+        ],
+        team: [
+          { id: 'u1', name: 'Alice', roleType: 'PM' },
+          { id: 'u2', name: 'Bob', roleType: 'LD' },
+          { id: 'u3', name: 'Cara', roleType: 'SME' },
+        ],
+        schedule: {},
+      },
+    ];
+    localStorage.setItem('healthPM:courses:v1', JSON.stringify(courses));
+
+    render(
+      <CoursesHub
+        onOpenCourse={() => {}}
+        onEditTemplate={() => {}}
+        onAddCourse={() => {}}
+        onOpenUser={() => {}}
+        people={courses[0].team}
+        onPeopleChange={() => {}}
+      />
+    );
+
+    await screen.findByText('Course 1');
+
+    const toggle = screen.getByRole('button', { name: /Blocks/i });
+    fireEvent.click(toggle);
+
+    expect(await screen.findByText('Need approval')).toBeInTheDocument();
+    expect(screen.getByText('Resolved earlier')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resolve' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Resolve Block' });
+    fireEvent.change(screen.getByLabelText('Resolution notes'), {
+      target: { value: 'Approved by lead' },
+    });
+    fireEvent.change(screen.getByLabelText('Resolved by'), {
+      target: { value: 'u2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Resolve Block' }));
+
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(screen.queryByText('Need approval')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Resolved (2)' }));
+    expect(await screen.findByText('Approved by lead')).toBeInTheDocument();
+
+    const stored = JSON.parse(localStorage.getItem('healthPM:courses:v1'));
+    const updated = stored[0].tasks[0].blocks.find((b) => b.id === 'b1');
+    expect(updated.resolvedAt).toBeTruthy();
+    expect(updated.resolution).toBe('Approved by lead');
   });
 });
 
