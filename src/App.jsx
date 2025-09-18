@@ -2425,36 +2425,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return Array.from(map.values());
   }, [courses]);
 
-  const blockAggregatesDashboard = useMemo(
-    () => aggregateBlocksByCourse(courses, members),
-    [courses, members]
-  );
-  const activeBlocks = blockAggregatesDashboard.active;
-  const resolvedBlocks = blockAggregatesDashboard.resolved;
-  const myActiveBlocks = useMemo(
-    () =>
-      activeBlocks.filter((block) => block.reportedBy && block.reportedBy === userId),
-    [activeBlocks, userId]
-  );
-  const assistBlocks = useMemo(
-    () =>
-      activeBlocks.filter((block) => {
-        if (!Array.isArray(block.taggedMemberIds)) return false;
-        if (block.reportedBy && block.reportedBy === userId) return false;
-        return block.taggedMemberIds.includes(userId);
-      }),
-    [activeBlocks, userId]
-  );
-  const resolvedHistory = useMemo(
-    () =>
-      resolvedBlocks.filter((block) => {
-        if (block.reportedBy === userId) return true;
-        if (!Array.isArray(block.taggedMemberIds)) return false;
-        return block.taggedMemberIds.includes(userId);
-      }),
-    [resolvedBlocks, userId]
-  );
-
   const openResolveBlock = useCallback((entry) => {
     setResolveBlockRequest(entry);
   }, []);
@@ -2514,6 +2484,36 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     if (initialUserId) setUserId(initialUserId);
   }, [initialUserId]);
   const user = members.find((m) => m.id === userId);
+
+  const blockAggregatesDashboard = useMemo(
+    () => aggregateBlocksByCourse(courses, members),
+    [courses, members]
+  );
+  const activeBlocks = blockAggregatesDashboard.active;
+  const resolvedBlocks = blockAggregatesDashboard.resolved;
+  const myActiveBlocks = useMemo(
+    () =>
+      activeBlocks.filter((block) => block.reportedBy && block.reportedBy === userId),
+    [activeBlocks, userId]
+  );
+  const assistBlocks = useMemo(
+    () =>
+      activeBlocks.filter((block) => {
+        if (!Array.isArray(block.taggedMemberIds)) return false;
+        if (block.reportedBy && block.reportedBy === userId) return false;
+        return block.taggedMemberIds.includes(userId);
+      }),
+    [activeBlocks, userId]
+  );
+  const resolvedHistory = useMemo(
+    () =>
+      resolvedBlocks.filter((block) => {
+        if (block.reportedBy === userId) return true;
+        if (!Array.isArray(block.taggedMemberIds)) return false;
+        return block.taggedMemberIds.includes(userId);
+      }),
+    [resolvedBlocks, userId]
+  );
 
   const myCoursesAll = useMemo(
     () =>
