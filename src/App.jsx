@@ -4376,10 +4376,24 @@ export default function PMApp() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    const { scrollTo } = window;
+
+    if (typeof scrollTo === "function") {
+      try {
+        scrollTo({ top: 0, left: 0, behavior: "auto" });
+      } catch {
+        scrollTo(0, 0);
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+
     if (typeof document !== "undefined") {
-      if (document.documentElement) document.documentElement.scrollTop = 0;
-      if (document.body) document.body.scrollTop = 0;
+      const { scrollingElement, documentElement, body } = document;
+      if (scrollingElement) scrollingElement.scrollTop = 0;
+      if (documentElement) documentElement.scrollTop = 0;
+      if (body) body.scrollTop = 0;
     }
   }, [view, currentCourseId, currentUserId]);
 
