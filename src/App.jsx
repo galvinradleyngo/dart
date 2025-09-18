@@ -46,6 +46,7 @@ import {
   ChevronDown,
   ChevronUp,
   Link as LinkIcon,
+  Pencil,
   Filter,
   Menu,
   Target,
@@ -427,6 +428,9 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [editingCourseLinkId, setEditingCourseLinkId] = useState(null);
+  const [editingCourseLinkLabel, setEditingCourseLinkLabel] = useState("");
+  const [editingCourseLinkUrl, setEditingCourseLinkUrl] = useState("");
   const [saveState, setSaveState] = useState('saved');
   const [history, setHistory] = useState([]);
   const firstRun = useRef(true);
@@ -467,6 +471,18 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
     },
     [updateCourseState]
   );
+
+  const handleStartEditCourseLink = useCallback((link) => {
+    setEditingCourseLinkId(link.id);
+    setEditingCourseLinkLabel(link.label || "");
+    setEditingCourseLinkUrl(link.url || "");
+  }, []);
+
+  const handleCancelEditCourseLink = useCallback(() => {
+    setEditingCourseLinkId(null);
+    setEditingCourseLinkLabel("");
+    setEditingCourseLinkUrl("");
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -634,9 +650,45 @@ useEffect(() => {
 
   const handleRemoveCourseLink = useCallback(
     (id) => {
+      if (editingCourseLinkId === id) {
+        handleCancelEditCourseLink();
+      }
       persistCourseLinkLibrary(linkLibrary.filter((link) => link.id !== id));
     },
-    [linkLibrary, persistCourseLinkLibrary]
+    [editingCourseLinkId, linkLibrary, persistCourseLinkLibrary, handleCancelEditCourseLink]
+  );
+
+  const handleSubmitCourseLinkEdit = useCallback(
+    (event) => {
+      event.preventDefault();
+      if (!editingCourseLinkId) return;
+      const label = editingCourseLinkLabel.trim();
+      const rawUrl = editingCourseLinkUrl.trim();
+      if (!rawUrl) return;
+      const finalUrl = normalizeUrl(rawUrl);
+      if (!finalUrl) return;
+      const parsed = new URL(finalUrl);
+      persistCourseLinkLibrary(
+        linkLibrary.map((link) =>
+          link.id === editingCourseLinkId
+            ? {
+                ...link,
+                label: label || parsed.hostname || finalUrl,
+                url: finalUrl,
+              }
+            : link
+        )
+      );
+      handleCancelEditCourseLink();
+    },
+    [
+      editingCourseLinkId,
+      editingCourseLinkLabel,
+      editingCourseLinkUrl,
+      linkLibrary,
+      persistCourseLinkLibrary,
+      handleCancelEditCourseLink,
+    ]
   );
 
 
@@ -1211,35 +1263,85 @@ useEffect(() => {
                         key={link.id}
                         className="glass-card p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="min-w-0 space-y-1">
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-slate-800 hover:underline break-words"
+                        {editingCourseLinkId === link.id ? (
+                          <form
+                            className="w-full flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3"
+                            onSubmit={handleSubmitCourseLinkEdit}
                           >
-                            {link.label}
-                          </a>
-                          <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="glass-button text-sm"
-                          >
-                            Open
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCourseLink(link.id)}
-                            className="glass-icon-button w-9 h-9 text-rose-500 hover:text-rose-600"
-                            aria-label="Remove link"
-                          >
-                            <X className="icon" />
-                          </button>
-                        </div>
+                            <label className="flex-1 text-sm text-slate-700">
+                              <span className="font-medium">Label</span>
+                              <input
+                                type="text"
+                                value={editingCourseLinkLabel}
+                                onChange={(event) => setEditingCourseLinkLabel(event.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                              />
+                            </label>
+                            <label className="flex-1 text-sm text-slate-700">
+                              <span className="font-medium">URL</span>
+                              <input
+                                type="text"
+                                inputMode="url"
+                                autoComplete="url"
+                                value={editingCourseLinkUrl}
+                                onChange={(event) => setEditingCourseLinkUrl(event.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                              />
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <button type="submit" className="glass-button-primary text-sm whitespace-nowrap">
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditCourseLink}
+                                className="glass-button text-sm whitespace-nowrap"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <>
+                            <div className="min-w-0 space-y-1">
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-slate-800 hover:underline break-words"
+                              >
+                                {link.label}
+                              </a>
+                              <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="glass-button text-sm"
+                              >
+                                Open
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditCourseLink(link)}
+                                className="glass-icon-button w-9 h-9 text-slate-600 hover:text-slate-700"
+                                aria-label="Edit link"
+                              >
+                                <Pencil className="icon" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCourseLink(link.id)}
+                                className="glass-icon-button w-9 h-9 text-rose-500 hover:text-rose-600"
+                                aria-label="Remove link"
+                              >
+                                <X className="icon" />
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -2593,6 +2695,9 @@ export function CoursesHub({
   const [workweekCollapsed, setWorkweekCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
+  const [editingLinkId, setEditingLinkId] = useState(null);
+  const [editingLinkLabel, setEditingLinkLabel] = useState("");
+  const [editingLinkUrl, setEditingLinkUrl] = useState("");
   const [membersEditing, setMembersEditing] = useState(false);
   const [history, setHistory] = useState([]);
 
@@ -2612,6 +2717,18 @@ export function CoursesHub({
     setLinkLibrary(next);
     saveLinkLibrary(next);
     saveLinkLibraryRemote(next).catch(() => {});
+  }, []);
+
+  const handleStartEditLink = useCallback((link) => {
+    setEditingLinkId(link.id);
+    setEditingLinkLabel(link.label || "");
+    setEditingLinkUrl(link.url || "");
+  }, []);
+
+  const handleCancelEditLink = useCallback(() => {
+    setEditingLinkId(null);
+    setEditingLinkLabel("");
+    setEditingLinkUrl("");
   }, []);
 
   const handleAddLink = useCallback(
@@ -2637,9 +2754,45 @@ export function CoursesHub({
 
   const handleRemoveLink = useCallback(
     (id) => {
+      if (editingLinkId === id) {
+        handleCancelEditLink();
+      }
       persistLinkLibrary(linkLibrary.filter((link) => link.id !== id));
     },
-    [linkLibrary, persistLinkLibrary]
+    [editingLinkId, linkLibrary, persistLinkLibrary, handleCancelEditLink]
+  );
+
+  const handleSubmitEditLink = useCallback(
+    (event) => {
+      event.preventDefault();
+      if (!editingLinkId) return;
+      const label = editingLinkLabel.trim();
+      const rawUrl = editingLinkUrl.trim();
+      if (!rawUrl) return;
+      const finalUrl = normalizeUrl(rawUrl);
+      if (!finalUrl) return;
+      const parsed = new URL(finalUrl);
+      persistLinkLibrary(
+        linkLibrary.map((link) =>
+          link.id === editingLinkId
+            ? {
+                ...link,
+                label: label || parsed.hostname || finalUrl,
+                url: finalUrl,
+              }
+            : link
+        )
+      );
+      handleCancelEditLink();
+    },
+    [
+      editingLinkId,
+      editingLinkLabel,
+      editingLinkUrl,
+      linkLibrary,
+      persistLinkLibrary,
+      handleCancelEditLink,
+    ]
   );
 
   const undo = useCallback(() => {
@@ -3073,35 +3226,85 @@ export function CoursesHub({
                         key={link.id}
                         className="glass-card p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                       >
-                        <div className="min-w-0 space-y-1">
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-slate-800 hover:underline break-words"
+                        {editingLinkId === link.id ? (
+                          <form
+                            className="w-full flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-3"
+                            onSubmit={handleSubmitEditLink}
                           >
-                            {link.label}
-                          </a>
-                          <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <a
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="glass-button text-sm"
-                          >
-                            Open
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveLink(link.id)}
-                            className="glass-icon-button w-9 h-9 text-rose-500 hover:text-rose-600"
-                            aria-label="Remove link"
-                          >
-                            <X className="icon" />
-                          </button>
-                        </div>
+                            <label className="flex-1 text-sm text-slate-700">
+                              <span className="font-medium">Label</span>
+                              <input
+                                type="text"
+                                value={editingLinkLabel}
+                                onChange={(event) => setEditingLinkLabel(event.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                              />
+                            </label>
+                            <label className="flex-1 text-sm text-slate-700">
+                              <span className="font-medium">URL</span>
+                              <input
+                                type="text"
+                                inputMode="url"
+                                autoComplete="url"
+                                value={editingLinkUrl}
+                                onChange={(event) => setEditingLinkUrl(event.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
+                              />
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <button type="submit" className="glass-button-primary text-sm whitespace-nowrap">
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleCancelEditLink}
+                                className="glass-button text-sm whitespace-nowrap"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <>
+                            <div className="min-w-0 space-y-1">
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-slate-800 hover:underline break-words"
+                              >
+                                {link.label}
+                              </a>
+                              <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={link.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="glass-button text-sm"
+                              >
+                                Open
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditLink(link)}
+                                className="glass-icon-button w-9 h-9 text-slate-600 hover:text-slate-700"
+                                aria-label="Edit link"
+                              >
+                                <Pencil className="icon" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveLink(link.id)}
+                                className="glass-icon-button w-9 h-9 text-rose-500 hover:text-rose-600"
+                                aria-label="Remove link"
+                              >
+                                <X className="icon" />
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>
