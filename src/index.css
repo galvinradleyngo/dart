@@ -79,6 +79,22 @@ body {
     box-shadow: 0 22px 38px -20px rgba(15, 23, 42, 0.72);
   }
 
+  .glass-button-success {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-semibold text-white transition-all duration-200;
+    background: linear-gradient(135deg, #0f766e, #34d399);
+    box-shadow: 0 24px 46px -24px rgba(16, 185, 129, 0.6);
+  }
+
+  .glass-button-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 28px 50px -22px rgba(16, 185, 129, 0.55);
+  }
+
+  .glass-button-success:active {
+    transform: translateY(1px);
+    box-shadow: 0 22px 38px -20px rgba(13, 148, 136, 0.52);
+  }
+
   .glass-icon-button {
     @apply inline-flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200;
     color: #475569;
