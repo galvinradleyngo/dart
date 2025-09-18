@@ -32,6 +32,7 @@ describe('Upcoming Deadlines window', () => {
       tasks: [
         { id: 't1', title: 'Today Task', status: 'todo', dueDate: fmt(today), assigneeId: 'u1', milestoneId: 'm1' },
         { id: 't2', title: 'Future Task', status: 'todo', dueDate: fmt(day14), assigneeId: 'u1', milestoneId: 'm2' },
+        { id: 't4', title: 'Blocked Task', status: 'blocked', dueDate: fmt(day14), assigneeId: 'u1', milestoneId: 'm2' },
         { id: 't3', title: 'Outside Task', status: 'todo', dueDate: fmt(day15), assigneeId: 'u1', milestoneId: 'm1' },
       ],
       team: [{ id: 'u1', name: 'Alice', roleType: 'LD' }],
@@ -48,6 +49,9 @@ describe('Upcoming Deadlines window', () => {
     expect(taskButton).toBeInTheDocument();
     expect(
       await screen.findByRole('button', { name: 'Future Task for Milestone 2' })
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Blocked Task for Milestone 2' })
     ).toBeInTheDocument();
     expect(screen.queryByText('Outside Task')).toBeNull();
 
