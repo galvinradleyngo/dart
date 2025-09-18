@@ -2946,27 +2946,30 @@ export function CoursesHub({
     });
   };
 
-  const removeCourse = (id) => {
+  const removeCourse = (courseId) => {
     pushHistory(courses);
-    const next = courses.filter((c) => c.id !== id);
+    const next = courses.filter((c) => (c.course?.id ?? c.id) !== courseId);
     saveCourses(next);
     saveCoursesRemote(next).catch(() => {});
     setCourses(next);
-    onRemoveCourse && onRemoveCourse(id);
+    onRemoveCourse && onRemoveCourse(courseId);
   };
-  const duplicateCourse = (id) => {
+  const duplicateCourse = (courseId) => {
     pushHistory(courses);
-    const src = courses.find((c) => c.id === id);
+    const src = courses.find((c) => (c.course?.id ?? c.id) === courseId);
     if (!src) return;
     const copy = JSON.parse(JSON.stringify(src));
     copy.id = uid();
-    copy.course.id = copy.id;
-    copy.course.name = `${src.course.name} (copy)`;
+    copy.course = {
+      ...(copy.course ?? {}),
+      id: copy.id,
+      name: `${src.course.name} (copy)`,
+    };
     const next = [...courses, copy];
     saveCourses(next);
     saveCoursesRemote(next).catch(() => {});
     setCourses(next);
-    onDuplicateCourse && onDuplicateCourse(copy.id);
+    onDuplicateCourse && onDuplicateCourse(copy.course?.id ?? copy.id);
   };
   const handleAddCourse = () => {
     pushHistory(courses);
@@ -3330,17 +3333,18 @@ export function CoursesHub({
           ) : (
             <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {courses.map((c) => {
+                const courseId = c.course?.id ?? c.id;
                 const t = computeTotals(c);
                 return (
                   <motion.div
-                    key={c.id}
+                    key={courseId}
                     layout
                     role="button"
                     tabIndex={0}
                     aria-label={`Open ${c.course.name}`}
-                    onClick={() => open(c.id)}
+                    onClick={() => open(courseId)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') open(c.id);
+                      if (e.key === 'Enter' || e.key === ' ') open(courseId);
                     }}
                     className="group w-full glass-card p-4 cursor-pointer hover:ring-2 hover:ring-indigo-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
                   >
@@ -3358,21 +3362,21 @@ export function CoursesHub({
                     </div>
                     <div className="mt-3 flex items-center gap-2">
                       <button
-                        onClick={(e) => { e.stopPropagation(); open(c.id); }}
+                        onClick={(e) => { e.stopPropagation(); open(courseId); }}
                         className="glass-icon-button w-11 h-11 text-slate-700"
                         aria-label="Open course"
                       >
                         <BookOpen className="icon" />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); duplicateCourse(c.id); }}
+                        onClick={(e) => { e.stopPropagation(); duplicateCourse(courseId); }}
                         className="glass-icon-button w-11 h-11"
                         aria-label="Duplicate course"
                       >
                         <Copy className="icon" />
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); if (confirm('Delete this course?')) removeCourse(c.id); }}
+                        onClick={(e) => { e.stopPropagation(); if (confirm('Delete this course?')) removeCourse(courseId); }}
                         className="glass-icon-button w-11 h-11 text-rose-500 hover:text-rose-600"
                         aria-label="Delete course"
                       >
