@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import { Link2, X, Plus } from "lucide-react";
+import { normalizeUrl } from "../utils.js";
 
 export function LinksEditor({ links = [], onAdd, onRemove }) {
   const [val, setVal] = useState("");
   const add = () => {
     const url = val.trim();
     if (!url) return;
-    try {
-      const u = new URL(url);
-      onAdd?.(u.toString());
-      setVal("");
-    } catch {}
+    const normalized = normalizeUrl(url);
+    if (!normalized) return;
+    onAdd?.(normalized);
+    setVal("");
   };
   return (
     <div className="mt-1">

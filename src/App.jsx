@@ -71,7 +71,8 @@ import {
   nextMemberName,
   isHoliday,
   isWorkday,
-  addBusinessDays
+  addBusinessDays,
+  normalizeUrl
 } from "./utils.js";
 
 /**
@@ -616,18 +617,9 @@ useEffect(() => {
       const label = newLinkLabel.trim();
       const rawUrl = newLinkUrl.trim();
       if (!rawUrl) return;
-      let parsed;
-      try {
-        parsed = new URL(rawUrl);
-      } catch {
-        try {
-          parsed = new URL(`https://${rawUrl}`);
-        } catch {
-          return;
-        }
-      }
-      if (!parsed) return;
-      const finalUrl = parsed.toString();
+      const finalUrl = normalizeUrl(rawUrl);
+      if (!finalUrl) return;
+      const parsed = new URL(finalUrl);
       const entry = {
         id: uid(),
         label: label || parsed.hostname || finalUrl,
@@ -1195,10 +1187,12 @@ useEffect(() => {
                   <label className="flex-1 text-sm text-slate-700">
                     <span className="font-medium">URL</span>
                     <input
-                      type="url"
+                      type="text"
+                      inputMode="url"
+                      autoComplete="url"
                       value={newLinkUrl}
                       onChange={(e) => setNewLinkUrl(e.target.value)}
-                      placeholder="https://example.com"
+                      placeholder="example.com or https://example.com"
                       className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
                     />
                   </label>
@@ -2626,18 +2620,9 @@ export function CoursesHub({
       const label = newLinkLabel.trim();
       const rawUrl = newLinkUrl.trim();
       if (!rawUrl) return;
-      let parsed;
-      try {
-        parsed = new URL(rawUrl);
-      } catch {
-        try {
-          parsed = new URL(`https://${rawUrl}`);
-        } catch {
-          return;
-        }
-      }
-      if (!parsed) return;
-      const finalUrl = parsed.toString();
+      const finalUrl = normalizeUrl(rawUrl);
+      if (!finalUrl) return;
+      const parsed = new URL(finalUrl);
       const entry = {
         id: uid(),
         label: label || parsed.hostname || finalUrl,
@@ -3064,10 +3049,12 @@ export function CoursesHub({
                   <label className="flex-1 text-sm text-slate-700">
                     <span className="font-medium">URL</span>
                     <input
-                      type="url"
+                      type="text"
+                      inputMode="url"
+                      autoComplete="url"
                       value={newLinkUrl}
                       onChange={(e) => setNewLinkUrl(e.target.value)}
-                      placeholder="https://example.com"
+                      placeholder="example.com or https://example.com"
                       className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
                     />
                   </label>
