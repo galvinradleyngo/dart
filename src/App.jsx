@@ -4374,6 +4374,26 @@ export default function PMApp() {
   };
   const onBack = () => { setView(prevView); setPrevView("hub"); setCurrentCourseId(null); };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const { scrollTo } = window;
+    if (typeof scrollTo === "function") {
+      try {
+        scrollTo({ top: 0, left: 0, behavior: "auto" });
+      } catch {
+        scrollTo(0, 0);
+      }
+    }
+
+    if (typeof document !== "undefined") {
+      const { documentElement, body, scrollingElement } = document;
+      if (scrollingElement) scrollingElement.scrollTop = 0;
+      if (documentElement) documentElement.scrollTop = 0;
+      if (body) body.scrollTop = 0;
+    }
+  }, [view, currentCourseId, currentUserId]);
+
   let content = null;
   if (view === "hub") {
     content = (
