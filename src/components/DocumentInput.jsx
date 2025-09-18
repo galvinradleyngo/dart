@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import { Plus } from "lucide-react";
+import { normalizeUrl } from "../utils.js";
 
 export default function DocumentInput({ onAdd }) {
   const [val, setVal] = useState("");
   const add = () => {
     const url = val.trim();
     if (!url) return;
-    try {
-      const u = new URL(url);
-      onAdd?.(u.toString());
-      setVal("");
-    } catch {}
+    const normalized = normalizeUrl(url);
+    if (!normalized) return;
+    onAdd?.(normalized);
+    setVal("");
   };
   return (
     <div className="flex items-center gap-2 text-sm w-full">
@@ -19,7 +19,9 @@ export default function DocumentInput({ onAdd }) {
       </label>
       <input
         id="document-url"
-        type="url"
+        type="text"
+        inputMode="url"
+        autoComplete="url"
         value={val}
         onChange={(e) => setVal(e.target.value)}
         onKeyDown={(e) => {

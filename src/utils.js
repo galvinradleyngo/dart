@@ -6,6 +6,21 @@ export const todayStr = () => new Date().toISOString().slice(0, 10);
 export const fmt = (d) => new Date(d).toISOString().slice(0, 10);
 export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
+const tryParseUrl = (value) => {
+  try {
+    return new URL(value).toString();
+  } catch {
+    return null;
+  }
+};
+
+export const normalizeUrl = (rawUrl) => {
+  if (typeof rawUrl !== "string") return null;
+  const candidate = rawUrl.trim();
+  if (!candidate) return null;
+  return tryParseUrl(candidate) ?? tryParseUrl(`https://${candidate}`);
+};
+
 export const rolePalette = {
   LD: "#4f46e5",
   SME: "#16a34a",
