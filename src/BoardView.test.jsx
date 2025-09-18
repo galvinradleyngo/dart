@@ -4,6 +4,10 @@ import { BoardView } from './App.jsx';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
 const sampleTask = { id: 't1', title: 'Sample Task', status: 'todo', milestoneId: 'm1', order: 0 };
+const teamWithPm = [
+  { id: 'pm1', name: 'Pat Manager', roleType: 'PM' },
+  { id: 'ld1', name: 'Lee Designer', roleType: 'LD' },
+];
 
 describe('BoardView mobile status selection', () => {
   beforeAll(() => {
@@ -17,11 +21,11 @@ describe('BoardView mobile status selection', () => {
     }));
   });
 
-  const renderBoard = (status, onUpdate) =>
+  const renderBoard = (status, onUpdate, extraProps = {}) =>
     render(
       <BoardView
         tasks={[{ ...sampleTask, status }]}
-        team={[]}
+        team={teamWithPm}
         milestones={[]}
         onUpdate={onUpdate}
         onDelete={() => {}}
@@ -31,6 +35,8 @@ describe('BoardView mobile status selection', () => {
         onAddLink={() => {}}
         onRemoveLink={() => {}}
         onDuplicate={() => {}}
+        reporter={teamWithPm[0]}
+        {...extraProps}
       />
     );
 
@@ -46,11 +52,43 @@ describe('BoardView mobile status selection', () => {
     expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'inprogress' });
   });
 
-  it('changes from todo to blocked', () => {
+  it('prompts for block details before switching to blocked', () => {
     const onUpdate = vi.fn();
     renderBoard('todo', onUpdate);
     fireEvent.change(openSelect(), { target: { value: 'blocked' } });
-    expect(onUpdate).toHaveBeenCalledWith('t1', { status: 'blocked' });
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('dialog', { name: /mark as blocked/i })
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/block description/i), {
+      target: { value: 'Pending SME review' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add block/i }));
+
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({
+        status: 'blocked',
+        blocks: [
+          expect.objectContaining({
+            description: 'Pending SME review',
+            reportedBy: teamWithPm[0].id,
+            taggedMemberIds: expect.arrayContaining([teamWithPm[0].id]),
+          }),
+        ],
+      })
+    );
+  });
+
+  it('allows cancelling the block dialog without updating', () => {
+    const onUpdate = vi.fn();
+    renderBoard('todo', onUpdate);
+    fireEvent.change(openSelect(), { target: { value: 'blocked' } });
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: /mark as blocked/i })).toBeNull();
   });
 
   it('changes from inprogress to done', () => {
@@ -76,7 +114,7 @@ describe('BoardView mobile status selection', () => {
 
   it('shows blocked pill styling on board', () => {
     const onUpdate = vi.fn();
-    renderBoard('blocked', onUpdate);
+    renderBoard('blocked', onUpdate, { reporter: teamWithPm[0] });
     const trigger = screen.getByRole('button', { name: /status: blocked/i });
     expect(trigger).toHaveClass('bg-orange-100');
   });

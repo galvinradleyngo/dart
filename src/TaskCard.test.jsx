@@ -11,11 +11,17 @@ const sampleTask = {
   note: '',
   status: 'todo',
   milestoneId: 'm1',
+  blocks: [],
 };
 
 const milestones = [
   { id: 'm1', title: 'Milestone 1' },
   { id: 'm2', title: 'Milestone 2' },
+];
+
+const teamWithPm = [
+  { id: 'pm1', name: 'Pat Manager', roleType: 'PM' },
+  { id: 'ld1', name: 'Lee Designer', roleType: 'LD' },
 ];
 
 describe('TaskCard', () => {
@@ -119,6 +125,64 @@ describe('TaskCard', () => {
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { startDate: '2024-01-01', status: 'inprogress' });
   });
 
+  it('prompts for block details before switching to blocked', () => {
+    const onUpdate = vi.fn();
+    render(
+      <TaskCard
+        task={sampleTask}
+        milestones={milestones}
+        team={teamWithPm}
+        reporter={teamWithPm[0]}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'blocked' } });
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: /mark as blocked/i })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/block description/i), {
+      target: { value: 'Waiting on SME feedback' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /add block/i }));
+
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+    expect(onUpdate).toHaveBeenCalledWith(
+      sampleTask.id,
+      expect.objectContaining({
+        status: 'blocked',
+        blocks: [
+          expect.objectContaining({
+            description: 'Waiting on SME feedback',
+            reportedBy: teamWithPm[0].id,
+            taggedMemberIds: expect.arrayContaining([teamWithPm[0].id]),
+          }),
+        ],
+      })
+    );
+  });
+
+  it('allows cancelling the block dialog without updating', () => {
+    const onUpdate = vi.fn();
+    render(
+      <TaskCard
+        task={sampleTask}
+        milestones={milestones}
+        team={teamWithPm}
+        reporter={teamWithPm[0]}
+        onUpdate={onUpdate}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'blocked' } });
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
   describe('mobile status selection', () => {
     beforeAll(() => {
       window.matchMedia = window.matchMedia || (() => ({
@@ -131,7 +195,7 @@ describe('TaskCard', () => {
       }));
     });
 
-    const renderWithStatus = (status, onUpdate) => {
+    const renderWithStatus = (status, onUpdate, extraProps = {}) => {
       render(
         <TaskCard
           task={{ ...sampleTask, status }}
@@ -139,6 +203,7 @@ describe('TaskCard', () => {
           onUpdate={onUpdate}
           onDelete={() => {}}
           onDuplicate={() => {}}
+          {...extraProps}
         />
       );
       fireEvent.click(screen.getByRole('button', { name: /status/i }));
@@ -150,13 +215,6 @@ describe('TaskCard', () => {
       const select = renderWithStatus('todo', onUpdate);
       fireEvent.change(select, { target: { value: 'inprogress' } });
       expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'inprogress' });
-    });
-
-    it('changes from todo to blocked', () => {
-      const onUpdate = vi.fn();
-      const select = renderWithStatus('todo', onUpdate);
-      fireEvent.change(select, { target: { value: 'blocked' } });
-      expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { status: 'blocked' });
     });
 
     it('changes from inprogress to done', () => {

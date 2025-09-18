@@ -8,11 +8,12 @@ import { LinkChips } from './components/LinksEditor.jsx';
 import DocumentInput from './components/DocumentInput.jsx';
 import DepPicker from './components/DepPicker.jsx';
 import LinkReminderModal from './components/LinkReminderModal.jsx';
+import BlockDialog from './components/BlockDialog.jsx';
 import { SoundContext } from './sound-context.js';
 import { Plus, Minus, Copy, Trash2, Pencil, StickyNote } from 'lucide-react';
 import { useCompletionConfetti } from './hooks/use-completion-confetti.js';
 
-export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {} }) {
+export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {}, reporter = null }) {
   const [collapsed, setCollapsed] = useState(true);
   const isMobile = useIsMobile();
   const dragProps = isMobile ? {} : dragHandlers;
@@ -56,6 +57,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     playSound();
   };
   const [statusOpen, setStatusOpen] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [linkModal, setLinkModal] = useState(false);
   const a = team.find((m) => m.id === t.assigneeId);
   const milestone = milestones.find((m) => m.id === t.milestoneId);
@@ -76,7 +78,22 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       setLinkModal(true);
       return;
     }
+    if (value === 'blocked') {
+      setStatusOpen(false);
+      setBlockDialogOpen(true);
+      return;
+    }
     update(t.id, { status: value });
+  };
+
+  const handleBlockSubmit = (entry) => {
+    setBlockDialogOpen(false);
+    const blocks = Array.isArray(t.blocks) ? t.blocks : [];
+    update(t.id, { status: 'blocked', blocks: [...blocks, entry] });
+  };
+
+  const handleBlockCancel = () => {
+    setBlockDialogOpen(false);
   };
 
   return (
@@ -371,6 +388,14 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
           }}
         />
       )}
+      <BlockDialog
+        open={blockDialogOpen}
+        task={t}
+        team={team}
+        reporter={reporter}
+        onSubmit={handleBlockSubmit}
+        onCancel={handleBlockCancel}
+      />
     </motion.div>
   );
 }

@@ -7,6 +7,7 @@ import DepPicker from "./DepPicker.jsx";
 import DuePill from "./DuePill.jsx";
 import { X } from "lucide-react";
 import { useCompletionConfetti } from "../hooks/use-completion-confetti.js";
+import BlockDialog from "./BlockDialog.jsx";
 
 function statusBg(status) {
   if (status === "done") return "bg-emerald-50";
@@ -15,16 +16,24 @@ function statusBg(status) {
   return "bg-sky-50";
 }
 
-export default function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose }) {
+export default function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose, reporter = null }) {
   const dialogRef = useRef(null);
   const [open, setOpen] = useState(false);
   const { fireOnDone } = useCompletionConfetti();
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [blockPrevStatus, setBlockPrevStatus] = useState(task?.status || "todo");
 
   useEffect(() => {
     if (task) {
       setOpen(true);
     }
   }, [task]);
+
+  useEffect(() => {
+    if (task?.status) {
+      setBlockPrevStatus(task.status);
+    }
+  }, [task?.status]);
 
   const handleClose = useCallback(() => {
     setOpen(false);
@@ -134,6 +143,11 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             value={task.status}
             onChange={(e) => {
               const nextStatus = e.target.value;
+              if (nextStatus === "blocked") {
+                setBlockPrevStatus(task.status);
+                setBlockDialogOpen(true);
+                return;
+              }
               fireOnDone(task.status, nextStatus);
               onUpdate(task.id, { status: nextStatus });
             }}
@@ -202,6 +216,21 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             </button>
           </div>
         )}
+        <BlockDialog
+          open={blockDialogOpen}
+          task={task}
+          team={team}
+          reporter={reporter}
+          onSubmit={(entry) => {
+            setBlockDialogOpen(false);
+            fireOnDone(blockPrevStatus, "blocked");
+            const blocks = Array.isArray(task.blocks) ? task.blocks : [];
+            onUpdate(task.id, { status: "blocked", blocks: [...blocks, entry] });
+          }}
+          onCancel={() => {
+            setBlockDialogOpen(false);
+          }}
+        />
       </div>
     </div>
   );
