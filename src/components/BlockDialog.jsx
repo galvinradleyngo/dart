@@ -142,7 +142,7 @@ export default function BlockDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 px-4 py-10 backdrop-blur-sm backdrop-saturate-150 sm:items-center sm:py-6"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-hidden bg-slate-900/60 px-4 py-10 backdrop-blur-sm backdrop-saturate-150 sm:items-center sm:py-6"
       onClick={() => onCancel?.()}
     >
       <div
@@ -153,7 +153,7 @@ export default function BlockDialog({
         className="w-full max-w-xl glass-surface overflow-hidden rounded-[28px] shadow-[0_38px_90px_-42px_rgba(15,23,42,0.58)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="max-h-[calc(100vh_-_3rem)] overflow-y-auto p-5 sm:overflow-y-visible sm:p-6">
+        <div className="max-h-[calc(100vh_-_5rem)] overflow-y-auto p-5 sm:max-h-[calc(100vh_-_3rem)] sm:overflow-y-visible sm:p-6">
           <div className="mb-5 flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-1">
               <h2
