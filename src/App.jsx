@@ -105,6 +105,28 @@ const mergeById = (base = [], extra = []) => {
 
 const APP_SHELL_CLASS = "min-h-screen text-slate-900 bg-transparent";
 
+const resetScrollPosition = () => {
+  if (typeof window !== "undefined") {
+    const { scrollTo } = window;
+    if (typeof scrollTo === "function") {
+      try {
+        scrollTo({ top: 0, left: 0, behavior: "auto" });
+      } catch {
+        scrollTo(0, 0);
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }
+
+  if (typeof document !== "undefined") {
+    const { scrollingElement, documentElement, body } = document;
+    if (scrollingElement) scrollingElement.scrollTop = 0;
+    if (documentElement) documentElement.scrollTop = 0;
+    if (body) body.scrollTop = 0;
+  }
+};
+
 const CoursesIcon = ({ className = "", ...props }) => (
   <GraduationCap
     aria-hidden="true"
@@ -2114,6 +2136,10 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
   const { fireOnDone } = useCompletionConfetti();
+
+  useEffect(() => {
+    resetScrollPosition();
+  }, [activeTab]);
 
   const [calMonth, setCalMonth] = useState(() => new Date());
   const [editing, setEditing] = useState(null);
@@ -4420,26 +4446,7 @@ export default function PMApp() {
   const onBack = () => { setView(prevView); setPrevView("hub"); setCurrentCourseId(null); };
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const { scrollTo } = window;
-
-    if (typeof scrollTo === "function") {
-      try {
-        scrollTo({ top: 0, left: 0, behavior: "auto" });
-      } catch {
-        scrollTo(0, 0);
-      }
-    } else {
-      window.scrollTo(0, 0);
-    }
-
-    if (typeof document !== "undefined") {
-      const { scrollingElement, documentElement, body } = document;
-      if (scrollingElement) scrollingElement.scrollTop = 0;
-      if (documentElement) documentElement.scrollTop = 0;
-      if (body) body.scrollTop = 0;
-    }
+    resetScrollPosition();
   }, [view, currentCourseId, currentUserId]);
 
   let content = null;
