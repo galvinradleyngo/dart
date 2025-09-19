@@ -320,14 +320,14 @@ export default function BlockDialog({
                         <ul className="glass-card p-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                           {team.map((member) => (
                             <li key={member.id} className="min-w-0">
-                              <label className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
+                              <label className="flex items-start gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
                                 <input
                                   type="checkbox"
                                   checked={taggedIds.includes(member.id)}
                                   onChange={() => toggleTagged(member.id)}
-                                  className="h-4 w-4 rounded border-white/70 bg-white/70 text-indigo-500 focus:ring-indigo-400/80 focus:ring-offset-0"
+                                  className="mt-1 h-4 w-4 rounded border-white/70 bg-white/70 text-indigo-500 focus:ring-indigo-400/80 focus:ring-offset-0"
                                 />
-                                <span className="truncate">
+                                <span className="flex-1 whitespace-normal break-words">
                                   {member.name} ({member.roleType})
                                 </span>
                               </label>
