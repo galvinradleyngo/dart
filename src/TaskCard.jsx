@@ -436,7 +436,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 />
               </div>
             </div>
-            <div className="w-fit">
+            <div className="w-full max-w-full space-y-1">
               <DocumentInput onAdd={(url) => onAddLink?.(t.id, url)} />
               {t.links && t.links.length > 0 && (
                 <LinkChips links={t.links} onRemove={(i) => onRemoveLink?.(t.id, i)} />
