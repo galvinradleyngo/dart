@@ -1,4 +1,4 @@
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, within } from '@testing-library/react';
 import { useState } from 'react';
 import { BoardView } from './App.jsx';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
@@ -44,6 +44,13 @@ describe('BoardView mobile status selection', () => {
     fireEvent.click(screen.getByRole('button', { name: /status/i }));
     return screen.getByLabelText('Status');
   };
+
+  it('includes skipped option in status menu', () => {
+    const onUpdate = vi.fn();
+    renderBoard('skip', onUpdate);
+    const select = openSelect();
+    expect(within(select).getByRole('option', { name: 'Skipped' })).toBeInTheDocument();
+  });
 
   it('changes from todo to inprogress', () => {
     const onUpdate = vi.fn();
@@ -155,6 +162,19 @@ describe('BoardView mobile status selection', () => {
     const onUpdate = vi.fn();
     renderBoard('todo', onUpdate);
     expect(screen.getByText('Blocked')).toBeInTheDocument();
+  });
+
+  it('renders skipped column header', () => {
+    const onUpdate = vi.fn();
+    renderBoard('todo', onUpdate);
+    expect(screen.getByText('Skipped')).toBeInTheDocument();
+  });
+
+  it('shows skipped pill styling on board', () => {
+    const onUpdate = vi.fn();
+    renderBoard('skip', onUpdate, { reporter: teamWithPm[0] });
+    const trigger = screen.getByRole('button', { name: /status: skipped/i });
+    expect(trigger).toHaveClass('bg-pink-100');
   });
 
   it('allows editing start date when status is todo', () => {

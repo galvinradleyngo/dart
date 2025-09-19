@@ -11,6 +11,7 @@ import BlockDialog from "./BlockDialog.jsx";
 
 function statusBg(status) {
   if (status === "done") return "bg-emerald-50";
+  if (status === "skip") return "bg-pink-50";
   if (status === "blocked") return "bg-orange-50";
   if (status === "inprogress") return "bg-amber-50";
   return "bg-sky-50";
@@ -157,6 +158,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             <option value="inprogress">In Progress</option>
             <option value="blocked">Blocked</option>
             <option value="done">Done</option>
+            <option value="skip">Skipped</option>
           </select>
           <div className="flex items-center gap-2">
             <span>Start</span>

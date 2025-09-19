@@ -33,6 +33,7 @@ describe('Upcoming Deadlines window', () => {
         { id: 't1', title: 'Today Task', status: 'todo', dueDate: fmt(today), assigneeId: 'u1', milestoneId: 'm1' },
         { id: 't2', title: 'Future Task', status: 'todo', dueDate: fmt(day14), assigneeId: 'u1', milestoneId: 'm2' },
         { id: 't4', title: 'Blocked Task', status: 'blocked', dueDate: fmt(day14), assigneeId: 'u1', milestoneId: 'm2' },
+        { id: 't5', title: 'Skip Task', status: 'skip', dueDate: fmt(today), assigneeId: 'u1', milestoneId: 'm1' },
         { id: 't3', title: 'Outside Task', status: 'todo', dueDate: fmt(day15), assigneeId: 'u1', milestoneId: 'm1' },
       ],
       team: [{ id: 'u1', name: 'Alice', roleType: 'LD' }],
@@ -53,6 +54,7 @@ describe('Upcoming Deadlines window', () => {
     expect(
       await screen.findByRole('button', { name: 'Blocked Task for Milestone 2' })
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Skip Task for Milestone 1' })).toBeNull();
     expect(screen.queryByText('Outside Task')).toBeNull();
 
     fireEvent.click(taskButton);
@@ -74,6 +76,14 @@ describe('Upcoming Deadlines window', () => {
         })
       ).toBeNull()
     );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Milestones' }));
+    const courseSummary = await screen.findByText('Course 1');
+    fireEvent.click(courseSummary.closest('summary') ?? courseSummary);
+    const milestoneSummary = await screen.findByText('Milestone 1');
+    fireEvent.click(milestoneSummary.closest('summary') ?? milestoneSummary);
+    const skipBadge = await screen.findByText('Skipped');
+    expect(skipBadge).toHaveClass('bg-pink-100/80');
   });
 
   it('prompts for link when completing from deadlines panel', async () => {
