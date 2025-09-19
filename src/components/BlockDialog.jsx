@@ -30,6 +30,7 @@ export default function BlockDialog({
     [team, isResolveMode, block?.taggedMemberIds]
   );
   const [taggedIds, setTaggedIds] = useState(defaultTagged);
+  const [showTagPicker, setShowTagPicker] = useState(false);
   const [resolution, setResolution] = useState("");
   const resolverDefault = useMemo(() => {
     if (block?.resolvedBy) return block.resolvedBy;
@@ -42,6 +43,10 @@ export default function BlockDialog({
   const descriptionRef = useRef(null);
   const resolutionRef = useRef(null);
   const teamLookup = useMemo(() => new Map(team.map((member) => [member.id, member])), [team]);
+  const taggedMembersList = useMemo(
+    () => taggedIds.map((id) => teamLookup.get(id)).filter(Boolean),
+    [taggedIds, teamLookup]
+  );
   const sharedFieldClasses =
     "w-full rounded-2xl border border-white/60 bg-white/55 px-3.5 py-2.5 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.4)] backdrop-blur placeholder:text-slate-500/70 focus:outline-none focus:ring-2";
   const reportFieldFocus = "focus:ring-indigo-200/70 focus:border-indigo-300";
@@ -49,6 +54,7 @@ export default function BlockDialog({
 
   useEffect(() => {
     if (!open) return;
+    setShowTagPicker(false);
     if (isResolveMode) {
       setResolution(block?.resolution ?? "");
       setResolverId(block?.resolvedBy ?? resolverDefault);
@@ -279,23 +285,49 @@ export default function BlockDialog({
                   {team.length === 0 ? (
                     <p className="text-sm text-slate-500/80">No team members available.</p>
                   ) : (
-                    <ul className="glass-card grid max-h-48 grid-cols-1 gap-2 overflow-y-auto p-3 sm:grid-cols-2">
-                      {team.map((member) => (
-                        <li key={member.id} className="min-w-0">
-                          <label className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
-                            <input
-                              type="checkbox"
-                              checked={taggedIds.includes(member.id)}
-                              onChange={() => toggleTagged(member.id)}
-                              className="h-4 w-4 rounded border-white/70 bg-white/70 text-indigo-500 focus:ring-indigo-400/80 focus:ring-offset-0"
-                            />
-                            <span className="truncate">
-                              {member.name} ({member.roleType})
-                            </span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="space-y-3">
+                      <div className="glass-card border border-indigo-200/35 bg-white/55 p-4 text-sm text-indigo-900/90">
+                        <p>Project managers are notified automatically.</p>
+                        {taggedMembersList.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {taggedMembersList.map((member) => (
+                              <span
+                                key={member.id}
+                                className="rounded-full border border-white/60 bg-white/75 px-3 py-1 text-xs font-medium text-indigo-900/90 shadow-[0_10px_22px_-18px_rgba(15,23,42,0.45)]"
+                              >
+                                {member.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowTagPicker((prev) => !prev)}
+                          className="mt-3 inline-flex items-center gap-2 rounded-full border border-indigo-200/60 bg-white/70 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-indigo-600 shadow-[0_12px_28px_-20px_rgba(79,70,229,0.55)] backdrop-blur transition hover:border-indigo-200 hover:text-indigo-700"
+                        >
+                          {showTagPicker ? "Hide list" : "Tag others"}
+                        </button>
+                      </div>
+                      {showTagPicker && (
+                        <ul className="glass-card grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
+                          {team.map((member) => (
+                            <li key={member.id} className="min-w-0">
+                              <label className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
+                                <input
+                                  type="checkbox"
+                                  checked={taggedIds.includes(member.id)}
+                                  onChange={() => toggleTagged(member.id)}
+                                  className="h-4 w-4 rounded border-white/70 bg-white/70 text-indigo-500 focus:ring-indigo-400/80 focus:ring-offset-0"
+                                />
+                                <span className="truncate">
+                                  {member.name} ({member.roleType})
+                                </span>
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
