@@ -13,7 +13,7 @@ import { SoundContext } from './sound-context.js';
 import { Plus, Minus, Copy, Trash2, Pencil, StickyNote } from 'lucide-react';
 import { useCompletionConfetti } from './hooks/use-completion-confetti.js';
 
-export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {}, reporter = null }) {
+export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {}, reporter = null, variant = 'default' }) {
   const [collapsed, setCollapsed] = useState(true);
   const isMobile = useIsMobile();
   const dragProps = isMobile ? {} : dragHandlers;
@@ -67,6 +67,17 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const [linkModal, setLinkModal] = useState(false);
   const a = team.find((m) => m.id === t.assigneeId);
   const milestone = milestones.find((m) => m.id === t.milestoneId);
+  const isUserBoardVariant = variant === 'user-board';
+  const isUserBoardCollapsed = isUserBoardVariant && collapsed;
+  const courseName = t.courseName || 'Untitled course';
+  const milestoneName = t.milestoneName || milestone?.title || 'Unassigned';
+  const formatLinkLabel = (link) => {
+    try {
+      return new URL(link).hostname;
+    } catch {
+      return link;
+    }
+  };
   const [milestoneEdit, setMilestoneEdit] = useState(false);
   useEffect(() => {
     if (collapsed) setMilestoneEdit(false);
@@ -114,9 +125,11 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-sm sm:text-[14px] font-semibold leading-tight truncate">
-            <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
-          </div>
+          {!isUserBoardCollapsed && (
+            <div className="text-sm sm:text-[14px] font-semibold leading-tight truncate">
+              <InlineText value={t.title} onChange={(v) => update(t.id, { title: v })} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
@@ -149,20 +162,101 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
         </div>
       </div>
       {collapsed ? (
-        <>
-          <div className="mt-1">
-            {isMobile ? (
-              statusOpen ? (
+        isUserBoardVariant ? (
+          <div className="mt-2 flex flex-col gap-2 text-sm text-slate-600/90">
+            <div className="text-[13px] font-semibold text-slate-700 truncate" title={courseName}>
+              {courseName}
+            </div>
+            {t.dueDate && (
+              <div>
+                <DuePill date={t.dueDate} status={t.status} />
+              </div>
+            )}
+            <div className="text-xs uppercase tracking-wide text-slate-500/80">Milestone</div>
+            <div className="text-sm text-slate-700 truncate" title={milestoneName}>
+              {milestoneName}
+            </div>
+            <div className="text-base sm:text-lg font-semibold text-slate-900 leading-tight break-words">
+              <InlineText
+                className="text-base sm:text-lg font-semibold leading-tight"
+                value={t.title}
+                onChange={(v) => update(t.id, { title: v })}
+              />
+            </div>
+            <div className="text-sm text-slate-600/90 leading-snug">
+              <InlineText
+                className="text-sm leading-snug"
+                value={t.details}
+                onChange={(v) => update(t.id, { details: v })}
+                placeholder="Details…"
+              />
+            </div>
+            {t.note && (
+              <div className="text-sm text-slate-600/90 flex items-center gap-1">
+                <StickyNote className="icon flex-shrink-0 text-amber-500" /> {t.note}
+              </div>
+            )}
+            <div className="flex flex-col gap-1 text-xs text-slate-500/90">
+              <span className="font-semibold uppercase tracking-wide text-[11px] text-slate-500">Documents</span>
+              {t.links && t.links.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {t.links.map((link, idx) => (
+                    <a
+                      key={`${link}-${idx}`}
+                      href={link}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-full border border-black/10 bg-white px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-50"
+                    >
+                      {formatLinkLabel(link)}
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-slate-400">No documents</span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mt-1">
+              {isMobile ? (
+                statusOpen ? (
+                  <select
+                    aria-label="Status"
+                    value={t.status}
+                    onChange={(e) => {
+                      handleStatusChange(e.target.value);
+                      setStatusOpen(false);
+                    }}
+                    onBlur={() => setStatusOpen(false)}
+                    className={`${statusPillBase} ${statusPillClass(t.status)}`}
+                    autoFocus
+                  >
+                    <option value="todo">To Do</option>
+                    <option value="inprogress">In Progress</option>
+                    <option value="blocked">Blocked</option>
+                    <option value="done">Done</option>
+                    <option value="skip">Skipped</option>
+                  </select>
+                ) : (
+                  <button
+                    type="button"
+                    aria-haspopup="listbox"
+                    aria-expanded={statusOpen}
+                    aria-label={`Status: ${statusLabel[t.status]}`}
+                    onClick={() => setStatusOpen((v) => !v)}
+                    className={`${statusPillBase} ${statusPillClass(t.status)}`}
+                  >
+                    {statusLabel[t.status]}
+                  </button>
+                )
+              ) : (
                 <select
                   aria-label="Status"
                   value={t.status}
-                  onChange={(e) => {
-                    handleStatusChange(e.target.value);
-                    setStatusOpen(false);
-                  }}
-                  onBlur={() => setStatusOpen(false)}
+                  onChange={(e) => handleStatusChange(e.target.value)}
                   className={`${statusPillBase} ${statusPillClass(t.status)}`}
-                  autoFocus
                 >
                   <option value="todo">To Do</option>
                   <option value="inprogress">In Progress</option>
@@ -170,41 +264,16 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   <option value="done">Done</option>
                   <option value="skip">Skipped</option>
                 </select>
-              ) : (
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={statusOpen}
-                  aria-label={`Status: ${statusLabel[t.status]}`}
-                  onClick={() => setStatusOpen((v) => !v)}
-                  className={`${statusPillBase} ${statusPillClass(t.status)}`}
-                >
-                  {statusLabel[t.status]}
-                </button>
-              )
-            ) : (
-              <select
-                aria-label="Status"
-                value={t.status}
-                onChange={(e) => handleStatusChange(e.target.value)}
-                className={`${statusPillBase} ${statusPillClass(t.status)}`}
-                >
-                  <option value="todo">To Do</option>
-                  <option value="inprogress">In Progress</option>
-                  <option value="blocked">Blocked</option>
-                  <option value="done">Done</option>
-                  <option value="skip">Skipped</option>
-                </select>
-            )}
-          </div>
-          <div className="text-sm text-slate-600/90 mt-1 truncate">
-            <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
-          </div>
-          {t.note && (
-            <div className="text-sm text-slate-600/90 mt-1 flex items-center gap-1 truncate">
-              <StickyNote className="icon flex-shrink-0 text-amber-500" /> {t.note}
+              )}
             </div>
-          )}
+            <div className="text-sm text-slate-600/90 mt-1 truncate">
+              <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
+            </div>
+            {t.note && (
+              <div className="text-sm text-slate-600/90 mt-1 flex items-center gap-1 truncate">
+                <StickyNote className="icon flex-shrink-0 text-amber-500" /> {t.note}
+              </div>
+            )}
             <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
               <div className="flex items-start gap-2 min-w-0">
                 {a ? (
@@ -239,7 +308,8 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 )}
               </div>
             </div>
-        </>
+          </>
+        )
       ) : (
         <>
           <div className="mt-1">
