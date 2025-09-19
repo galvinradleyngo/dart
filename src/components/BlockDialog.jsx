@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { uid, todayStr } from "../utils.js";
 
@@ -93,6 +94,11 @@ export default function BlockDialog({
 
   if (!open) return null;
 
+  if (typeof document === "undefined") return null;
+
+  const portalTarget = document.body;
+  if (!portalTarget) return null;
+
   const toggleTagged = (id) => {
     setTaggedIds((prev) =>
       prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
@@ -140,7 +146,7 @@ export default function BlockDialog({
         .map((member) => member.name)
     : [];
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 py-10 sm:items-center sm:py-6"
       onClick={() => onCancel?.()}
@@ -364,6 +370,7 @@ export default function BlockDialog({
         </form>
         </div>
       </div>
-    </div>
+    </div>,
+    portalTarget
   );
 }
