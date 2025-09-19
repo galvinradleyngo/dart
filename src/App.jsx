@@ -3200,6 +3200,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   },
                                 }}
                                 reporter={user || null}
+                                variant="user-board"
                               />
                             );
                           })}

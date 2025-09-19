@@ -13,8 +13,8 @@ export default function DocumentInput({ onAdd }) {
     setVal("");
   };
   return (
-    <div className="flex items-center gap-2 text-sm w-full">
-      <label htmlFor="document-url" className="font-medium">
+    <div className="flex flex-wrap items-center gap-2 text-sm w-full">
+      <label htmlFor="document-url" className="font-medium flex-shrink-0">
         Document:
       </label>
       <input
@@ -28,7 +28,7 @@ export default function DocumentInput({ onAdd }) {
           if (e.key === "Enter") add();
         }}
         placeholder="Paste link and press Enter"
-        className="w-48"
+        className="flex-1 min-w-[12rem] max-w-full"
       />
       <button
         onClick={add}

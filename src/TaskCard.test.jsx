@@ -86,6 +86,34 @@ describe('TaskCard', () => {
     expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { milestoneId: 'm2' });
   });
 
+  it('renders course summary layout for user board variant', () => {
+    render(
+      <TaskCard
+        task={{
+          ...sampleTask,
+          courseName: 'History 101',
+          milestoneName: 'Module 1',
+          dueDate: '2024-01-10',
+          links: ['https://example.com/doc'],
+        }}
+        milestones={milestones}
+        onUpdate={() => {}}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+        variant="user-board"
+      />
+    );
+
+    expect(screen.getByText('History 101')).toBeInTheDocument();
+    expect(screen.getByText('Milestone')).toBeInTheDocument();
+    expect(screen.getByText('Module 1')).toBeInTheDocument();
+    expect(screen.getByText('2024-01-10')).toBeInTheDocument();
+    expect(screen.getByText('Documents')).toBeInTheDocument();
+    expect(screen.getByText('example.com')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Status')).toBeNull();
+    expect(screen.queryByLabelText('Assignee')).toBeNull();
+  });
+
   it('updates assignee while collapsed', () => {
     const onUpdate = vi.fn();
     const team = [
