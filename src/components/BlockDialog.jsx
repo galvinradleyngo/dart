@@ -142,7 +142,7 @@ export default function BlockDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-hidden bg-slate-900/60 px-4 py-10 backdrop-blur-sm backdrop-saturate-150 sm:items-center sm:py-6"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-hidden px-4 py-10 sm:items-center sm:py-6"
       onClick={() => onCancel?.()}
     >
       <div
