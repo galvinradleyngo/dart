@@ -754,7 +754,7 @@ useEffect(() => {
 
 
   const recomputeDue = (t, patch = {}) => { const start = patch.startDate ?? t.startDate; const work = patch.workDays ?? t.workDays; const due = start ? addBusinessDays(start, work, state.schedule.workweek, state.schedule.holidays) : ""; return { ...patch, dueDate: due }; };
-  const propagateDependentForecasts = (tasks, schedule) => { const map = new Map(tasks.map((t)=>[t.id,t])); return tasks.map((t)=>{ if(!t.depTaskId || t.status==="done") return t; const src = map.get(t.depTaskId); if(!src) return t; const startForecast = src.dueDate || ""; if (t.status !== "inprogress" && startForecast) { const due = addBusinessDays(startForecast, t.workDays, schedule.workweek, schedule.holidays); return { ...t, startDate: startForecast, dueDate: due }; } return t; }); };
+  const propagateDependentForecasts = (tasks, schedule) => { const map = new Map(tasks.map((t)=>[t.id,t])); return tasks.map((t)=>{ if(!t.depTaskId || t.status==="done" || t.status==="skip") return t; const src = map.get(t.depTaskId); if(!src || src.status === "skip") return t; const startForecast = src.dueDate || ""; if (t.status !== "inprogress" && startForecast) { const due = addBusinessDays(startForecast, t.workDays, schedule.workweek, schedule.holidays); return { ...t, startDate: startForecast, dueDate: due }; } return t; }); };
 
   const updateTask = (id, patch) => {
     let nextState = null;
@@ -773,11 +773,22 @@ useEffect(() => {
         return { ...t, ...adjusted };
       });
       let tasks2 = tasks1;
-      if (changedTo === "inprogress") tasks2 = tasks2.map((d) => (d.depTaskId === id && d.status !== "done" ? { ...d, status: "inprogress" } : d));
+      if (changedTo === "inprogress") tasks2 = tasks2.map((d) => (d.depTaskId === id && d.status !== "done" && d.status !== "skip" ? { ...d, status: "inprogress" } : d));
       if (changedTo === "done") {
         const doneDate = todayStr();
         tasks2 = tasks2.map((x) => (x.id === id ? { ...x, completedDate: x.completedDate || doneDate } : x));
-        tasks2 = tasks2.map((d) => { if (d.depTaskId === id && d.status !== "done") { const start = doneDate; const due = addBusinessDays(start, d.workDays, s.schedule.workweek, s.schedule.holidays); return { ...d, status: "inprogress", startDate: start, dueDate: due }; } return d; });
+        tasks2 = tasks2.map((d) => { if (d.depTaskId === id && d.status !== "done" && d.status !== "skip") { const start = doneDate; const due = addBusinessDays(start, d.workDays, s.schedule.workweek, s.schedule.holidays); return { ...d, status: "inprogress", startDate: start, dueDate: due }; } return d; });
+      }
+      if (changedTo === "skip") {
+        const skipDate = todayStr();
+        tasks2 = tasks2.map((d) => {
+          if (d.depTaskId === id && d.status !== "done" && d.status !== "skip") {
+            const start = skipDate;
+            const due = addBusinessDays(start, d.workDays, s.schedule.workweek, s.schedule.holidays);
+            return { ...d, status: "inprogress", startDate: start, dueDate: due };
+          }
+          return d;
+        });
       }
       const tasks3 = propagateDependentForecasts(tasks2, s.schedule);
       nextState = { ...s, tasks: tasks3 };
@@ -1867,7 +1878,8 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
     { id: "todo", title: "To Do" },
     { id: "inprogress", title: "In Progress" },
     { id: "blocked", title: "Blocked" },
-    { id: "done", title: "Done" }
+    { id: "done", title: "Done" },
+    { id: "skip", title: "Skipped" },
   ];
   const taskAssignableMembers = team;
   const byCol = (id) =>
@@ -1899,13 +1911,26 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
     });
   const statusPillClass = (status) => {
     if (status === "done") return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    if (status === "skip") return "bg-pink-100 text-pink-800 border-pink-200";
     if (status === "blocked") return "bg-orange-100 text-orange-800 border-orange-200";
     if (status === "inprogress") return "bg-amber-100 text-amber-800 border-amber-200";
     return "bg-sky-100 text-sky-800 border-sky-200";
   };
-  const columnBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', blocked: 'bg-orange-50', done: 'bg-emerald-50' };
-  const cardBackground = { todo: 'bg-sky-50', inprogress: 'bg-amber-50', blocked: 'bg-orange-50', done: 'bg-emerald-50' };
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done' };
+  const columnBackground = {
+    todo: 'bg-sky-50',
+    inprogress: 'bg-amber-50',
+    blocked: 'bg-orange-50',
+    done: 'bg-emerald-50',
+    skip: 'bg-pink-50',
+  };
+  const cardBackground = {
+    todo: 'bg-sky-50',
+    inprogress: 'bg-amber-50',
+    blocked: 'bg-orange-50',
+    done: 'bg-emerald-50',
+    skip: 'bg-pink-50',
+  };
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done', skip: 'Skipped' };
   const renderStatusControl = (task) => {
     if (!isMobile) {
       return (
@@ -1927,6 +1952,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
           <option value="inprogress">In Progress</option>
           <option value="blocked">Blocked</option>
           <option value="done">Done</option>
+          <option value="skip">Skipped</option>
         </select>
       );
     }
@@ -1954,6 +1980,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
         <option value="inprogress">In Progress</option>
         <option value="blocked">Blocked</option>
         <option value="done">Done</option>
+        <option value="skip">Skipped</option>
       </select>
     ) : (
       <button
@@ -1970,7 +1997,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
   };
   return (
     <div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
         {cols.map((c) => (
           <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${columnBackground[c.id] || 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
@@ -2130,9 +2157,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const propagateDependentForecasts = (tasks, schedule) => {
     const map = new Map(tasks.map((x) => [x.id, x]));
     return tasks.map((t) => {
-      if (!t.depTaskId || t.status === 'done') return t;
+      if (!t.depTaskId || t.status === 'done' || t.status === 'skip') return t;
       const src = map.get(t.depTaskId);
-      if (!src) return t;
+      if (!src || src.status === 'skip') return t;
       const startForecast = src.dueDate || '';
       if (t.status !== 'inprogress' && startForecast) {
         const due = addBusinessDays(startForecast, t.workDays, schedule.workweek || [1,2,3,4,5], schedule.holidays || []);
@@ -2174,7 +2201,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         let tasks2 = tasks1;
         if (changedTo === 'inprogress') {
           tasks2 = tasks2.map((item) =>
-            item.depTaskId === taskId && item.status !== 'done'
+            item.depTaskId === taskId && item.status !== 'done' && item.status !== 'skip'
               ? { ...item, status: 'inprogress' }
               : item
           );
@@ -2185,8 +2212,19 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             item.id === taskId ? { ...item, completedDate: item.completedDate || doneDate } : item
           );
           tasks2 = tasks2.map((item) => {
-            if (item.depTaskId === taskId && item.status !== 'done') {
+            if (item.depTaskId === taskId && item.status !== 'done' && item.status !== 'skip') {
               const start = doneDate;
+              const due = addBusinessDays(start, item.workDays, sched.workweek || [1, 2, 3, 4, 5], sched.holidays || []);
+              return { ...item, status: 'inprogress', startDate: start, dueDate: due };
+            }
+            return item;
+          });
+        }
+        if (changedTo === 'skip') {
+          const skipDate = todayStr();
+          tasks2 = tasks2.map((item) => {
+            if (item.depTaskId === taskId && item.status !== 'done' && item.status !== 'skip') {
+              const start = skipDate;
               const due = addBusinessDays(start, item.workDays, sched.workweek || [1, 2, 3, 4, 5], sched.holidays || []);
               return { ...item, status: 'inprogress', startDate: start, dueDate: due };
             }
@@ -2399,19 +2437,21 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo]);
-  const statusPriority = { inprogress: 0, blocked: 1, todo: 2, done: 3 };
-  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done' };
+  const statusPriority = { inprogress: 0, blocked: 1, todo: 2, done: 3, skip: 4 };
+  const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done', skip: 'Skipped' };
   const statusListClasses = {
     todo: 'bg-sky-50/80 border-sky-200/80 text-sky-700',
     inprogress: 'bg-amber-50/80 border-amber-200/80 text-amber-700',
     blocked: 'bg-orange-50/80 border-orange-200/80 text-orange-700',
     done: 'bg-emerald-50/80 border-emerald-200/80 text-emerald-700',
+    skip: 'bg-pink-50/80 border-pink-200/80 text-pink-700',
   };
   const statusBadgeClasses = {
     todo: 'bg-sky-100/80 text-sky-700 border-sky-200/80',
     inprogress: 'bg-amber-100/80 text-amber-700 border-amber-200/80',
     blocked: 'bg-orange-100/80 text-orange-700 border-orange-200/80',
     done: 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80',
+    skip: 'bg-pink-100/80 text-pink-700 border-pink-200/80',
   };
 
   const members = useMemo(() => {
@@ -2541,7 +2581,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       const courseName = course?.course?.name ?? course?.name ?? "Untitled course";
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
-        if (!task || task.assigneeId !== userId) return;
+        if (!task || task.assigneeId !== userId || task.status === 'skip') return;
         const milestoneName =
           milestones.find((m) => m.id === task.milestoneId)?.title || "";
         arr.push({
@@ -2561,7 +2601,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     });
   }, [courses, userId]);
   const groupedTasks = useMemo(() => {
-    const g = { todo: [], inprogress: [], blocked: [], done: [] };
+    const g = { todo: [], inprogress: [], blocked: [], done: [], skip: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
     return g;
   }, [myTasks]);
@@ -2573,7 +2613,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       const ds = fmt(d);
-      const tasksOnDate = myTasks.filter((t) => t.dueDate === ds && t.status !== 'done');
+      const tasksOnDate = myTasks.filter((t) => t.dueDate === ds && t.status !== 'done' && t.status !== 'skip');
       return { date: d, tasks: tasksOnDate };
     });
   }, [myTasks]);
@@ -2949,7 +2989,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     const courseName = c?.course?.name ?? c?.name ?? 'Untitled course';
                     const tTotal = tasks.filter((t) => t?.assigneeId === userId).length;
                     const tDone = tasks.filter(
-                      (t) => t?.assigneeId === userId && t?.status === 'done'
+                      (t) =>
+                        t?.assigneeId === userId &&
+                        (t?.status === 'done' || t?.status === 'skip')
                     ).length;
                     const pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
                     return (
@@ -3021,10 +3063,12 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   else acc.todo += 1;
                                   return acc;
                                 },
-                                { todo: 0, inprogress: 0, done: 0 }
+                                { todo: 0, inprogress: 0, blocked: 0, done: 0, skip: 0 }
                               );
-                              const total = counts.todo + counts.inprogress + counts.done;
-                              const pct = total ? Math.round((counts.done / total) * 100) : 0;
+                              const total =
+                                counts.todo + counts.inprogress + counts.blocked + counts.done + counts.skip;
+                              const completedCount = counts.done + counts.skip;
+                              const pct = total ? Math.round((completedCount / total) * 100) : 0;
                               const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
                               return (
                                 <details key={m.id} className="group glass-card">
@@ -3034,7 +3078,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                       <div>
                                         <div className="font-medium">{m.title}</div>
                                         <div className="text-xs text-slate-600/80">
-                                          {counts.inprogress} in progress • {counts.todo} to do • {counts.done} done
+                                          {counts.inprogress} in progress • {counts.blocked} blocked • {counts.todo} to do • {counts.done} done • {counts.skip} skipped
                                         </div>
                                         <div className="h-2 bg-black/10 rounded-full mt-1 overflow-hidden">
                                           <div className="h-full" style={{ width: `${pct}%`, backgroundColor: progressColor }} />
@@ -3557,9 +3601,9 @@ export function CoursesHub({
   const propagateDependentForecasts = (tasks, sched) => {
     const map = new Map(tasks.map((t) => [t.id, t]));
     return tasks.map((t) => {
-      if (!t.depTaskId || t.status === 'done') return t;
+      if (!t.depTaskId || t.status === 'done' || t.status === 'skip') return t;
       const src = map.get(t.depTaskId);
-      if (!src) return t;
+      if (!src || src.status === 'skip') return t;
       const startForecast = src.dueDate || '';
       if (t.status !== 'inprogress' && startForecast) {
         const due = addBusinessDays(startForecast, t.workDays, sched.workweek, sched.holidays);

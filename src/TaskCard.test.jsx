@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { useState } from 'react';
 import TaskCard from './TaskCard';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
@@ -210,6 +210,12 @@ describe('TaskCard', () => {
       return screen.getByLabelText('Status');
     };
 
+    it('includes skipped option', () => {
+      const onUpdate = vi.fn();
+      const select = renderWithStatus('skip', onUpdate);
+      expect(within(select).getByRole('option', { name: 'Skipped' })).toBeInTheDocument();
+    });
+
     it('changes from todo to inprogress', () => {
       const onUpdate = vi.fn();
       const select = renderWithStatus('todo', onUpdate);
@@ -276,6 +282,21 @@ describe('TaskCard', () => {
       const trigger = screen.getByRole('button', { name: /status: blocked/i });
       expect(trigger).toHaveClass('bg-orange-100/80');
     });
+  });
+
+  it('shows skipped pill styling', () => {
+    render(
+      <TaskCard
+        task={{ ...sampleTask, status: 'skip' }}
+        milestones={milestones}
+        onUpdate={() => {}}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+      />
+    );
+
+    const trigger = screen.getByRole('button', { name: /status: skipped/i });
+    expect(trigger).toHaveClass('bg-pink-100/80');
   });
 
   it('prompts for link when completing without one', () => {

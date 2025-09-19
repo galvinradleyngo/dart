@@ -33,15 +33,17 @@ export default function MilestoneCard({
     }
   };
 
-  const statusOrder = { todo: 0, inprogress: 1, done: 2 };
+  const statusOrder = { todo: 0, inprogress: 1, blocked: 2, done: 3, skip: 4 };
 
-  const { done, pct, tasksSorted } = useMemo(() => {
-    const done = tasks.filter((t) => t.status === 'done').length;
-    const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
+  const { pct, tasksSorted } = useMemo(() => {
+    const completedCount = tasks.filter((t) => t.status === 'done' || t.status === 'skip').length;
+    const pct = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
     const tasksSorted = [...tasks].sort(
-      (a, b) => statusOrder[a.status] - statusOrder[b.status] || a.order - b.order,
+      (a, b) =>
+        (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99) ||
+        a.order - b.order,
     );
-    return { done, pct, tasksSorted };
+    return { pct, tasksSorted };
   }, [tasks]);
 
   const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
