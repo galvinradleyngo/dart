@@ -2135,6 +2135,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const validTabs = new Set(['deadlines','courses','milestones','board','calendar']);
     return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
+  const [milestoneSort, setMilestoneSort] = useState('status');
   const { fireOnDone } = useCompletionConfetti();
 
   useEffect(() => {
@@ -2464,6 +2465,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo]);
   const statusPriority = { inprogress: 0, blocked: 1, todo: 2, done: 3, skip: 4 };
+  const milestoneStatusPriority = { blocked: 0, inprogress: 1, todo: 2, done: 3, skip: 4 };
   const statusLabel = { todo: 'To Do', inprogress: 'In Progress', blocked: 'Blocked', done: 'Done', skip: 'Skipped' };
   const statusListClasses = {
     todo: 'bg-sky-50/80 border-sky-200/80 text-sky-700',
@@ -2478,6 +2480,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     blocked: 'bg-orange-100/80 text-orange-700 border-orange-200/80',
     done: 'bg-emerald-100/80 text-emerald-700 border-emerald-200/80',
     skip: 'bg-pink-100/80 text-pink-700 border-pink-200/80',
+  };
+  const parseDateToMs = (value) => {
+    if (!value) return null;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? null : time;
   };
 
   const members = useMemo(() => {
@@ -3047,7 +3054,25 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           )}
 
           {activeTab === 'milestones' && (
-            <SectionCard title="My Milestones">
+            <SectionCard
+              title="My Milestones"
+              actions={
+                myCourses.length > 0 ? (
+                  <label className="text-sm text-slate-600 flex items-center gap-2">
+                    <span className="hidden sm:inline">Sort by</span>
+                    <select
+                      value={milestoneSort}
+                      onChange={(event) => setMilestoneSort(event.target.value)}
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      aria-label="Sort milestones"
+                    >
+                      <option value="status">Status</option>
+                      <option value="recent">Most Recent</option>
+                    </select>
+                  </label>
+                ) : null
+              }
+            >
               {myCourses.length === 0 ? (
                 <div className="text-sm text-slate-600/90">No milestones</div>
               ) : (
@@ -3057,6 +3082,80 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     const courseName = c?.course?.name ?? c?.name ?? 'Untitled course';
                     const courseTasks = ensureArray(c?.tasks);
                     const milestones = ensureArray(c?.milestones);
+                    const milestoneEntries = milestones.map((m) => {
+                      const tasksForMilestone = courseTasks.filter(
+                        (t) => t?.milestoneId === m.id && t?.assigneeId === userId
+                      );
+                      const sortedTasks = [...tasksForMilestone].sort((a, b) => {
+                        const statusDiff =
+                          (statusPriority[a?.status] ?? 1) - (statusPriority[b?.status] ?? 1);
+                        if (statusDiff !== 0) return statusDiff;
+                        const da = a?.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+                        const db = b?.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+                        return da - db;
+                      });
+                      const counts = sortedTasks.reduce(
+                        (acc, task) => {
+                          const key = task?.status;
+                          if (acc[key] !== undefined) acc[key] += 1;
+                          else acc.todo += 1;
+                          return acc;
+                        },
+                        { todo: 0, inprogress: 0, blocked: 0, done: 0, skip: 0 }
+                      );
+                      const total =
+                        counts.todo + counts.inprogress + counts.blocked + counts.done + counts.skip;
+                      const completedCount = counts.done + counts.skip;
+                      const pct = total ? Math.round((completedCount / total) * 100) : 0;
+                      const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
+                      const milestoneStatus =
+                        counts.blocked > 0
+                          ? 'blocked'
+                          : counts.inprogress > 0
+                          ? 'inprogress'
+                          : counts.todo > 0
+                          ? 'todo'
+                          : completedCount > 0
+                          ? 'done'
+                          : 'todo';
+                      const statusRank =
+                        milestoneStatusPriority[milestoneStatus] ?? milestoneStatusPriority.todo;
+                      const dateCandidates = [
+                        parseDateToMs(m?.start),
+                        parseDateToMs(m?.dueDate),
+                        parseDateToMs(m?.completedDate),
+                        parseDateToMs(m?.updatedAt),
+                      ];
+                      sortedTasks.forEach((task) => {
+                        dateCandidates.push(parseDateToMs(task?.dueDate));
+                        dateCandidates.push(parseDateToMs(task?.completedDate));
+                        dateCandidates.push(parseDateToMs(task?.startDate));
+                      });
+                      const validDates = dateCandidates.filter((value) => typeof value === 'number');
+                      const mostRecent = validDates.length ? Math.max(...validDates) : null;
+                      return {
+                        milestone: m,
+                        sortedTasks,
+                        counts,
+                        pct,
+                        progressColor,
+                        statusRank,
+                        mostRecent,
+                      };
+                    });
+                    const sortedMilestones = [...milestoneEntries].sort((a, b) => {
+                      if (milestoneSort === 'status') {
+                        if (a.statusRank !== b.statusRank) return a.statusRank - b.statusRank;
+                        if (b.pct !== a.pct) return b.pct - a.pct;
+                      } else if (milestoneSort === 'recent') {
+                        const aDate = a.mostRecent ?? 0;
+                        const bDate = b.mostRecent ?? 0;
+                        if (aDate !== bDate) return bDate - aDate;
+                      }
+                      const aTitle = a.milestone?.title || '';
+                      const bTitle = b.milestone?.title || '';
+                      return aTitle.localeCompare(bTitle, undefined, { sensitivity: 'base' });
+                    });
                     return (
                       <details key={courseId || index} className="group glass-card">
                         <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
@@ -3066,100 +3165,72 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                           </div>
                         </summary>
                         <div className="p-4 space-y-2">
-                          {[...milestones]
-                            .sort((a, b) =>
-                              (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: 'base' })
-                            )
-                            .map((m) => {
-                              const tasksForMilestone = courseTasks.filter(
-                                (t) => t?.milestoneId === m.id && t?.assigneeId === userId
-                              );
-                              const sortedTasks = [...tasksForMilestone].sort((a, b) => {
-                                const statusDiff =
-                                  (statusPriority[a?.status] ?? 1) - (statusPriority[b?.status] ?? 1);
-                                if (statusDiff !== 0) return statusDiff;
-                                const da = a?.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-                                const db = b?.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-                                return da - db;
-                              });
-                              const counts = sortedTasks.reduce(
-                                (acc, task) => {
-                                  const key = task?.status;
-                                  if (acc[key] !== undefined) acc[key] += 1;
-                                  else acc.todo += 1;
-                                  return acc;
-                                },
-                                { todo: 0, inprogress: 0, blocked: 0, done: 0, skip: 0 }
-                              );
-                              const total =
-                                counts.todo + counts.inprogress + counts.blocked + counts.done + counts.skip;
-                              const completedCount = counts.done + counts.skip;
-                              const pct = total ? Math.round((completedCount / total) * 100) : 0;
-                              const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
-                              return (
-                                <details key={m.id} className="group glass-card">
-                                  <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
-                                    <div className="flex items-center gap-2">
-                                      <ChevronDown className="icon transition-transform group-open:rotate-180" />
-                                      <div>
-                                        <div className="font-medium">{m.title}</div>
-                                        <div className="text-xs text-slate-600/80">
-                                          {counts.inprogress} in progress • {counts.blocked} blocked • {counts.todo} to do • {counts.done} done • {counts.skip} skipped
-                                        </div>
-                                        <div className="h-2 bg-black/10 rounded-full mt-1 overflow-hidden">
-                                          <div className="h-full" style={{ width: `${pct}%`, backgroundColor: progressColor }} />
-                                        </div>
+                          {sortedMilestones.map((entry) => {
+                            const { milestone: m, sortedTasks, counts, pct, progressColor } = entry;
+                            return (
+                              <details key={m.id} className="group glass-card">
+                                <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
+                                  <div className="flex items-center gap-2">
+                                    <ChevronDown className="icon transition-transform group-open:rotate-180" />
+                                    <div>
+                                      <div className="font-medium">{m.title}</div>
+                                      <div className="text-xs text-slate-600/80">
+                                        {counts.inprogress} in progress • {counts.blocked} blocked • {counts.todo} to do • {counts.done} done • {counts.skip} skipped
+                                      </div>
+                                      <div className="h-2 bg-black/10 rounded-full mt-1 overflow-hidden">
+                                        <div className="h-full" style={{ width: `${pct}%`, backgroundColor: progressColor }} />
                                       </div>
                                     </div>
-                                  </summary>
-                                  <div className="p-4 space-y-3">
-                                    {m.goal && <p className="text-sm text-slate-600/90">{m.goal}</p>}
-                                    {sortedTasks.length === 0 ? (
-                                      <div className="text-sm text-slate-600/90">No tasks assigned to you.</div>
-                                    ) : (
-                                      <ul className="space-y-2">
-                                        {sortedTasks.map((t) => (
-                                          <li
-                                            key={t.id}
-                                            className={`rounded-xl border px-3 py-2 ${statusListClasses[t?.status] || statusListClasses.todo}`}
+                                  </div>
+                                </summary>
+                                <div className="p-4 space-y-3">
+                                  {m.goal && <p className="text-sm text-slate-600/90">{m.goal}</p>}
+                                  {sortedTasks.length === 0 ? (
+                                    <div className="text-sm text-slate-600/90">No tasks assigned to you.</div>
+                                  ) : (
+                                    <ul className="space-y-2">
+                                      {sortedTasks.map((t) => (
+                                        <li
+                                          key={t.id}
+                                          className={`rounded-xl border px-3 py-2 ${statusListClasses[t?.status] || statusListClasses.todo}`}
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              courseId &&
+                                              setEditing({ courseId, taskId: t.id })
+                                            }
+                                            className="flex w-full items-center justify-between gap-3 text-left"
                                           >
-                                            <button
-                                              type="button"
-                                              onClick={() =>
-                                                courseId &&
-                                                setEditing({ courseId, taskId: t.id })
-                                              }
-                                              className="flex w-full items-center justify-between gap-3 text-left"
-                                            >
-                                              <div className="min-w-0">
-                                                <div className="font-medium truncate">{t?.title || 'Untitled task'}</div>
-                                                <div className="text-xs text-slate-600/80 truncate">
-                                                  {t?.dueDate
-                                                    ? `Due ${new Date(t.dueDate).toLocaleDateString(undefined, {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                      })}`
-                                                    : 'No due date'}
-                                                </div>
+                                            <div className="min-w-0">
+                                              <div className="font-medium truncate">{t?.title || 'Untitled task'}</div>
+                                              <div className="text-xs text-slate-600/80 truncate">
+                                                {t?.dueDate
+                                                  ? `Due ${new Date(t.dueDate).toLocaleDateString(undefined, {
+                                                      month: 'short',
+                                                      day: 'numeric',
+                                                    })}`
+                                                  : 'No due date'}
                                               </div>
-                                              <span
-                                                className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadgeClasses[t?.status] || statusBadgeClasses.todo}`}
-                                              >
-                                                {statusLabel[t?.status] || t?.status || 'Unknown'}
-                                              </span>
-                                            </button>
-                                          </li>
-                                        ))}
-                                      </ul>
-                                  )}
-                                </div>
-                              </details>
-                            );
-                          })}
-                        </div>
-                      </details>
-                    );
-                  })}
+                                            </div>
+                                            <span
+                                              className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-semibold ${statusBadgeClasses[t?.status] || statusBadgeClasses.todo}`}
+                                            >
+                                              {statusLabel[t?.status] || t?.status || 'Unknown'}
+                                            </span>
+                                          </button>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                )}
+                              </div>
+                            </details>
+                          );
+                        })}
+                      </div>
+                    </details>
+                  );
+                })}
                 </div>
               )}
             </SectionCard>
