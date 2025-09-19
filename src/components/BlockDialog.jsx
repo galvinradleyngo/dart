@@ -279,7 +279,7 @@ export default function BlockDialog({
                   {team.length === 0 ? (
                     <p className="text-sm text-slate-500/80">No team members available.</p>
                   ) : (
-                    <ul className="max-h-48 overflow-y-auto glass-card p-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <ul className="glass-card max-h-48 overflow-y-auto p-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                       {team.map((member) => (
                         <li key={member.id} className="min-w-0">
                           <label className="flex items-center gap-3 rounded-2xl border border-white/60 bg-white/45 px-3 py-2 text-sm text-slate-800 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.35)] backdrop-blur">
