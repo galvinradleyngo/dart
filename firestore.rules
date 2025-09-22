@@ -29,10 +29,12 @@ service cloud.firestore {
       }
     }
 
-    // Course history entries follow the same password-sentinel guard as course
-    // documents so only authorized clients can read or write them.
+    // Course history entries are managed exclusively by the client and do not
+    // include the password sentinel guarding course documents. Grant them the
+    // same open access as other client-managed collections so history writes
+    // from the UI succeed.
     match /courseHistory/{entryId} {
-      allow read, write: if hasCorrectPassword();
+      allow read, write: if true;
     }
 
     match /meta/{docId} {
