@@ -29,6 +29,10 @@ service cloud.firestore {
       }
     }
 
+    match /courseHistory/{entryId} {
+      allow read, write: if hasCorrectPassword();
+    }
+
     match /meta/{docId} {
       allow read: if isSignedIn();
       allow create, update: if isSignedIn() && hasRole(request.auth.uid,'pc');
