@@ -208,7 +208,7 @@ const saveCoursesRemote = async (arr) => {
 };
 
 const COURSE_HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-const courseHistoryCollectionRef = collection(db, 'app', 'courseHistory');
+const courseHistoryCollectionRef = collection(db, 'courseHistory');
 
 const toMillis = (value, fallback) => {
   if (value && typeof value.toMillis === "function") return value.toMillis();
