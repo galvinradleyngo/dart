@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "courseHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "password", "order": "ASCENDING" },
+        { "fieldPath": "expiresAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
