@@ -2,7 +2,20 @@ import React, { useEffect, useMemo, useState, useRef, Fragment, useCallback } fr
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { useCompletionConfetti } from "./hooks/use-completion-confetti.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
 import TeamMembersSection from "./components/TeamMembersSection.jsx";
@@ -105,6 +118,13 @@ const mergeById = (base = [], extra = []) => {
   return Array.from(map.values());
 };
 
+const HISTORY_STACK_LIMIT = 20;
+
+const cloneDeep = (value) => {
+  if (value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+};
+
 const APP_SHELL_CLASS = "min-h-screen text-slate-900 bg-transparent";
 
 const resetScrollPosition = () => {
@@ -185,6 +205,75 @@ const saveCoursesRemote = async (arr) => {
   try {
     await setDoc(doc(db, 'app', 'courses'), { courses: arr });
   } catch {}
+};
+
+const COURSE_HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const courseHistoryCollectionRef = collection(db, 'app', 'courseHistory');
+
+const toMillis = (value, fallback) => {
+  if (value && typeof value.toMillis === "function") return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return value;
+  return fallback;
+};
+
+const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', position = null }) => {
+  try {
+    const createdAtMs = Date.now();
+    const expiresAtTs = Timestamp.fromMillis(createdAtMs + COURSE_HISTORY_RETENTION_MS);
+    const payload = {
+      courseId,
+      course,
+      action,
+      position,
+      createdAt: serverTimestamp(),
+      expiresAt: expiresAtTs,
+    };
+    const ref = await addDoc(courseHistoryCollectionRef, payload);
+    return {
+      id: ref.id,
+      courseId,
+      course,
+      action,
+      position,
+      createdAt: createdAtMs,
+      expiresAt: toMillis(expiresAtTs, createdAtMs + COURSE_HISTORY_RETENTION_MS),
+    };
+  } catch {
+    return null;
+  }
+};
+
+const loadCourseHistoryEntries = async () => {
+  try {
+    const now = Date.now();
+    const q = query(
+      courseHistoryCollectionRef,
+      where('expiresAt', '>', Timestamp.fromMillis(now)),
+      orderBy('expiresAt', 'asc'),
+      limit(50)
+    );
+    const snapshot = await getDocs(q);
+    const rows = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data?.() ?? docSnap.data;
+      if (!data) return;
+      if (!data.courseId || !data.course) return;
+      rows.push({
+        id: docSnap.id,
+        courseId: data.courseId,
+        course: data.course,
+        action: data.action || 'delete',
+        position: typeof data.position === 'number' ? data.position : null,
+        createdAt: toMillis(data.createdAt, now),
+        expiresAt: toMillis(data.expiresAt, now + COURSE_HISTORY_RETENTION_MS),
+      });
+    });
+    rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return rows;
+  } catch {
+    return [];
+  }
 };
 
 const loadScheduleRemote = async () => {
@@ -3446,9 +3535,67 @@ export function CoursesHub({
   const [editingLinkUrl, setEditingLinkUrl] = useState("");
   const [membersEditing, setMembersEditing] = useState(false);
   const [history, setHistory] = useState([]);
+  const [courseHistoryEntries, setCourseHistoryEntries] = useState([]);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [courseHistoryLoading, setCourseHistoryLoading] = useState(true);
   const [blockPanels, setBlockPanels] = useState({});
   const [blockTabs, setBlockTabs] = useState({});
   const [resolveRequest, setResolveRequest] = useState(null);
+
+  const pruneExpiredCourseHistory = useCallback((entries) => {
+    const now = Date.now();
+    return (entries || []).filter((entry) => {
+      if (!entry || !entry.course || !entry.courseId) return false;
+      return (entry.expiresAt ?? 0) > now;
+    });
+  }, []);
+
+  const upsertCourseHistoryEntry = useCallback(
+    (entry, options = {}) => {
+      if (!entry || !entry.course || !entry.courseId) return;
+      const { removeIds = [] } = options;
+      setCourseHistoryLoading(false);
+      setCourseHistoryEntries((prev) => {
+        const filtered = prev.filter((item) => !removeIds.includes(item.id) && item.id !== entry.id);
+        const next = pruneExpiredCourseHistory([entry, ...filtered]);
+        next.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        return next;
+      });
+    },
+    [pruneExpiredCourseHistory]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCourseHistoryLoading(true);
+      try {
+        const remote = await loadCourseHistoryEntries();
+        if (cancelled) return;
+        const sanitized = pruneExpiredCourseHistory(remote);
+        sanitized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setCourseHistoryEntries(sanitized);
+      } finally {
+        if (!cancelled) setCourseHistoryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pruneExpiredCourseHistory]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const interval = window.setInterval(() => {
+      setCourseHistoryEntries((prev) => {
+        const pruned = pruneExpiredCourseHistory(prev);
+        if (pruned.length === prev.length) return prev;
+        pruned.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        return pruned;
+      });
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [pruneExpiredCourseHistory]);
 
   const toggleLinkLibraryCollapsed = useCallback(() => {
     setLinkLibraryCollapsed((value) => !value);
@@ -3458,8 +3605,55 @@ export function CoursesHub({
     setWorkweekCollapsed((value) => !value);
   }, []);
 
-  const pushHistory = useCallback((snapshot) => {
-    setHistory((h) => [JSON.parse(JSON.stringify(snapshot)), ...h].slice(0, 10));
+  const pushHistory = useCallback((entry) => {
+    if (!entry) return;
+    const normalized = {
+      id: entry.id ?? uid(),
+      type: entry.type ?? 'course',
+      action: entry.action ?? null,
+      courseId: entry.courseId ?? null,
+      position: typeof entry.position === 'number' ? entry.position : null,
+      courseBefore: entry.courseBefore ? cloneDeep(entry.courseBefore) : null,
+      courseAfter: entry.courseAfter ? cloneDeep(entry.courseAfter) : null,
+      snapshot: entry.snapshot ? cloneDeep(entry.snapshot) : null,
+      createdAt: entry.createdAt ?? Date.now(),
+    };
+    setHistory((h) => [normalized, ...h].slice(0, HISTORY_STACK_LIMIT));
+  }, []);
+
+  const applyUndoEntry = useCallback((entry, prevCourses) => {
+    if (!entry) return prevCourses;
+    if (entry.type === 'bulk' && entry.snapshot) {
+      return cloneDeep(entry.snapshot);
+    }
+    if (entry.type === 'course') {
+      if (entry.action === 'delete' && entry.courseBefore) {
+        const next = [...prevCourses];
+        const insertion = cloneDeep(entry.courseBefore);
+        const insertAt = typeof entry.position === 'number'
+          ? Math.min(Math.max(entry.position, 0), next.length)
+          : next.length;
+        next.splice(insertAt, 0, insertion);
+        return next;
+      }
+      if (entry.action === 'update' && entry.courseBefore) {
+        const next = [...prevCourses];
+        const idx = next.findIndex((item) => (item.course?.id ?? item.id) === entry.courseId);
+        if (idx >= 0) {
+          next[idx] = cloneDeep(entry.courseBefore);
+          return next;
+        }
+        const insertAt = typeof entry.position === 'number'
+          ? Math.min(Math.max(entry.position, 0), next.length)
+          : next.length;
+        next.splice(insertAt, 0, cloneDeep(entry.courseBefore));
+        return next;
+      }
+      if (entry.action === 'create') {
+        return prevCourses.filter((item) => (item.course?.id ?? item.id) !== entry.courseId);
+      }
+    }
+    return prevCourses;
   }, []);
 
   const persistLinkLibrary = useCallback((next) => {
@@ -3589,6 +3783,10 @@ export function CoursesHub({
   const handleResolveBlock = useCallback(
     ({ resolution, resolvedBy, resolvedAt }) => {
       if (!resolveRequest) return;
+      const targetIdx = courses.findIndex(
+        (item) => (item.course?.id ?? item.id) === resolveRequest.courseId
+      );
+      const previousCourse = targetIdx >= 0 ? cloneDeep(courses[targetIdx]) : null;
       const next = applyBlockResolution(courses, {
         courseId: resolveRequest.courseId,
         taskId: resolveRequest.taskId,
@@ -3601,7 +3799,15 @@ export function CoursesHub({
         setResolveRequest(null);
         return;
       }
-      pushHistory(courses);
+      if (previousCourse) {
+        pushHistory({
+          type: 'course',
+          action: 'update',
+          courseId: resolveRequest.courseId,
+          position: targetIdx,
+          courseBefore: previousCourse,
+        });
+      }
       saveCourses(next);
       saveCoursesRemote(next).catch(() => {});
       setCourses(next);
@@ -3611,15 +3817,19 @@ export function CoursesHub({
   );
 
   const undo = useCallback(() => {
-    setHistory((h) => {
-      if (!h.length) return h;
-      const [latest, ...rest] = h;
-      saveCourses(latest);
-      saveCoursesRemote(latest).catch(() => {});
-      setCourses(latest);
+    setHistory((stack) => {
+      if (!stack.length) return stack;
+      const [latest, ...rest] = stack;
+      setCourses((prev) => {
+        const next = applyUndoEntry(latest, prev);
+        if (next === prev) return prev;
+        saveCourses(next);
+        saveCoursesRemote(next).catch(() => {});
+        return next;
+      });
       return rest;
     });
-  }, []);
+  }, [applyUndoEntry]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -3733,7 +3943,7 @@ export function CoursesHub({
       const set = new Set(s.workweek);
       set.has(dow) ? set.delete(dow) : set.add(dow);
       const next = { ...s, workweek: Array.from(set).sort() };
-      pushHistory(loadCourses());
+      pushHistory({ type: 'bulk', snapshot: loadCourses() });
       applySchedule(next);
       return next;
     });
@@ -3744,7 +3954,7 @@ export function CoursesHub({
     setSchedule((s) => {
       const holidays = Array.from(new Set([...s.holidays, dateStr])).sort();
       const next = { ...s, holidays };
-      pushHistory(loadCourses());
+      pushHistory({ type: 'bulk', snapshot: loadCourses() });
       applySchedule(next);
       return next;
     });
@@ -3753,39 +3963,107 @@ export function CoursesHub({
   const removeHoliday = (dateStr) => {
     setSchedule((s) => {
       const next = { ...s, holidays: s.holidays.filter((h) => h !== dateStr) };
-      pushHistory(loadCourses());
+      pushHistory({ type: 'bulk', snapshot: loadCourses() });
       applySchedule(next);
       return next;
     });
   };
 
   const removeCourse = (courseId) => {
-    pushHistory(courses);
-    const next = courses.filter((c) => (c.course?.id ?? c.id) !== courseId);
+    const index = courses.findIndex((c) => (c.course?.id ?? c.id) === courseId);
+    if (index < 0) return;
+    const removedCourse = cloneDeep(courses[index]);
+    pushHistory({
+      type: 'course',
+      action: 'delete',
+      courseId,
+      position: index,
+      courseBefore: removedCourse,
+    });
+    const next = courses.filter((c, idx) => idx !== index);
     saveCourses(next);
     saveCoursesRemote(next).catch(() => {});
     setCourses(next);
+    const fallbackId = uid();
+    const fallbackEntry = {
+      id: fallbackId,
+      courseId,
+      course: removedCourse,
+      action: 'delete',
+      position: index,
+      createdAt: Date.now(),
+      expiresAt: Date.now() + COURSE_HISTORY_RETENTION_MS,
+    };
+    upsertCourseHistoryEntry(fallbackEntry);
+    recordCourseHistoryEntry({ courseId, course: removedCourse, action: 'delete', position: index })
+      .then((entry) => {
+        if (entry) {
+          upsertCourseHistoryEntry(entry, { removeIds: [fallbackId] });
+        }
+      })
+      .catch(() => {});
     onRemoveCourse && onRemoveCourse(courseId);
   };
   const duplicateCourse = (courseId) => {
-    pushHistory(courses);
-    const src = courses.find((c) => (c.course?.id ?? c.id) === courseId);
-    if (!src) return;
-    const copy = JSON.parse(JSON.stringify(src));
+    const srcIndex = courses.findIndex((c) => (c.course?.id ?? c.id) === courseId);
+    if (srcIndex < 0) return;
+    const src = courses[srcIndex];
+    const copy = cloneDeep(src);
     copy.id = uid();
     copy.course = {
       ...(copy.course ?? {}),
       id: copy.id,
       name: `${src.course.name} (copy)`,
     };
+    pushHistory({
+      type: 'course',
+      action: 'create',
+      courseId: copy.course?.id ?? copy.id,
+      position: courses.length,
+      courseAfter: copy,
+    });
     const next = [...courses, copy];
     saveCourses(next);
     saveCoursesRemote(next).catch(() => {});
     setCourses(next);
     onDuplicateCourse && onDuplicateCourse(copy.course?.id ?? copy.id);
   };
+  const formatHistoryTimestamp = (value) => {
+    if (!value) return 'Unknown';
+    try {
+      return new Date(value).toLocaleString();
+    } catch {
+      return 'Unknown';
+    }
+  };
+  const handleRetrieveHistoryEntry = useCallback(
+    (entry) => {
+      if (!entry || !entry.course) return;
+      setCourses((prev) => {
+        const filtered = prev.filter((item) => (item.course?.id ?? item.id) !== entry.courseId);
+        const next = [...filtered];
+        const insertAt = typeof entry.position === 'number'
+          ? Math.min(Math.max(entry.position, 0), next.length)
+          : next.length;
+        const insertion = cloneDeep(entry.course);
+        next.splice(insertAt, 0, insertion);
+        pushHistory({
+          type: 'course',
+          action: 'create',
+          courseId: entry.courseId,
+          position: insertAt,
+          courseAfter: insertion,
+        });
+        saveCourses(next);
+        saveCoursesRemote(next).catch(() => {});
+        return next;
+      });
+      setHistoryModalOpen(false);
+    },
+    [pushHistory]
+  );
   const handleAddCourse = () => {
-    pushHistory(courses);
+    pushHistory({ type: 'bulk', snapshot: courses });
     onAddCourse();
   };
   const open = (id) => onOpenCourse(id);
@@ -3824,6 +4102,14 @@ export function CoursesHub({
           </div>
           <div className="flex items-center gap-3">
             <button onClick={onEditTemplate} className="glass-button">Edit Template</button>
+            <button
+              onClick={() => setHistoryModalOpen(true)}
+              className="glass-button flex items-center gap-2"
+            >
+              <History className="icon" />
+              <span className="hidden sm:inline">Version history</span>
+              <span className="sm:hidden">History</span>
+            </button>
             <button
               onClick={undo}
               disabled={!history.length}
@@ -4406,18 +4692,99 @@ export function CoursesHub({
           )}
         </section>
 
-        <BlockDialog
-          open={!!resolveContext}
-          mode="resolve"
-          task={resolveContext?.task ?? null}
-          team={resolveContext?.course?.team ?? []}
-          reporter={resolveRequest?.context?.reporter ?? null}
-          resolver={resolveRequest?.context?.resolver ?? null}
-          block={resolveContext?.block ?? null}
-          onResolve={handleResolveBlock}
-          onCancel={() => setResolveRequest(null)}
-        />
-      </main>
+      <BlockDialog
+        open={!!resolveContext}
+        mode="resolve"
+        task={resolveContext?.task ?? null}
+        team={resolveContext?.course?.team ?? []}
+        reporter={resolveRequest?.context?.reporter ?? null}
+        resolver={resolveRequest?.context?.resolver ?? null}
+        block={resolveContext?.block ?? null}
+        onResolve={handleResolveBlock}
+        onCancel={() => setResolveRequest(null)}
+      />
+    </main>
+      {historyModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Course version history"
+          className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4"
+        >
+          <div className="w-full max-w-2xl rounded-3xl bg-white shadow-xl p-6 max-h-[85vh] overflow-hidden">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-slate-800">Course version history</h2>
+                <p className="text-sm text-slate-600/90">
+                  Recently deleted courses remain available for seven days.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryModalOpen(false)}
+                className="glass-icon-button w-10 h-10 text-slate-600 hover:text-slate-800"
+                aria-label="Close version history"
+              >
+                <X className="icon" />
+              </button>
+            </div>
+            <div className="mt-4 overflow-y-auto max-h-[60vh]">
+              {courseHistoryLoading ? (
+                <div className="py-10 text-center text-sm text-slate-600/90">
+                  Loading recent history…
+                </div>
+              ) : courseHistoryEntries.length === 0 ? (
+                <div className="py-10 text-center text-sm text-slate-600/90">
+                  No course deletions in the last seven days.
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {courseHistoryEntries.map((entry) => {
+                    const courseMeta = entry.course?.course || entry.course;
+                    const courseName = courseMeta?.name || 'Untitled course';
+                    const description = courseMeta?.description || '';
+                    return (
+                      <li
+                        key={entry.id}
+                        className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0 space-y-1">
+                            <div className="text-sm font-semibold text-slate-800 truncate">
+                              {courseName}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              Removed {formatHistoryTimestamp(entry.createdAt)}
+                            </div>
+                            <div className="text-xs text-slate-500">Course ID: {entry.courseId}</div>
+                            {typeof entry.position === 'number' && (
+                              <div className="text-xs text-slate-500">
+                                Original position: {entry.position + 1}
+                              </div>
+                            )}
+                            {description ? (
+                              <div className="text-sm text-slate-600/90 whitespace-pre-wrap break-words">
+                                {description}
+                              </div>
+                            ) : null}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRetrieveHistoryEntry(entry)}
+                            className="glass-button-primary whitespace-nowrap"
+                          >
+                            Retrieve
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

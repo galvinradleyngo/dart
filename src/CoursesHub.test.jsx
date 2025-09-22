@@ -3,10 +3,24 @@ import { describe, it, beforeEach, expect, vi } from 'vitest';
 import { CoursesHub } from './App.jsx';
 
 vi.mock('./firebase.js', () => ({ db: {} }));
+const addDoc = vi.fn().mockResolvedValue({ id: 'history-doc' });
+const getDocs = vi.fn().mockResolvedValue({ forEach: () => {}, docs: [] });
+
 vi.mock('firebase/firestore', () => ({
   getDoc: vi.fn().mockResolvedValue({ exists: () => false }),
   setDoc: vi.fn().mockResolvedValue(),
   doc: vi.fn(),
+  collection: vi.fn(() => ({})),
+  addDoc,
+  getDocs,
+  query: vi.fn((...args) => args),
+  where: vi.fn((...args) => args),
+  orderBy: vi.fn((...args) => args),
+  limit: vi.fn((...args) => args),
+  serverTimestamp: vi.fn(() => ({ server: true })),
+  Timestamp: {
+    fromMillis: (ms) => ({ toMillis: () => ms }),
+  },
 }));
 
 const localStorageMock = (() => {
@@ -30,6 +44,8 @@ describe('CoursesHub undo functionality', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    addDoc.mockClear();
+    getDocs.mockClear();
   });
 
   const renderHub = () =>
@@ -59,7 +75,7 @@ describe('CoursesHub undo functionality', () => {
     const undoButton = screen.getByRole('button', { name: 'Undo' });
     expect(undoButton).toBeDisabled();
 
-    const deleteButton = screen.getAllByRole('button', { name: 'Delete' })[0];
+    const deleteButton = screen.getAllByRole('button', { name: /Delete course/i })[0];
     fireEvent.click(deleteButton);
 
     expect(screen.queryByText('Course 1')).toBeNull();
@@ -87,7 +103,7 @@ describe('CoursesHub undo functionality', () => {
     const undoButton = screen.getByRole('button', { name: 'Undo' });
 
     for (let i = 0; i < 10; i++) {
-      const del = screen.getAllByRole('button', { name: 'Delete' })[0];
+      const del = screen.getAllByRole('button', { name: /Delete course/i })[0];
       fireEvent.click(del);
     }
 
@@ -188,6 +204,39 @@ describe('CoursesHub undo functionality', () => {
     const updated = stored[0].tasks[0].blocks.find((b) => b.id === 'b1');
     expect(updated.resolvedAt).toBeTruthy();
     expect(updated.resolution).toBe('Approved by lead');
+  });
+
+  it('restores a deleted course from version history without affecting others', async () => {
+    const courses = [
+      { id: 'c1', course: { id: 'c1', name: 'Course 1', description: 'Alpha' }, tasks: [], team: [], schedule: {} },
+      { id: 'c2', course: { id: 'c2', name: 'Course 2', description: 'Beta' }, tasks: [], team: [], schedule: {} },
+    ];
+    localStorage.setItem('healthPM:courses:v1', JSON.stringify(courses));
+
+    renderHub();
+
+    await screen.findByText('Course 1');
+    await screen.findByText('Course 2');
+
+    const deleteButton = screen.getAllByRole('button', { name: /Delete course/i })[0];
+    fireEvent.click(deleteButton);
+
+    expect(screen.queryByText('Course 1')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /Version history/i }));
+
+    const retrieveButton = await screen.findByRole('button', { name: 'Retrieve' });
+    fireEvent.click(retrieveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Course 1')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Course 2')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /Course version history/i })).not.toBeInTheDocument();
+
+    const stored = JSON.parse(localStorage.getItem('healthPM:courses:v1'));
+    expect(stored.map((c) => c.course.name)).toEqual(['Course 1', 'Course 2']);
+    expect(addDoc).toHaveBeenCalled();
   });
 });
 
