@@ -251,6 +251,7 @@ const loadCourseHistoryEntries = async () => {
     const now = Date.now();
     const q = query(
       courseHistoryCollectionRef,
+      where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
       where('expiresAt', '>', Timestamp.fromMillis(now)),
       orderBy('expiresAt', 'asc'),
       limit(50)
