@@ -208,6 +208,7 @@ const saveCoursesRemote = async (arr) => {
 };
 
 const COURSE_HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const FIRESTORE_PASSWORD_SENTINEL = "passthesalt";
 const courseHistoryCollectionRef = collection(db, 'courseHistory');
 
 const toMillis = (value, fallback) => {
@@ -222,6 +223,7 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
     const createdAtMs = Date.now();
     const expiresAtTs = Timestamp.fromMillis(createdAtMs + COURSE_HISTORY_RETENTION_MS);
     const payload = {
+      password: FIRESTORE_PASSWORD_SENTINEL,
       courseId,
       course,
       action,
