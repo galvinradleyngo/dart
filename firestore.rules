@@ -30,6 +30,7 @@ service cloud.firestore {
     }
 
     match /courseHistory/{entryId} {
+      // History entries should also require the shared password sentinel.
       allow read, write: if hasCorrectPassword();
     }
 
