@@ -1440,6 +1440,7 @@ useEffect(() => {
                     <span className="font-medium">Label</span>
                     <input
                       type="text"
+                      name="courseLinkLabel"
                       value={newLinkLabel}
                       onChange={(e) => setNewLinkLabel(e.target.value)}
                       placeholder="Resource name"
@@ -1452,6 +1453,7 @@ useEffect(() => {
                       type="text"
                       inputMode="url"
                       autoComplete="url"
+                      name="courseLinkUrl"
                       value={newLinkUrl}
                       onChange={(e) => setNewLinkUrl(e.target.value)}
                       placeholder="example.com or https://example.com"
@@ -1482,6 +1484,7 @@ useEffect(() => {
                               <span className="font-medium">Label</span>
                               <input
                                 type="text"
+                                name="courseLinkLabel"
                                 value={editingCourseLinkLabel}
                                 onChange={(event) => setEditingCourseLinkLabel(event.target.value)}
                                 className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
@@ -1493,6 +1496,7 @@ useEffect(() => {
                                 type="text"
                                 inputMode="url"
                                 autoComplete="url"
+                                name="courseLinkUrl"
                                 value={editingCourseLinkUrl}
                                 onChange={(event) => setEditingCourseLinkUrl(event.target.value)}
                                 className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
@@ -4302,6 +4306,7 @@ export function CoursesHub({
                     <span className="font-medium">Label</span>
                     <input
                       type="text"
+                      name="coursesHubLinkLabel"
                       value={newLinkLabel}
                       onChange={(e) => setNewLinkLabel(e.target.value)}
                       placeholder="Resource name"
@@ -4314,6 +4319,7 @@ export function CoursesHub({
                       type="text"
                       inputMode="url"
                       autoComplete="url"
+                      name="coursesHubLinkUrl"
                       value={newLinkUrl}
                       onChange={(e) => setNewLinkUrl(e.target.value)}
                       placeholder="example.com or https://example.com"
@@ -4344,6 +4350,7 @@ export function CoursesHub({
                               <span className="font-medium">Label</span>
                               <input
                                 type="text"
+                                name="coursesHubLinkLabel"
                                 value={editingLinkLabel}
                                 onChange={(event) => setEditingLinkLabel(event.target.value)}
                                 className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
@@ -4355,6 +4362,7 @@ export function CoursesHub({
                                 type="text"
                                 inputMode="url"
                                 autoComplete="url"
+                                name="coursesHubLinkUrl"
                                 value={editingLinkUrl}
                                 onChange={(event) => setEditingLinkUrl(event.target.value)}
                                 className="mt-1 w-full rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm"
