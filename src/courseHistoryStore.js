@@ -305,6 +305,40 @@ const syncPendingCourseHistoryEntries = async () => {
   }
 };
 
+const shouldRetryWithoutOrder = (error) => {
+  if (!error) return false;
+  if (error.code === 'failed-precondition') return true;
+  if (typeof error.message === 'string') {
+    const msg = error.message.toLowerCase();
+    if (msg.includes('index') || msg.includes('requires an index')) return true;
+  }
+  return false;
+};
+
+const readRemoteCourseHistory = async () => {
+  const orderedQuery = query(
+    courseHistoryCollectionRef,
+    where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
+    orderBy('createdAt', 'desc'),
+    limit(COURSE_HISTORY_FETCH_LIMIT)
+  );
+
+  try {
+    return await getDocs(orderedQuery);
+  } catch (error) {
+    if (!shouldRetryWithoutOrder(error)) {
+      throw error;
+    }
+  }
+
+  const fallbackQuery = query(
+    courseHistoryCollectionRef,
+    where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
+    limit(COURSE_HISTORY_FETCH_LIMIT)
+  );
+  return await getDocs(fallbackQuery);
+};
+
 export const loadCourseHistoryEntries = async () => {
   migrateLegacyCourseHistory();
   await syncPendingCourseHistoryEntries();
@@ -316,14 +350,7 @@ export const loadCourseHistoryEntries = async () => {
   ]);
 
   try {
-    const snapshot = await getDocs(
-      query(
-        courseHistoryCollectionRef,
-        where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
-        orderBy('createdAt', 'desc'),
-        limit(COURSE_HISTORY_FETCH_LIMIT)
-      )
-    );
+    const snapshot = await readRemoteCourseHistory();
     const remoteEntries = snapshot.docs
       .map((docSnap) => {
         const data = docSnap.data?.() ?? docSnap.data;
