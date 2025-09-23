@@ -273,9 +273,10 @@ const loadCourseHistoryEntries = async () => {
       })
       .filter(Boolean);
     rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    return rows;
-  } catch {
-    return [];
+    return { rows, error: null };
+  } catch (error) {
+    console.error('Failed to load course history entries', error);
+    return { rows: [], error };
   }
 };
 
@@ -3541,6 +3542,7 @@ export function CoursesHub({
   const [courseHistoryEntries, setCourseHistoryEntries] = useState([]);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [courseHistoryLoading, setCourseHistoryLoading] = useState(true);
+  const [courseHistoryError, setCourseHistoryError] = useState(null);
   const [blockPanels, setBlockPanels] = useState({});
   const [blockTabs, setBlockTabs] = useState({});
   const [resolveRequest, setResolveRequest] = useState(null);
@@ -3572,12 +3574,24 @@ export function CoursesHub({
     let cancelled = false;
     (async () => {
       setCourseHistoryLoading(true);
+      setCourseHistoryError(null);
       try {
-        const remote = await loadCourseHistoryEntries();
+        const result = await loadCourseHistoryEntries();
         if (cancelled) return;
-        const sanitized = pruneExpiredCourseHistory(remote);
+        const normalized = Array.isArray(result) ? { rows: result, error: null } : result ?? {};
+        const rows = Array.isArray(normalized.rows) ? normalized.rows : [];
+        const loadError = normalized.error ?? null;
+        if (loadError) {
+          setCourseHistoryError(loadError);
+        }
+        const sanitized = pruneExpiredCourseHistory(rows);
         sanitized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         setCourseHistoryEntries(sanitized);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to load course history entries', error);
+        setCourseHistoryError(error);
+        setCourseHistoryEntries([]);
       } finally {
         if (!cancelled) setCourseHistoryLoading(false);
       }
@@ -3658,6 +3672,10 @@ export function CoursesHub({
     }
     return prevCourses;
   }, []);
+
+  const courseHistoryErrorMessage = courseHistoryError
+    ? courseHistoryError.message || String(courseHistoryError)
+    : null;
 
   const persistLinkLibrary = useCallback((next) => {
     setLinkLibrary(next);
@@ -4735,6 +4753,15 @@ export function CoursesHub({
               {courseHistoryLoading ? (
                 <div className="py-10 text-center text-sm text-slate-600/90">
                   Loading recent history…
+                </div>
+              ) : courseHistoryError ? (
+                <div className="py-10 text-center text-sm text-red-600">
+                  Failed to load course history.
+                  {courseHistoryErrorMessage ? (
+                    <span className="mt-1 block text-xs text-red-500/90 break-words">
+                      {courseHistoryErrorMessage}
+                    </span>
+                  ) : null}
                 </div>
               ) : courseHistoryEntries.length === 0 ? (
                 <div className="py-10 text-center text-sm text-slate-600/90">
