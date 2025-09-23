@@ -249,10 +249,11 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
 const loadCourseHistoryEntries = async () => {
   try {
     const now = Date.now();
+    const nowTimestamp = Timestamp.fromMillis(now);
     const q = query(
       courseHistoryCollectionRef,
       where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
-      where('expiresAt', '>', Timestamp.fromMillis(now)),
+      where('expiresAt', '>', nowTimestamp),
       orderBy('expiresAt', 'asc'),
       limit(50)
     );
