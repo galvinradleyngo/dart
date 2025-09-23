@@ -1,7 +1,12 @@
 import { describe, it, beforeEach, expect, vi } from 'vitest';
-import { loadCourseHistoryEntries } from './App.jsx';
+import {
+  loadCourseHistoryEntries,
+  addCourseHistoryEntryLocal,
+  loadCourseHistoryCache,
+  courseHistoryInternal,
+} from './courseHistoryStore.js';
 
-const COURSE_HISTORY_KEY = 'healthPM:courseHistory:v1';
+const { loadPendingEntries } = courseHistoryInternal;
 
 const localStorageMock = (() => {
   let store = {};
@@ -24,13 +29,14 @@ vi.stubGlobal('localStorage', localStorageMock);
 vi.mock('./firebase.js', () => ({ db: {} }));
 
 const getDocsMock = vi.fn();
+const addDocMock = vi.fn();
 
 vi.mock('firebase/firestore', () => ({
   getDoc: vi.fn().mockResolvedValue({ exists: () => false }),
   setDoc: vi.fn().mockResolvedValue(),
   doc: vi.fn(),
   collection: vi.fn(() => ({})),
-  addDoc: vi.fn(),
+  addDoc: (...args) => addDocMock(...args),
   getDocs: (...args) => getDocsMock(...args),
   deleteDoc: vi.fn(),
   writeBatch: vi.fn(() => ({ delete: vi.fn(), commit: vi.fn().mockResolvedValue() })),
@@ -49,49 +55,46 @@ const makeRemovedCourse = (id, name) => ({
   schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
 });
 
-const readStoredHistory = () => {
-  const raw = localStorage.getItem(COURSE_HISTORY_KEY);
-  return raw ? JSON.parse(raw) : [];
-};
-
 describe('loadCourseHistoryEntries local fallbacks', () => {
   beforeEach(() => {
     localStorage.clear();
     getDocsMock.mockReset();
+    addDocMock.mockReset();
   });
 
   it('returns locally cached deletions when Firestore fails', async () => {
     const removedCourse = makeRemovedCourse('course-1', 'Course One');
-    const fallbackEntry = {
+    const fallbackEntry = addCourseHistoryEntryLocal({
       id: 'local-1',
       courseId: 'course-1',
       course: removedCourse,
       action: 'delete',
       position: 0,
       createdAt: 1_000,
-    };
-    localStorage.setItem(COURSE_HISTORY_KEY, JSON.stringify([fallbackEntry]));
+    });
+    addDocMock.mockRejectedValue(new Error('firestore down'));
     getDocsMock.mockRejectedValue(new Error('firestore down'));
 
     const entries = await loadCourseHistoryEntries();
 
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ id: 'local-1', courseId: 'course-1', action: 'delete' });
+    expect(entries[0]).toMatchObject({ id: fallbackEntry.id, courseId: 'course-1', action: 'delete' });
     expect(entries[0].course.course.name).toBe('Course One');
-    expect(readStoredHistory()).toHaveLength(1);
+    expect(loadCourseHistoryCache()).toHaveLength(1);
+    expect(loadPendingEntries()).toHaveLength(1);
   });
 
   it('removes duplicate cached entries when remote data succeeds', async () => {
     const removedCourse = makeRemovedCourse('course-1', 'Course One');
-    const fallbackEntry = {
-      id: 'remote-1',
+    const fallbackEntry = addCourseHistoryEntryLocal({
+      id: 'local-remote',
       courseId: 'course-1',
       course: removedCourse,
       action: 'delete',
       position: 0,
       createdAt: 1_000,
-    };
-    localStorage.setItem(COURSE_HISTORY_KEY, JSON.stringify([fallbackEntry]));
+    });
+    addDocMock.mockResolvedValue({ id: 'remote-1' });
     getDocsMock.mockResolvedValue({
       docs: [
         {
@@ -102,6 +105,7 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
             course: removedCourse,
             action: 'delete',
             position: 0,
+            clientId: fallbackEntry.id,
             createdAt: { toMillis: () => 2_000 },
           }),
         },
@@ -112,20 +116,22 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0].id).toBe('remote-1');
-    expect(readStoredHistory()).toEqual([]);
+    expect(entries[0].clientId).toBe(fallbackEntry.id);
+    expect(loadPendingEntries()).toHaveLength(0);
+    expect(loadCourseHistoryCache().map((entry) => entry.id)).toEqual(['remote-1']);
   });
 
   it('merges cached fallbacks with remote history', async () => {
     const removedCourse = makeRemovedCourse('course-1', 'Course One');
-    const fallbackEntry = {
+    const fallbackEntry = addCourseHistoryEntryLocal({
       id: 'local-2',
       courseId: 'course-1',
       course: removedCourse,
       action: 'delete',
       position: 1,
       createdAt: 500,
-    };
-    localStorage.setItem(COURSE_HISTORY_KEY, JSON.stringify([fallbackEntry]));
+    });
+    addDocMock.mockRejectedValue(new Error('firestore down'));
     getDocsMock.mockResolvedValue({
       docs: [
         {
@@ -145,7 +151,9 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
     const entries = await loadCourseHistoryEntries();
 
     expect(entries).toHaveLength(2);
-    expect(entries.map((entry) => entry.id)).toEqual(['remote-2', 'local-2']);
-    expect(readStoredHistory().map((entry) => entry.id)).toEqual(['local-2']);
+    expect(entries.map((entry) => entry.id)).toEqual(['remote-2', fallbackEntry.id]);
+    expect(loadPendingEntries().map((entry) => entry.id)).toEqual([fallbackEntry.id]);
+    const cachedIds = loadCourseHistoryCache().map((entry) => entry.id);
+    expect(cachedIds).toEqual(['remote-2', fallbackEntry.id]);
   });
 });
