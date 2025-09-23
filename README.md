@@ -21,7 +21,7 @@ Vitest and React Testing Library power the test suite.
 
 ## Course History Resilience
 
-When a course is deleted, the app now stages a copy of that deletion event in `localStorage` before it is sent to Firestore. If the remote write fails (for example, due to a lost connection), the backup entry is merged into the history dialog on the next load so the deletion still appears in the version history. Once Firestore confirms the change, the local cache is automatically cleaned up.
+When a course is deleted, the app now stages a copy of that deletion event in `localStorage` before it is sent to Firestore. If the remote write fails (for example, due to a lost connection), the backup entry is merged into the history dialog on the next load so the deletion still appears in the version history. Once Firestore confirms the change, the local cache automatically removes that fallback entry.
 
 ## Milestone Templates
 
