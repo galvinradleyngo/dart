@@ -238,5 +238,17 @@ describe('CoursesHub undo functionality', () => {
     expect(stored.map((c) => c.course.name)).toEqual(['Course 1', 'Course 2']);
     expect(addDoc).toHaveBeenCalled();
   });
+
+  it('surfaces errors when course history fetching fails', async () => {
+    getDocs.mockRejectedValueOnce(new Error('firestore unavailable'));
+
+    renderHub();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Version history/i }));
+
+    const errorMessage = await screen.findByText(/Failed to load course history/i);
+    expect(errorMessage).toBeInTheDocument();
+    expect(errorMessage.textContent).toContain('firestore unavailable');
+  });
 });
 
