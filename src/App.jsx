@@ -126,6 +126,51 @@ const cloneDeep = (value) => {
   return JSON.parse(JSON.stringify(value));
 };
 
+const toMillis = (value, fallback) => {
+  if (value && typeof value.toMillis === "function") return value.toMillis();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") return value;
+  return fallback;
+};
+
+const sanitizeCourseHistoryEntryData = (entry) => {
+  if (!entry || typeof entry !== "object") return null;
+  const course = entry.course ? cloneDeep(entry.course) : null;
+  const courseId = entry.courseId ?? course?.course?.id ?? course?.id ?? null;
+  if (!course || !courseId) return null;
+  const createdAt = toMillis(entry.createdAt, Date.now());
+  const expiresAt =
+    entry.expiresAt == null ? null : toMillis(entry.expiresAt, Number.NEGATIVE_INFINITY);
+  const sanitized = {
+    id: entry.id ?? uid(),
+    courseId,
+    course,
+    action: entry.action || "delete",
+    position: typeof entry.position === "number" ? entry.position : null,
+    createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
+  };
+  if (Number.isFinite(expiresAt)) {
+    sanitized.expiresAt = expiresAt;
+  }
+  return sanitized;
+};
+
+const normalizeCourseHistoryEntryList = (entries = []) => {
+  const now = Date.now();
+  const seen = new Set();
+  const normalized = [];
+  for (const rawEntry of entries || []) {
+    const entry = sanitizeCourseHistoryEntryData(rawEntry);
+    if (!entry) continue;
+    if (entry.expiresAt != null && entry.expiresAt <= now) continue;
+    if (seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    normalized.push(entry);
+  }
+  normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return normalized;
+};
+
 const APP_SHELL_CLASS = "min-h-screen text-slate-900 bg-transparent";
 
 const resetScrollPosition = () => {
@@ -181,6 +226,48 @@ const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
 const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
+const COURSE_HISTORY_LOCAL_KEY = "healthPM:courseHistory:v1";
+const loadCourseHistoryLocal = () => {
+  if (typeof localStorage === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(COURSE_HISTORY_LOCAL_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+const saveCourseHistoryLocal = (entries) => {
+  if (typeof localStorage === "undefined") return;
+  try {
+    const normalized = Array.isArray(entries) ? entries : [];
+    localStorage.setItem(COURSE_HISTORY_LOCAL_KEY, JSON.stringify(normalized));
+  } catch {}
+};
+const updateCourseHistoryLocal = (updater) => {
+  const current = loadCourseHistoryLocal();
+  let next = current;
+  if (typeof updater === "function") {
+    try {
+      next = updater(current);
+    } catch {
+      next = current;
+    }
+  }
+  if (!Array.isArray(next)) {
+    next = [];
+  }
+  saveCourseHistoryLocal(next);
+  return next;
+};
+const upsertCourseHistoryLocalEntry = (entry) => {
+  const sanitized = sanitizeCourseHistoryEntryData(entry);
+  if (!sanitized) return;
+  updateCourseHistoryLocal((prev) => {
+    const base = Array.isArray(prev) ? prev : [];
+    const filtered = base.filter((item) => item && item.id !== sanitized.id);
+    return [sanitized, ...filtered];
+  });
+};
 const loadTemplateRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'template'));
@@ -212,13 +299,6 @@ const COURSE_HISTORY_FETCH_LIMIT = 200;
 const FIRESTORE_PASSWORD_SENTINEL = "passthesalt";
 const courseHistoryCollectionRef = collection(db, 'courseHistory');
 
-const toMillis = (value, fallback) => {
-  if (value && typeof value.toMillis === "function") return value.toMillis();
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === "number") return value;
-  return fallback;
-};
-
 const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', position = null }) => {
   try {
     const createdAtMs = Date.now();
@@ -244,7 +324,23 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
   }
 };
 
-const loadCourseHistoryEntries = async () => {
+const mapRemoteCourseHistoryDocs = (docs = []) =>
+  docs
+    .map((docSnap) => {
+      if (!docSnap) return null;
+      const data = docSnap.data?.() ?? docSnap.data;
+      if (!data || data.password !== FIRESTORE_PASSWORD_SENTINEL) return null;
+      return sanitizeCourseHistoryEntryData({
+        ...data,
+        id: docSnap.id,
+        createdAt: data.createdAt,
+      });
+    })
+    .filter(Boolean);
+
+export const loadCourseHistoryEntries = async () => {
+  const localEntries = normalizeCourseHistoryEntryList(loadCourseHistoryLocal());
+  let remoteDocs = [];
   try {
     const snapshot = await getDocs(
       query(
@@ -254,25 +350,23 @@ const loadCourseHistoryEntries = async () => {
         limit(COURSE_HISTORY_FETCH_LIMIT)
       )
     );
-    const rows = snapshot.docs
-      .map((docSnap) => {
-        const data = docSnap.data?.() ?? docSnap.data;
-        if (!data || !data.courseId || !data.course) return null;
-        return {
-          id: docSnap.id,
-          courseId: data.courseId,
-          course: data.course,
-          action: data.action || 'delete',
-          position: typeof data.position === 'number' ? data.position : null,
-          createdAt: toMillis(data.createdAt, Date.now()),
-        };
-      })
-      .filter(Boolean);
-    rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    return rows;
-  } catch {
-    return [];
+    remoteDocs = snapshot?.docs ?? [];
+  } catch (primaryError) {
+    try {
+      const fallbackSnapshot = await getDocs(courseHistoryCollectionRef);
+      remoteDocs = fallbackSnapshot?.docs ?? [];
+    } catch {
+      remoteDocs = [];
+    }
   }
+  const remoteEntries = mapRemoteCourseHistoryDocs(remoteDocs);
+  const normalizedRemote = normalizeCourseHistoryEntryList(remoteEntries).slice(
+    0,
+    COURSE_HISTORY_FETCH_LIMIT
+  );
+  const combined = normalizeCourseHistoryEntryList([...normalizedRemote, ...localEntries]);
+  saveCourseHistoryLocal(combined);
+  return combined;
 };
 
 const deleteCourseHistoryEntryRemote = async (id) => {
@@ -3576,38 +3670,14 @@ export function CoursesHub({
   const [blockTabs, setBlockTabs] = useState({});
   const [resolveRequest, setResolveRequest] = useState(null);
 
-  const sanitizeCourseHistoryEntry = useCallback((entry) => {
-    if (!entry || typeof entry !== "object") return null;
-    const course = entry.course ? cloneDeep(entry.course) : null;
-    const courseId = entry.courseId ?? course?.course?.id ?? course?.id ?? null;
-    if (!course || !courseId) return null;
-    const createdAt = toMillis(entry.createdAt, Date.now());
-    const expiresAt =
-      entry.expiresAt == null ? null : toMillis(entry.expiresAt, Number.NEGATIVE_INFINITY);
-    const sanitized = {
-      id: entry.id ?? uid(),
-      courseId,
-      course,
-      action: entry.action || "delete",
-      position: typeof entry.position === "number" ? entry.position : null,
-      createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
-    };
-    if (Number.isFinite(expiresAt)) {
-      sanitized.expiresAt = expiresAt;
-    }
-    return sanitized;
-  }, []);
+  const sanitizeCourseHistoryEntry = useCallback(
+    (entry) => sanitizeCourseHistoryEntryData(entry),
+    []
+  );
 
   const normalizeCourseHistoryEntries = useCallback(
-    (entries = []) => {
-      const now = Date.now();
-      const normalized = (entries || [])
-        .map((entry) => sanitizeCourseHistoryEntry(entry))
-        .filter((entry) => entry && (entry.expiresAt == null || entry.expiresAt > now));
-      normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      return normalized;
-    },
-    [sanitizeCourseHistoryEntry]
+    (entries = []) => normalizeCourseHistoryEntryList(entries),
+    []
   );
 
   const updateCourseHistoryEntries = useCallback(
@@ -3615,11 +3685,15 @@ export function CoursesHub({
       if (typeof valueOrUpdater === "function") {
         setCourseHistoryEntries((prev) => {
           const next = valueOrUpdater(prev);
-          return normalizeCourseHistoryEntries(next ?? prev);
+          const normalized = normalizeCourseHistoryEntries(next ?? prev);
+          saveCourseHistoryLocal(normalized);
+          return normalized;
         });
         return;
       }
-      setCourseHistoryEntries(normalizeCourseHistoryEntries(valueOrUpdater));
+      const normalized = normalizeCourseHistoryEntries(valueOrUpdater);
+      saveCourseHistoryLocal(normalized);
+      setCourseHistoryEntries(normalized);
     },
     [normalizeCourseHistoryEntries]
   );
@@ -4104,6 +4178,7 @@ export function CoursesHub({
       position: index,
       createdAt: Date.now(),
     };
+    upsertCourseHistoryLocalEntry(fallbackEntry);
     upsertCourseHistoryEntry(fallbackEntry);
     recordCourseHistoryEntry({ courseId, course: removedCourse, action: 'delete', position: index })
       .then((entry) => {
