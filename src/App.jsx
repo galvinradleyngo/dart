@@ -249,28 +249,29 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
 const loadCourseHistoryEntries = async () => {
   try {
     const now = Date.now();
-    const q = query(
-      courseHistoryCollectionRef,
-      where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
-      orderBy('createdAt', 'desc'),
-      limit(50)
+    const snapshot = await getDocs(
+      query(
+        courseHistoryCollectionRef,
+        where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
+        orderBy('createdAt', 'desc'),
+        limit(50)
+      )
     );
-    const snapshot = await getDocs(q);
-    const rows = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data?.() ?? docSnap.data;
-      if (!data) return;
-      if (!data.courseId || !data.course) return;
-      rows.push({
-        id: docSnap.id,
-        courseId: data.courseId,
-        course: data.course,
-        action: data.action || 'delete',
-        position: typeof data.position === 'number' ? data.position : null,
-        createdAt: toMillis(data.createdAt, now),
-        expiresAt: toMillis(data.expiresAt, now + COURSE_HISTORY_RETENTION_MS),
-      });
-    });
+    const rows = snapshot.docs
+      .map((docSnap) => {
+        const data = docSnap.data?.() ?? docSnap.data;
+        if (!data || !data.courseId || !data.course) return null;
+        return {
+          id: docSnap.id,
+          courseId: data.courseId,
+          course: data.course,
+          action: data.action || 'delete',
+          position: typeof data.position === 'number' ? data.position : null,
+          createdAt: toMillis(data.createdAt, now),
+          expiresAt: toMillis(data.expiresAt, now + COURSE_HISTORY_RETENTION_MS),
+        };
+      })
+      .filter(Boolean);
     rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     return rows;
   } catch {
