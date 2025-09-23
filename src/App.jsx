@@ -12,7 +12,7 @@ import {
   query,
   where,
   orderBy,
-  limitToLast,
+  limit,
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
@@ -249,13 +249,11 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
 const loadCourseHistoryEntries = async () => {
   try {
     const now = Date.now();
-    const nowTimestamp = Timestamp.fromMillis(now);
     const q = query(
       courseHistoryCollectionRef,
       where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
-      where('expiresAt', '>', nowTimestamp),
-      orderBy('expiresAt', 'asc'),
-      limitToLast(50)
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
     const snapshot = await getDocs(q);
     const rows = [];
