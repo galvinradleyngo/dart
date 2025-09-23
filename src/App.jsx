@@ -2,21 +2,7 @@ import React, { useEffect, useMemo, useState, useRef, Fragment, useCallback } fr
 import { useIsMobile } from "./hooks/use-is-mobile.js";
 import { useCompletionConfetti } from "./hooks/use-completion-confetti.js";
 import { AnimatePresence, motion, useAnimation } from "framer-motion";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  writeBatch,
-  query,
-  where,
-  orderBy,
-  limit,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
 import TeamMembersSection from "./components/TeamMembersSection.jsx";
@@ -92,6 +78,17 @@ import {
   normalizeUrl,
 } from "./utils.js";
 import { aggregateBlocksByCourse, applyBlockResolution } from "./blockUtils.js";
+import {
+  loadCourseHistoryEntries,
+  loadCourseHistoryCache,
+  recordCourseHistoryEntry,
+  deleteCourseHistoryEntry as deleteCourseHistoryEntryRemote,
+  clearCourseHistoryEntries as clearCourseHistoryEntriesRemote,
+  addCourseHistoryEntryLocal,
+  removeCourseHistoryEntriesLocal,
+  sanitizeCourseHistoryEntryData,
+  normalizeCourseHistoryEntryList,
+} from "./courseHistoryStore.js";
 
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
@@ -131,37 +128,6 @@ const toMillis = (value, fallback) => {
   if (value instanceof Date) return value.getTime();
   if (typeof value === "number") return value;
   return fallback;
-};
-
-const sanitizeCourseHistoryEntryData = (entry) => {
-  if (!entry || typeof entry !== "object") return null;
-  const course = entry.course ? cloneDeep(entry.course) : null;
-  const courseId = entry.courseId ?? course?.course?.id ?? course?.id ?? null;
-  if (!course || !courseId) return null;
-  const createdAt = toMillis(entry.createdAt, Date.now());
-  const expiresAt =
-    entry.expiresAt == null ? null : toMillis(entry.expiresAt, Number.NEGATIVE_INFINITY);
-  const sanitized = {
-    id: entry.id ?? uid(),
-    courseId,
-    course,
-    action: entry.action || "delete",
-    position: typeof entry.position === "number" ? entry.position : null,
-    createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
-  };
-  if (Number.isFinite(expiresAt)) {
-    sanitized.expiresAt = expiresAt;
-  }
-  return sanitized;
-};
-
-const normalizeCourseHistoryEntryList = (entries = []) => {
-  const now = Date.now();
-  const normalized = (entries || [])
-    .map((entry) => sanitizeCourseHistoryEntryData(entry))
-    .filter((entry) => entry && (entry.expiresAt == null || entry.expiresAt > now));
-  normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  return normalized;
 };
 
 const APP_SHELL_CLASS = "min-h-screen text-slate-900 bg-transparent";
@@ -219,56 +185,6 @@ const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
 const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
-const COURSE_HISTORY_LOCAL_KEY = "healthPM:courseHistory:v1";
-const loadCourseHistoryLocal = () => {
-  if (typeof localStorage === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(COURSE_HISTORY_LOCAL_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-const saveCourseHistoryLocal = (entries) => {
-  if (typeof localStorage === "undefined") return;
-  try {
-    const normalized = Array.isArray(entries) ? entries : [];
-    localStorage.setItem(COURSE_HISTORY_LOCAL_KEY, JSON.stringify(normalized));
-  } catch {}
-};
-const updateCourseHistoryLocal = (updater) => {
-  const current = loadCourseHistoryLocal();
-  let next = current;
-  if (typeof updater === "function") {
-    try {
-      next = updater(current);
-    } catch {
-      next = current;
-    }
-  }
-  if (!Array.isArray(next)) {
-    next = [];
-  }
-  saveCourseHistoryLocal(next);
-  return next;
-};
-const upsertCourseHistoryLocalEntry = (entry) => {
-  const sanitized = sanitizeCourseHistoryEntryData(entry);
-  if (!sanitized) return;
-  updateCourseHistoryLocal((prev) => {
-    const base = Array.isArray(prev) ? prev : [];
-    const filtered = base.filter((item) => item && item.id !== sanitized.id);
-    return [sanitized, ...filtered];
-  });
-};
-const removeCourseHistoryLocalEntries = (ids = []) => {
-  if (!ids || ids.length === 0) return;
-  const removeSet = new Set(ids);
-  updateCourseHistoryLocal((prev) => {
-    const base = Array.isArray(prev) ? prev : [];
-    return base.filter((item) => item && !removeSet.has(item.id));
-  });
-};
 const loadTemplateRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'template'));
@@ -296,98 +212,6 @@ const saveCoursesRemote = async (arr) => {
   } catch {}
 };
 
-const COURSE_HISTORY_FETCH_LIMIT = 200;
-const FIRESTORE_PASSWORD_SENTINEL = "passthesalt";
-const courseHistoryCollectionRef = collection(db, 'courseHistory');
-
-const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', position = null }) => {
-  try {
-    const createdAtMs = Date.now();
-    const payload = {
-      password: FIRESTORE_PASSWORD_SENTINEL,
-      courseId,
-      course,
-      action,
-      position,
-      createdAt: serverTimestamp(),
-    };
-    const ref = await addDoc(courseHistoryCollectionRef, payload);
-    return {
-      id: ref.id,
-      courseId,
-      course,
-      action,
-      position,
-      createdAt: createdAtMs,
-    };
-  } catch {
-    return null;
-  }
-};
-
-export const loadCourseHistoryEntries = async () => {
-  const localEntries = normalizeCourseHistoryEntryList(loadCourseHistoryLocal());
-  let remoteEntries = [];
-  try {
-    const snapshot = await getDocs(
-      query(
-        courseHistoryCollectionRef,
-        where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
-        orderBy('createdAt', 'desc'),
-        limit(COURSE_HISTORY_FETCH_LIMIT)
-      )
-    );
-    remoteEntries = snapshot.docs
-      .map((docSnap) => {
-        const data = docSnap.data?.() ?? docSnap.data;
-        if (!data || !data.courseId || !data.course) return null;
-        return sanitizeCourseHistoryEntryData({
-          ...data,
-          id: docSnap.id,
-          createdAt: data.createdAt,
-        });
-      })
-      .filter(Boolean);
-  } catch {
-    remoteEntries = [];
-  }
-  const normalizedRemote = normalizeCourseHistoryEntryList(remoteEntries);
-  const remoteIds = new Set(normalizedRemote.map((entry) => entry.id));
-  const mergedLocal = localEntries.filter((entry) => entry && !remoteIds.has(entry.id));
-  saveCourseHistoryLocal(mergedLocal);
-  const combined = [...normalizedRemote, ...mergedLocal];
-  combined.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  return combined;
-};
-
-const deleteCourseHistoryEntryRemote = async (id) => {
-  if (!id) return false;
-  try {
-    await deleteDoc(doc(courseHistoryCollectionRef, id));
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const clearCourseHistoryEntriesRemote = async () => {
-  try {
-    const snapshot = await getDocs(query(courseHistoryCollectionRef, where('password', '==', FIRESTORE_PASSWORD_SENTINEL)));
-    if (snapshot.empty) return true;
-    const docs = snapshot.docs;
-    const chunkSize = 400;
-    for (let i = 0; i < docs.length; i += chunkSize) {
-      const batch = writeBatch(db);
-      docs.slice(i, i + chunkSize).forEach((docSnap) => {
-        batch.delete(docSnap.ref);
-      });
-      await batch.commit();
-    }
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 const loadScheduleRemote = async () => {
   try {
@@ -3652,9 +3476,10 @@ export function CoursesHub({
   const [editingLinkUrl, setEditingLinkUrl] = useState("");
   const [membersEditing, setMembersEditing] = useState(false);
   const [history, setHistory] = useState([]);
-  const [courseHistoryEntries, setCourseHistoryEntries] = useState([]);
+  const initialCourseHistory = useMemo(() => loadCourseHistoryCache(), []);
+  const [courseHistoryEntries, setCourseHistoryEntries] = useState(initialCourseHistory);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [courseHistoryLoading, setCourseHistoryLoading] = useState(true);
+  const [courseHistoryLoading, setCourseHistoryLoading] = useState(() => initialCourseHistory.length === 0);
   const [historyActionPending, setHistoryActionPending] = useState(false);
   const [deletingHistoryIds, setDeletingHistoryIds] = useState(() => new Set());
   const [blockPanels, setBlockPanels] = useState({});
@@ -3691,7 +3516,7 @@ export function CoursesHub({
       if (!sanitized) return;
       const { removeIds = [] } = options;
       if (removeIds.length) {
-        removeCourseHistoryLocalEntries(removeIds);
+        removeCourseHistoryEntriesLocal(removeIds);
       }
       setCourseHistoryLoading(false);
       updateCourseHistoryEntries((prev) => {
@@ -3705,7 +3530,9 @@ export function CoursesHub({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setCourseHistoryLoading(true);
+      if (initialCourseHistory.length === 0) {
+        setCourseHistoryLoading(true);
+      }
       try {
         const remote = await loadCourseHistoryEntries();
         if (cancelled) return;
@@ -3717,7 +3544,7 @@ export function CoursesHub({
     return () => {
       cancelled = true;
     };
-  }, [updateCourseHistoryEntries]);
+  }, [initialCourseHistory.length, updateCourseHistoryEntries]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -4159,24 +3986,23 @@ export function CoursesHub({
     saveCourses(next);
     saveCoursesRemote(next).catch(() => {});
     setCourses(next);
-    const fallbackId = uid();
-    const fallbackEntry = {
-      id: fallbackId,
+    const fallbackEntry = addCourseHistoryEntryLocal({
       courseId,
       course: removedCourse,
       action: 'delete',
       position: index,
       createdAt: Date.now(),
-    };
-    upsertCourseHistoryLocalEntry(fallbackEntry);
-    upsertCourseHistoryEntry(fallbackEntry);
-    recordCourseHistoryEntry({ courseId, course: removedCourse, action: 'delete', position: index })
-      .then((entry) => {
-        if (entry) {
-          upsertCourseHistoryEntry(entry, { removeIds: [fallbackId] });
-        }
-      })
-      .catch(() => {});
+    });
+    if (fallbackEntry) {
+      upsertCourseHistoryEntry(fallbackEntry);
+      recordCourseHistoryEntry(fallbackEntry)
+        .then((entry) => {
+          if (entry) {
+            upsertCourseHistoryEntry(entry, { removeIds: [fallbackEntry.id] });
+          }
+        })
+        .catch(() => {});
+    }
     onRemoveCourse && onRemoveCourse(courseId);
   };
   const duplicateCourse = (courseId) => {
