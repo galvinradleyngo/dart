@@ -9,12 +9,13 @@ import {
   collection,
   addDoc,
   getDocs,
+  deleteDoc,
+  writeBatch,
   query,
   where,
   orderBy,
-  limitToLast,
+  limit,
   serverTimestamp,
-  Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase.js";
 import MilestoneCard from "./MilestoneCard.jsx";
@@ -207,7 +208,7 @@ const saveCoursesRemote = async (arr) => {
   } catch {}
 };
 
-const COURSE_HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const COURSE_HISTORY_FETCH_LIMIT = 200;
 const FIRESTORE_PASSWORD_SENTINEL = "passthesalt";
 const courseHistoryCollectionRef = collection(db, 'courseHistory');
 
@@ -221,7 +222,6 @@ const toMillis = (value, fallback) => {
 const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', position = null }) => {
   try {
     const createdAtMs = Date.now();
-    const expiresAtTs = Timestamp.fromMillis(createdAtMs + COURSE_HISTORY_RETENTION_MS);
     const payload = {
       password: FIRESTORE_PASSWORD_SENTINEL,
       courseId,
@@ -229,7 +229,6 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
       action,
       position,
       createdAt: serverTimestamp(),
-      expiresAt: expiresAtTs,
     };
     const ref = await addDoc(courseHistoryCollectionRef, payload);
     return {
@@ -239,7 +238,6 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
       action,
       position,
       createdAt: createdAtMs,
-      expiresAt: toMillis(expiresAtTs, createdAtMs + COURSE_HISTORY_RETENTION_MS),
     };
   } catch {
     return null;
@@ -248,15 +246,12 @@ const recordCourseHistoryEntry = async ({ courseId, course, action = 'delete', p
 
 const loadCourseHistoryEntries = async () => {
   try {
-    const now = Date.now();
     const snapshot = await getDocs(
       query(
         courseHistoryCollectionRef,
         where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
-        where('expiresAt', '>=', Timestamp.fromMillis(now)),
-        orderBy('expiresAt', 'asc'),
         orderBy('createdAt', 'desc'),
-        limitToLast(50)
+        limit(COURSE_HISTORY_FETCH_LIMIT)
       )
     );
     const rows = snapshot.docs
@@ -269,8 +264,7 @@ const loadCourseHistoryEntries = async () => {
           course: data.course,
           action: data.action || 'delete',
           position: typeof data.position === 'number' ? data.position : null,
-          createdAt: toMillis(data.createdAt, now),
-          expiresAt: toMillis(data.expiresAt, now + COURSE_HISTORY_RETENTION_MS),
+          createdAt: toMillis(data.createdAt, Date.now()),
         };
       })
       .filter(Boolean);
@@ -278,6 +272,35 @@ const loadCourseHistoryEntries = async () => {
     return rows;
   } catch {
     return [];
+  }
+};
+
+const deleteCourseHistoryEntryRemote = async (id) => {
+  if (!id) return false;
+  try {
+    await deleteDoc(doc(courseHistoryCollectionRef, id));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const clearCourseHistoryEntriesRemote = async () => {
+  try {
+    const snapshot = await getDocs(query(courseHistoryCollectionRef, where('password', '==', FIRESTORE_PASSWORD_SENTINEL)));
+    if (snapshot.empty) return true;
+    const docs = snapshot.docs;
+    const chunkSize = 400;
+    for (let i = 0; i < docs.length; i += chunkSize) {
+      const batch = writeBatch(db);
+      docs.slice(i, i + chunkSize).forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+    }
+    return true;
+  } catch {
+    return false;
   }
 };
 
@@ -3547,16 +3570,20 @@ export function CoursesHub({
   const [courseHistoryEntries, setCourseHistoryEntries] = useState([]);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [courseHistoryLoading, setCourseHistoryLoading] = useState(true);
+  const [historyActionPending, setHistoryActionPending] = useState(false);
+  const [deletingHistoryIds, setDeletingHistoryIds] = useState(() => new Set());
   const [blockPanels, setBlockPanels] = useState({});
   const [blockTabs, setBlockTabs] = useState({});
   const [resolveRequest, setResolveRequest] = useState(null);
 
-  const pruneExpiredCourseHistory = useCallback((entries) => {
-    const now = Date.now();
-    return (entries || []).filter((entry) => {
-      if (!entry || !entry.course || !entry.courseId) return false;
-      return (entry.expiresAt ?? 0) > now;
+  const normalizeCourseHistoryEntries = useCallback((entries = []) => {
+    const filtered = [];
+    (entries || []).forEach((entry) => {
+      if (!entry || !entry.course || !entry.courseId) return;
+      filtered.push(entry);
     });
+    filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    return filtered;
   }, []);
 
   const upsertCourseHistoryEntry = useCallback(
@@ -3566,12 +3593,10 @@ export function CoursesHub({
       setCourseHistoryLoading(false);
       setCourseHistoryEntries((prev) => {
         const filtered = prev.filter((item) => !removeIds.includes(item.id) && item.id !== entry.id);
-        const next = pruneExpiredCourseHistory([entry, ...filtered]);
-        next.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        return next;
+        return normalizeCourseHistoryEntries([entry, ...filtered]);
       });
     },
-    [pruneExpiredCourseHistory]
+    [normalizeCourseHistoryEntries]
   );
 
   useEffect(() => {
@@ -3581,9 +3606,7 @@ export function CoursesHub({
       try {
         const remote = await loadCourseHistoryEntries();
         if (cancelled) return;
-        const sanitized = pruneExpiredCourseHistory(remote);
-        sanitized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        setCourseHistoryEntries(sanitized);
+        setCourseHistoryEntries(normalizeCourseHistoryEntries(remote));
       } finally {
         if (!cancelled) setCourseHistoryLoading(false);
       }
@@ -3591,20 +3614,52 @@ export function CoursesHub({
     return () => {
       cancelled = true;
     };
-  }, [pruneExpiredCourseHistory]);
+  }, [normalizeCourseHistoryEntries]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const interval = window.setInterval(() => {
-      setCourseHistoryEntries((prev) => {
-        const pruned = pruneExpiredCourseHistory(prev);
-        if (pruned.length === prev.length) return prev;
-        pruned.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        return pruned;
+  const handleDeleteHistoryEntry = useCallback(
+    async (entry) => {
+      if (!entry || !entry.id) return;
+      if (deletingHistoryIds.has(entry.id)) return;
+      if (typeof window !== 'undefined') {
+        const confirmDelete = window.confirm('Remove this deleted course from history?');
+        if (!confirmDelete) return;
+      }
+      const id = entry.id;
+      setDeletingHistoryIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
       });
-    }, 60_000);
-    return () => window.clearInterval(interval);
-  }, [pruneExpiredCourseHistory]);
+      setCourseHistoryEntries((prev) => prev.filter((item) => item.id !== id));
+      const success = await deleteCourseHistoryEntryRemote(id);
+      if (!success) {
+        setCourseHistoryEntries((prev) => normalizeCourseHistoryEntries([...prev, entry]));
+      }
+      setDeletingHistoryIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    },
+    [deletingHistoryIds, normalizeCourseHistoryEntries]
+  );
+
+  const handleClearCourseHistory = useCallback(async () => {
+    if (historyActionPending || !courseHistoryEntries.length) return;
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Clear all saved course versions?');
+      if (!confirmed) return;
+    }
+    setHistoryActionPending(true);
+    const previous = [...courseHistoryEntries];
+    setCourseHistoryEntries([]);
+    setDeletingHistoryIds(new Set());
+    const success = await clearCourseHistoryEntriesRemote();
+    if (!success) {
+      setCourseHistoryEntries(normalizeCourseHistoryEntries(previous));
+    }
+    setHistoryActionPending(false);
+  }, [courseHistoryEntries, historyActionPending, normalizeCourseHistoryEntries]);
 
   const toggleLinkLibraryCollapsed = useCallback(() => {
     setLinkLibraryCollapsed((value) => !value);
@@ -4001,7 +4056,6 @@ export function CoursesHub({
       action: 'delete',
       position: index,
       createdAt: Date.now(),
-      expiresAt: Date.now() + COURSE_HISTORY_RETENTION_MS,
     };
     upsertCourseHistoryEntry(fallbackEntry);
     recordCourseHistoryEntry({ courseId, course: removedCourse, action: 'delete', position: index })
@@ -4729,17 +4783,27 @@ export function CoursesHub({
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-slate-800">Course version history</h2>
                 <p className="text-sm text-slate-600/90">
-                  Recently deleted courses remain available for seven days.
+                  Deleted courses remain available here until you remove them.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setHistoryModalOpen(false)}
-                className="glass-icon-button w-10 h-10 text-slate-600 hover:text-slate-800"
-                aria-label="Close version history"
-              >
-                <X className="icon" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearCourseHistory}
+                  className="glass-button text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={historyActionPending || courseHistoryLoading || courseHistoryEntries.length === 0}
+                >
+                  {historyActionPending ? 'Clearing…' : 'Clear all'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHistoryModalOpen(false)}
+                  className="glass-icon-button w-10 h-10 text-slate-600 hover:text-slate-800"
+                  aria-label="Close version history"
+                >
+                  <X className="icon" />
+                </button>
+              </div>
             </div>
             <div className="mt-4 overflow-y-auto max-h-[60vh]">
               {courseHistoryLoading ? (
@@ -4748,7 +4812,7 @@ export function CoursesHub({
                 </div>
               ) : courseHistoryEntries.length === 0 ? (
                 <div className="py-10 text-center text-sm text-slate-600/90">
-                  No course deletions in the last seven days.
+                  No deleted courses in history yet.
                 </div>
               ) : (
                 <ul className="space-y-3">
@@ -4756,6 +4820,7 @@ export function CoursesHub({
                     const courseMeta = entry.course?.course || entry.course;
                     const courseName = courseMeta?.name || 'Untitled course';
                     const description = courseMeta?.description || '';
+                    const isDeleting = deletingHistoryIds.has(entry.id);
                     return (
                       <li
                         key={entry.id}
@@ -4781,13 +4846,23 @@ export function CoursesHub({
                               </div>
                             ) : null}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRetrieveHistoryEntry(entry)}
-                            className="glass-button-primary whitespace-nowrap"
-                          >
-                            Retrieve
-                          </button>
+                          <div className="flex flex-row gap-2 sm:flex-col sm:items-end">
+                            <button
+                              type="button"
+                              onClick={() => handleRetrieveHistoryEntry(entry)}
+                              className="glass-button-primary whitespace-nowrap"
+                            >
+                              Retrieve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteHistoryEntry(entry)}
+                              className="glass-button whitespace-nowrap text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isDeleting}
+                            >
+                              {isDeleting ? 'Removing…' : 'Delete'}
+                            </button>
+                          </div>
                         </div>
                       </li>
                     );
