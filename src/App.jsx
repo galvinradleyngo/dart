@@ -12,7 +12,7 @@ import {
   query,
   where,
   orderBy,
-  limit,
+  limitToLast,
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
@@ -253,8 +253,10 @@ const loadCourseHistoryEntries = async () => {
       query(
         courseHistoryCollectionRef,
         where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
+        where('expiresAt', '>=', Timestamp.fromMillis(now)),
+        orderBy('expiresAt', 'asc'),
         orderBy('createdAt', 'desc'),
-        limit(50)
+        limitToLast(50)
       )
     );
     const rows = snapshot.docs
