@@ -3576,27 +3576,66 @@ export function CoursesHub({
   const [blockTabs, setBlockTabs] = useState({});
   const [resolveRequest, setResolveRequest] = useState(null);
 
-  const normalizeCourseHistoryEntries = useCallback((entries = []) => {
-    const filtered = [];
-    (entries || []).forEach((entry) => {
-      if (!entry || !entry.course || !entry.courseId) return;
-      filtered.push(entry);
-    });
-    filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    return filtered;
+  const sanitizeCourseHistoryEntry = useCallback((entry) => {
+    if (!entry || typeof entry !== "object") return null;
+    const course = entry.course ? cloneDeep(entry.course) : null;
+    const courseId = entry.courseId ?? course?.course?.id ?? course?.id ?? null;
+    if (!course || !courseId) return null;
+    const createdAt = toMillis(entry.createdAt, Date.now());
+    const expiresAt =
+      entry.expiresAt == null ? null : toMillis(entry.expiresAt, Number.NEGATIVE_INFINITY);
+    const sanitized = {
+      id: entry.id ?? uid(),
+      courseId,
+      course,
+      action: entry.action || "delete",
+      position: typeof entry.position === "number" ? entry.position : null,
+      createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
+    };
+    if (Number.isFinite(expiresAt)) {
+      sanitized.expiresAt = expiresAt;
+    }
+    return sanitized;
   }, []);
+
+  const normalizeCourseHistoryEntries = useCallback(
+    (entries = []) => {
+      const now = Date.now();
+      const normalized = (entries || [])
+        .map((entry) => sanitizeCourseHistoryEntry(entry))
+        .filter((entry) => entry && (entry.expiresAt == null || entry.expiresAt > now));
+      normalized.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      return normalized;
+    },
+    [sanitizeCourseHistoryEntry]
+  );
+
+  const updateCourseHistoryEntries = useCallback(
+    (valueOrUpdater) => {
+      if (typeof valueOrUpdater === "function") {
+        setCourseHistoryEntries((prev) => {
+          const next = valueOrUpdater(prev);
+          return normalizeCourseHistoryEntries(next ?? prev);
+        });
+        return;
+      }
+      setCourseHistoryEntries(normalizeCourseHistoryEntries(valueOrUpdater));
+    },
+    [normalizeCourseHistoryEntries]
+  );
 
   const upsertCourseHistoryEntry = useCallback(
     (entry, options = {}) => {
-      if (!entry || !entry.course || !entry.courseId) return;
+      const sanitized = sanitizeCourseHistoryEntry(entry);
+      if (!sanitized) return;
       const { removeIds = [] } = options;
       setCourseHistoryLoading(false);
-      setCourseHistoryEntries((prev) => {
-        const filtered = prev.filter((item) => !removeIds.includes(item.id) && item.id !== entry.id);
-        return normalizeCourseHistoryEntries([entry, ...filtered]);
+      updateCourseHistoryEntries((prev) => {
+        const filtered = prev.filter((item) => !removeIds.includes(item.id) && item.id !== sanitized.id);
+        return [sanitized, ...filtered];
       });
     },
-    [normalizeCourseHistoryEntries]
+    [sanitizeCourseHistoryEntry, updateCourseHistoryEntries]
   );
 
   useEffect(() => {
@@ -3606,7 +3645,7 @@ export function CoursesHub({
       try {
         const remote = await loadCourseHistoryEntries();
         if (cancelled) return;
-        setCourseHistoryEntries(normalizeCourseHistoryEntries(remote));
+        updateCourseHistoryEntries(remote);
       } finally {
         if (!cancelled) setCourseHistoryLoading(false);
       }
@@ -3614,7 +3653,15 @@ export function CoursesHub({
     return () => {
       cancelled = true;
     };
-  }, [normalizeCourseHistoryEntries]);
+  }, [updateCourseHistoryEntries]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const interval = window.setInterval(() => {
+      updateCourseHistoryEntries((prev) => prev);
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [updateCourseHistoryEntries]);
 
   const handleDeleteHistoryEntry = useCallback(
     async (entry) => {
@@ -3630,10 +3677,10 @@ export function CoursesHub({
         next.add(id);
         return next;
       });
-      setCourseHistoryEntries((prev) => prev.filter((item) => item.id !== id));
+      updateCourseHistoryEntries((prev) => prev.filter((item) => item.id !== id));
       const success = await deleteCourseHistoryEntryRemote(id);
       if (!success) {
-        setCourseHistoryEntries((prev) => normalizeCourseHistoryEntries([...prev, entry]));
+        updateCourseHistoryEntries((prev) => [...prev, entry]);
       }
       setDeletingHistoryIds((prev) => {
         const next = new Set(prev);
@@ -3641,7 +3688,7 @@ export function CoursesHub({
         return next;
       });
     },
-    [deletingHistoryIds, normalizeCourseHistoryEntries]
+    [deletingHistoryIds, updateCourseHistoryEntries]
   );
 
   const handleClearCourseHistory = useCallback(async () => {
@@ -3652,14 +3699,14 @@ export function CoursesHub({
     }
     setHistoryActionPending(true);
     const previous = [...courseHistoryEntries];
-    setCourseHistoryEntries([]);
+    updateCourseHistoryEntries([]);
     setDeletingHistoryIds(new Set());
     const success = await clearCourseHistoryEntriesRemote();
     if (!success) {
-      setCourseHistoryEntries(normalizeCourseHistoryEntries(previous));
+      updateCourseHistoryEntries(previous);
     }
     setHistoryActionPending(false);
-  }, [courseHistoryEntries, historyActionPending, normalizeCourseHistoryEntries]);
+  }, [courseHistoryEntries, historyActionPending, updateCourseHistoryEntries]);
 
   const toggleLinkLibraryCollapsed = useCallback(() => {
     setLinkLibraryCollapsed((value) => !value);
