@@ -251,8 +251,8 @@ const loadCourseHistoryEntries = async () => {
     const now = Date.now();
     const q = query(
       courseHistoryCollectionRef,
-      where('expiresAt', '>', Timestamp.fromMillis(now)),
-      orderBy('expiresAt', 'asc'),
+      where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
+      orderBy('createdAt', 'desc'),
       limit(50)
     );
     const snapshot = await getDocs(q);
@@ -273,7 +273,8 @@ const loadCourseHistoryEntries = async () => {
     });
     rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     return rows;
-  } catch {
+  } catch (error) {
+    console.warn('Failed to load course history entries', error);
     return [];
   }
 };
