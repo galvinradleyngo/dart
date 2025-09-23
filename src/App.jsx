@@ -12,7 +12,7 @@ import {
   query,
   where,
   orderBy,
-  limit,
+  limitToLast,
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
@@ -255,7 +255,7 @@ const loadCourseHistoryEntries = async () => {
       where('password', '==', FIRESTORE_PASSWORD_SENTINEL),
       where('expiresAt', '>', nowTimestamp),
       orderBy('expiresAt', 'asc'),
-      limit(50)
+      limitToLast(50)
     );
     const snapshot = await getDocs(q);
     const rows = [];
