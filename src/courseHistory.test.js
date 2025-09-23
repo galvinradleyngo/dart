@@ -156,4 +156,37 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
     const cachedIds = loadCourseHistoryCache().map((entry) => entry.id);
     expect(cachedIds).toEqual(['remote-2', fallbackEntry.id]);
   });
+
+  it('retries without ordering when the Firestore index is missing', async () => {
+    const removedCourse = makeRemovedCourse('course-1', 'Course One');
+    const indexError = Object.assign(new Error('The query requires an index.'), {
+      code: 'failed-precondition',
+    });
+
+    getDocsMock.mockImplementationOnce(() => Promise.reject(indexError));
+    getDocsMock.mockImplementationOnce(() =>
+      Promise.resolve({
+        docs: [
+          {
+            id: 'remote-index-fallback',
+            data: () => ({
+              password: 'passthesalt',
+              courseId: 'course-1',
+              course: removedCourse,
+              action: 'delete',
+              position: 0,
+              clientId: 'client-1',
+              createdAt: { toMillis: () => 3_000 },
+            }),
+          },
+        ],
+      })
+    );
+
+    const entries = await loadCourseHistoryEntries();
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].id).toBe('remote-index-fallback');
+    expect(getDocsMock).toHaveBeenCalledTimes(2);
+  });
 });
