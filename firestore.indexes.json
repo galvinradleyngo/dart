@@ -7,6 +7,14 @@
         { "fieldPath": "password", "order": "ASCENDING" },
         { "fieldPath": "expiresAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "courseHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "password", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
