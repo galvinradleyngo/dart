@@ -86,6 +86,58 @@ describe('Upcoming Deadlines window', () => {
     expect(skipBadge).toHaveClass('bg-pink-100/80');
   });
 
+  it('lists overdue tasks before upcoming deadlines', async () => {
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    const courses = [
+      {
+        course: { id: 'c1', name: 'Course 1' },
+        milestones: [{ id: 'm1', title: 'Milestone 1' }],
+        tasks: [
+          {
+            id: 't-over',
+            title: 'Overdue Task',
+            status: 'todo',
+            dueDate: fmt(yesterday),
+            assigneeId: 'u1',
+            milestoneId: 'm1',
+          },
+          {
+            id: 't-up',
+            title: 'Upcoming Task',
+            status: 'todo',
+            dueDate: fmt(tomorrow),
+            assigneeId: 'u1',
+            milestoneId: 'm1',
+          },
+        ],
+        team: [{ id: 'u1', name: 'Alice', roleType: 'LD' }],
+        schedule: {},
+      },
+    ];
+
+    localStorage.setItem('healthPM:courses:v1', JSON.stringify(courses));
+
+    render(<UserDashboard onOpenCourse={() => {}} onBack={() => {}} initialUserId="u1" />);
+
+    const upcomingHeader = await screen.findByText('Upcoming Deadlines');
+    const upcomingSection = upcomingHeader.closest('section');
+    expect(upcomingSection).not.toBeNull();
+    const section = upcomingSection ?? document.createElement('section');
+
+    expect(within(section).getByText('Overdue')).toBeInTheDocument();
+
+    const taskButtons = within(section).getAllByRole('button', {
+      name: /for Milestone 1/,
+    });
+    expect(taskButtons[0]).toHaveAccessibleName(/Overdue Task for Milestone 1/);
+    expect(taskButtons[1]).toHaveAccessibleName(/Upcoming Task for Milestone 1/);
+  });
+
   it('prompts for link when completing from deadlines panel', async () => {
     const today = new Date();
     const courses = [{
