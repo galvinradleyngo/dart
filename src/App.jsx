@@ -2671,6 +2671,23 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     return g;
   }, [myTasks]);
 
+  const today = fmt(new Date());
+  const todayTime = useMemo(() => new Date(today).getTime(), [today]);
+  const overdueTasks = useMemo(() => {
+    return myTasks
+      .filter((t) => {
+        if (!t.dueDate) return false;
+        if (t.status === 'done' || t.status === 'skip') return false;
+        const dueTime = new Date(t.dueDate).getTime();
+        if (Number.isNaN(dueTime)) return false;
+        return dueTime < todayTime;
+      })
+      .sort((a, b) => {
+        const da = new Date(a.dueDate).getTime();
+        const db = new Date(b.dueDate).getTime();
+        return da - db;
+      });
+  }, [myTasks, todayTime]);
   const upcoming = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -2682,8 +2699,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       return { date: d, tasks: tasksOnDate };
     });
   }, [myTasks]);
-  const today = fmt(new Date());
-  const hasUpcomingTasks = upcoming.some(({ tasks }) => tasks.length > 0);
+  const hasActionableDeadlines = overdueTasks.length > 0 || upcoming.some(({ tasks }) => tasks.length > 0);
   const renderUpcomingTask = (t) => {
     const isOverdue = t.dueDate < today;
     const isDueToday = t.dueDate === today;
@@ -2810,10 +2826,23 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'deadlines' && (
             <>
               <SectionCard title="Upcoming Deadlines">
-                {!hasUpcomingTasks ? (
-                  <div className="text-sm text-slate-600/90">No tasks due in the next 2 weeks.</div>
+                {!hasActionableDeadlines ? (
+                  <div className="text-sm text-slate-600/90">No overdue tasks or deadlines in the next 2 weeks.</div>
                 ) : (
                   <ul className="space-y-3">
+                    {overdueTasks.length > 0 && (
+                      <li className="glass-card p-4" key="overdue">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <div className="text-sm font-semibold text-slate-800">Overdue</div>
+                          <div className="text-xs font-medium text-slate-500/80">
+                            {overdueTasks.length} task{overdueTasks.length === 1 ? '' : 's'}
+                          </div>
+                        </div>
+                        <ul className="mt-3 space-y-2">
+                          {overdueTasks.map((t) => renderUpcomingTask(t))}
+                        </ul>
+                      </li>
+                    )}
                     {upcoming
                       .filter(({ tasks }) => tasks.length > 0)
                       .map(({ date, tasks }) => (
