@@ -710,7 +710,30 @@ useEffect(() => {
   );
   const tasksRaw = state.tasks;
   const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
-  const listViewTasks = useMemo(() => filteredTasks, [filteredTasks]);
+  const listViewTasks = useMemo(() => {
+    if (!listPriority) return filteredTasks;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isOverdue = (task) => {
+      if (!task.dueDate || task.status === "done") return false;
+      const due = new Date(task.dueDate);
+      due.setHours(0, 0, 0, 0);
+      return due < today;
+    };
+    const priorityRank = (task) => {
+      if (listPriority === "overdue") return isOverdue(task) ? 0 : 1;
+      return task.status === listPriority ? 0 : 1;
+    };
+    return [...filteredTasks].sort((a, b) => {
+      const pa = priorityRank(a);
+      const pb = priorityRank(b);
+      if (pa !== pb) return pa - pb;
+      const da = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      const db = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+      if (da !== db) return da - db;
+      return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+    });
+  }, [filteredTasks, listPriority]);
   const groupedTasks = useMemo(() => {
     return filteredTasks.reduce((acc, t) => {
       (acc[t.milestoneId] ||= []).push(t);
