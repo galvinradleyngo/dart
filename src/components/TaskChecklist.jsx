@@ -1,11 +1,42 @@
 import React, { useMemo } from "react";
 import { useCompletionConfetti } from "../hooks/use-completion-confetti.js";
 
-export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdit }) {
+const STATUS_LABELS = {
+  todo: "To Do",
+  inprogress: "In Progress",
+  blocked: "Blocked",
+  skip: "Skipped",
+  done: "Done",
+};
+
+const STATUS_BADGE_TONES = {
+  todo: "bg-slate-100/80 text-slate-600 border-white/60",
+  inprogress: "bg-indigo-100/80 text-indigo-600 border-indigo-200/80",
+  blocked: "bg-rose-100/80 text-rose-600 border-rose-200/80",
+  skip: "bg-amber-100/80 text-amber-700 border-amber-200/80",
+  done: "bg-emerald-100/80 text-emerald-700 border-emerald-200/80",
+};
+
+const DEFAULT_STATUS_BADGE = "bg-slate-100/80 text-slate-600 border-white/60";
+
+export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdit, statusPriority = null }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayKey = today.toDateString();
   const { fireOnDone } = useCompletionConfetti();
+  const isTaskOverdue = (task) => {
+    if (!task.dueDate) return false;
+    const due = new Date(task.dueDate);
+    due.setHours(0, 0, 0, 0);
+    return due < today;
+  };
+  const priorityRank = (task) => {
+    if (!statusPriority) return 1;
+    if (statusPriority === "overdue") {
+      return isTaskOverdue(task) ? 0 : 1;
+    }
+    return task.status === statusPriority ? 0 : 1;
+  };
   const { activeGroups, doneTasks } = useMemo(() => {
     const upcoming = [];
     const completed = [];
@@ -21,10 +52,26 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
       (acc[key] ||= []).push(t);
       return acc;
     }, {});
-    const activeGroups = Object.entries(map).sort(([a], [b]) => {
-      if (a === "none") return 1;
-      if (b === "none") return -1;
-      return new Date(a) - new Date(b);
+    const groups = Object.entries(map).map(([date, items]) => {
+      const sortedItems = [...items].sort((a, b) => {
+        const pa = priorityRank(a);
+        const pb = priorityRank(b);
+        if (pa !== pb) return pa - pb;
+        const da = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        const db = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+        if (da !== db) return da - db;
+        return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+      });
+      const hasPriority = statusPriority ? sortedItems.some((item) => priorityRank(item) === 0) : false;
+      return { date, items: sortedItems, hasPriority };
+    });
+    groups.sort((a, b) => {
+      if (statusPriority && a.hasPriority !== b.hasPriority) {
+        return a.hasPriority ? -1 : 1;
+      }
+      if (a.date === "none") return b.date === "none" ? 0 : 1;
+      if (b.date === "none") return -1;
+      return new Date(a.date) - new Date(b.date);
     });
     const doneTasks = completed.sort((a, b) => {
       if (a.completedDate && b.completedDate) {
@@ -34,8 +81,8 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
       if (b.completedDate) return 1;
       return 0;
     });
-    return { activeGroups, doneTasks };
-  }, [tasks]);
+    return { activeGroups: groups, doneTasks };
+  }, [tasks, statusPriority, todayKey]);
 
   const formatDate = (value) =>
     new Date(value).toLocaleDateString(undefined, {
@@ -48,7 +95,7 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
     <div className="space-y-6">
       {activeGroups.length > 0 && (
         <ul className="space-y-2">
-          {activeGroups.map(([date, items]) => (
+          {activeGroups.map(({ date, items }) => (
             <li key={date} className="glass-card p-4 w-full space-y-3">
               <div className="text-sm font-semibold text-slate-700/90">
                 {date === "none" ? "No due date" : formatDate(date)}
@@ -80,10 +127,19 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                     : t.dueDate
                     ? "Scheduled"
                     : "No Date";
+                  const isPriority = statusPriority
+                    ? statusPriority === "overdue"
+                      ? isTaskOverdue(t)
+                      : t.status === statusPriority
+                    : false;
+                  const priorityRing = isPriority
+                    ? "ring-2 ring-indigo-200/70 ring-offset-1 ring-offset-white"
+                    : "";
+                  const statusBadgeClass = STATUS_BADGE_TONES[t.status] || DEFAULT_STATUS_BADGE;
                   return (
                     <li key={t.id}>
                       <div
-                        className={`flex items-center gap-3 rounded-3xl border px-4 py-3 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.45)] backdrop-blur transition-all ${containerTone}`}
+                        className={`flex items-center gap-3 rounded-3xl border px-4 py-3 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.45)] backdrop-blur transition-all ${containerTone} ${priorityRing}`}
                       >
                         <input
                           type="checkbox"
@@ -109,11 +165,18 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                             for {milestone ? milestone.title : "Unassigned"} • {assignee ? assignee.name : "Unassigned"}
                           </div>
                         </button>
-                        <span
-                          className={`shrink-0 self-start rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide shadow-sm backdrop-blur ${pillTone}`}
-                        >
-                          {pillLabel}
-                        </span>
+                        <div className="flex flex-col items-end gap-1 text-[11px] font-semibold uppercase tracking-wide">
+                          <span
+                            className={`shrink-0 rounded-full border px-2.5 py-1 shadow-sm backdrop-blur ${statusBadgeClass}`}
+                          >
+                            {STATUS_LABELS[t.status] || "Unknown"}
+                          </span>
+                          <span
+                            className={`shrink-0 rounded-full border px-2.5 py-1 shadow-sm backdrop-blur ${pillTone}`}
+                          >
+                            {pillLabel}
+                          </span>
+                        </div>
                       </div>
                     </li>
                   );
