@@ -96,6 +96,21 @@ const STATUS_PRIORITY_LABELS = {
   overdue: "Overdue",
 };
 
+const STATUS_PRIORITY_BASE_CLASS =
+  "inline-flex items-center gap-2 rounded-full border px-3 py-1 font-medium shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+
+const STATUS_PRIORITY_STYLES = {
+  inprogress:
+    "border-indigo-500/80 bg-indigo-50 text-indigo-700 shadow-[0_0_0_1px_rgba(79,70,229,0.25)] hover:bg-indigo-100 focus-visible:ring-indigo-500/60",
+  todo:
+    "border-sky-500/70 bg-sky-50 text-sky-700 shadow-[0_0_0_1px_rgba(14,165,233,0.25)] hover:bg-sky-100 focus-visible:ring-sky-500/60",
+  overdue:
+    "border-red-500/80 bg-red-50 text-red-700 shadow-[0_0_0_1px_rgba(239,68,68,0.3)] hover:bg-red-100 focus-visible:ring-red-500/60",
+};
+
+const STATUS_PRIORITY_DEFAULT_CLASS =
+  "border-slate-300/80 bg-white/80 text-slate-700 hover:bg-slate-100 focus-visible:ring-slate-400/50";
+
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
  * -----------------------------------------------------
@@ -525,6 +540,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [teamCollapsed, setTeamCollapsed] = useState(true);
   const [tasksCollapsed, setTasksCollapsed] = useState(true);
   const [listPriority, setListPriority] = useState(null);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
@@ -537,6 +553,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [history, setHistory] = useState([]);
   const firstRun = useRef(true);
   const milestoneFilterRef = useRef(null);
+  const statusMenuRef = useRef(null);
   const milestoneSectionRef = useRef(null);
   const tasksSectionRef = useRef(null);
 
@@ -650,10 +667,44 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   }, [milestoneFilterOpen]);
 
   useEffect(() => {
+    if (!statusMenuOpen) return;
+    const handleClickAway = (event) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(event.target)) {
+        setStatusMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setStatusMenuOpen(false);
+        const trigger = statusMenuRef.current?.querySelector("button");
+        trigger?.focus?.();
+      }
+    };
+    document.addEventListener("mousedown", handleClickAway);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickAway);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [statusMenuOpen]);
+
+  useEffect(() => {
     if (milestonesCollapsed) {
       setMilestoneFilterOpen(false);
     }
   }, [milestonesCollapsed]);
+
+  useEffect(() => {
+    if (view !== "list") {
+      setStatusMenuOpen(false);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (!listPriority) {
+      setStatusMenuOpen(false);
+    }
+  }, [listPriority]);
 
 const handleSave = useCallback(async () => {
   setSaveState('saving');
@@ -760,6 +811,14 @@ useEffect(() => {
     const match = milestones.find((m) => m.id === milestoneFilter);
     return match ? match.title : "All milestones";
   }, [milestoneFilter, milestones]);
+  const statusPriorityButtonClass = useMemo(() => {
+    if (!listPriority) {
+      return `${STATUS_PRIORITY_BASE_CLASS} ${STATUS_PRIORITY_DEFAULT_CLASS}`;
+    }
+    return `${STATUS_PRIORITY_BASE_CLASS} ${
+      STATUS_PRIORITY_STYLES[listPriority] ?? STATUS_PRIORITY_DEFAULT_CLASS
+    }`;
+  }, [listPriority]);
 
   const totals = useMemo(() => {
     const total = tasksRaw.length;
@@ -1888,14 +1947,69 @@ useEffect(() => {
           >
             <div>
               {view === "list" && listPriority && (
-                <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-slate-600/90">
-                  <span className="inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1 font-medium text-slate-700 shadow-sm">
-                    Showing {STATUS_PRIORITY_LABELS[listPriority] ?? "selected"} tasks first
-                  </span>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600/90">
+                  <div className="relative" ref={statusMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setStatusMenuOpen((open) => !open)}
+                      className={`${statusPriorityButtonClass} pe-3`}
+                      aria-haspopup="menu"
+                      aria-expanded={statusMenuOpen}
+                      aria-controls="status-priority-menu"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span>Showing {STATUS_PRIORITY_LABELS[listPriority] ?? "selected"} tasks first</span>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${statusMenuOpen ? "rotate-180" : ""}`}
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </button>
+                    {statusMenuOpen && (
+                      <div
+                        id="status-priority-menu"
+                        role="menu"
+                        aria-label="Select task status priority"
+                        className="absolute left-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1 shadow-xl focus:outline-none"
+                      >
+                        {Object.entries(STATUS_PRIORITY_LABELS).map(([option, label]) => {
+                          const active = listPriority === option;
+                          return (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                setListPriority(option);
+                                setStatusMenuOpen(false);
+                              }}
+                              role="menuitemradio"
+                              aria-checked={active}
+                              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                                active
+                                  ? "bg-slate-100 text-slate-900"
+                                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              }`}
+                            >
+                              <span>{label}</span>
+                              {active && (
+                                <span
+                                  className="ml-2 h-1.5 w-1.5 rounded-full bg-slate-500"
+                                  aria-hidden="true"
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setListPriority(null)}
-                    className="glass-button text-xs"
+                    onClick={() => {
+                      setListPriority(null);
+                      setStatusMenuOpen(false);
+                    }}
+                    className="text-xs font-medium text-slate-500 transition hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
                   >
                     Clear
                   </button>
