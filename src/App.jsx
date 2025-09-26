@@ -90,6 +90,12 @@ import {
   normalizeCourseHistoryEntryList,
 } from "./courseHistoryStore.js";
 
+const STATUS_PRIORITY_LABELS = {
+  inprogress: "In Progress",
+  todo: "To Do",
+  overdue: "Overdue",
+};
+
 /**
  * Course Hub + Course Dashboard – Health-style PM (v12)
  * -----------------------------------------------------
@@ -518,6 +524,8 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(false);
   const [teamCollapsed, setTeamCollapsed] = useState(true);
   const [tasksCollapsed, setTasksCollapsed] = useState(true);
+  const [listPriority, setListPriority] = useState(null);
+  const [taskSortMode, setTaskSortMode] = useState("dueDate");
   const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
@@ -530,6 +538,8 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [history, setHistory] = useState([]);
   const firstRun = useRef(true);
   const milestoneFilterRef = useRef(null);
+  const milestoneSectionRef = useRef(null);
+  const tasksSectionRef = useRef(null);
 
   const updateCourseState = useCallback((updater, options = {}) => {
     const { capture = true } = options;
@@ -558,6 +568,12 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
 
   const toggleLinkLibraryCollapsed = useCallback(() => {
     setLinkLibraryCollapsed((value) => !value);
+  }, []);
+
+  const scrollToSection = useCallback((ref) => {
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, []);
 
   const persistCourseLinkLibrary = useCallback(
@@ -681,6 +697,12 @@ useEffect(() => {
   // Capture current content once as initial template (only if not already captured)
   useEffect(() => { try { const flag = localStorage.getItem("healthPM:template:captured"); if (!flag) { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(state)); localStorage.setItem("healthPM:template:captured","1"); } } catch {} }, []);
 
+  useEffect(() => {
+    if (view !== "list" && listPriority) {
+      setListPriority(null);
+    }
+  }, [view, listPriority]);
+
   const team = state.team;
   const milestones = useMemo(
     () => [...state.milestones],
@@ -688,6 +710,7 @@ useEffect(() => {
   );
   const tasksRaw = state.tasks;
   const filteredTasks = useMemo(() => (milestoneFilter === "all" ? tasksRaw : tasksRaw.filter((t) => t.milestoneId === milestoneFilter)), [tasksRaw, milestoneFilter]);
+  const listViewTasks = useMemo(() => filteredTasks, [filteredTasks]);
   const groupedTasks = useMemo(() => {
     return filteredTasks.reduce((acc, t) => {
       (acc[t.milestoneId] ||= []).push(t);
@@ -1509,6 +1532,11 @@ useEffect(() => {
                 <Target className="icon icon-lg" />
               </IconBadge>
             )}
+            onClick={() => {
+              setMilestonesCollapsed(false);
+              scrollToSection(milestoneSectionRef);
+            }}
+            ariaLabel="Jump to milestones"
           />
           <DashboardRing
             title="In Progress"
@@ -1521,6 +1549,14 @@ useEffect(() => {
                 <Loader2 className="icon icon-lg" />
               </IconBadge>
             )}
+            onClick={() => {
+              setTasksCollapsed(false);
+              setView("list");
+              setListPriority("inprogress");
+              setTaskSortMode("status");
+              scrollToSection(tasksSectionRef);
+            }}
+            ariaLabel="Show in-progress tasks"
           />
           <DashboardRing
             title="To Do"
@@ -1533,6 +1569,14 @@ useEffect(() => {
                 <ListChecks className="icon icon-lg" />
               </IconBadge>
             )}
+            onClick={() => {
+              setTasksCollapsed(false);
+              setView("list");
+              setListPriority("todo");
+              setTaskSortMode("status");
+              scrollToSection(tasksSectionRef);
+            }}
+            ariaLabel="Show to-do tasks first"
           />
           <DashboardRing
             title="Overdue"
@@ -1545,6 +1589,14 @@ useEffect(() => {
                 <AlarmClock className="icon icon-lg" />
               </IconBadge>
             )}
+            onClick={() => {
+              setTasksCollapsed(false);
+              setView("list");
+              setListPriority("overdue");
+              setTaskSortMode("status");
+              scrollToSection(tasksSectionRef);
+            }}
+            ariaLabel="Show overdue tasks"
           />
         </section>
 
@@ -1564,7 +1616,7 @@ useEffect(() => {
           onToggle={() => setTeamCollapsed((v) => !v)}
         />
         {/* Milestones */}
-          <section className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6 text-sm sm:text-[14px]">
+          <section ref={milestoneSectionRef} className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6 text-sm sm:text-[14px]">
             <div
               className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
               onClick={() => setMilestonesCollapsed(v => !v)}
@@ -1770,7 +1822,7 @@ useEffect(() => {
         </section>
 
         {/* Tasks */}
-        <section className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6">
+        <section ref={tasksSectionRef} className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
             <h2 className="font-semibold flex items-center gap-2">☑ Course Tasks</h2>
             <div className="flex items-center gap-2">
@@ -1783,6 +1835,20 @@ useEffect(() => {
                   { id: "calendar", label: "📅︎ Calendar" },
                 ]}
               />
+              {view === "list" && (
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <span className="hidden sm:inline">Sort by</span>
+                  <select
+                    value={taskSortMode}
+                    onChange={(event) => setTaskSortMode(event.target.value)}
+                    className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    aria-label="Sort tasks"
+                  >
+                    <option value="dueDate">Due date</option>
+                    <option value="status">Status</option>
+                  </select>
+                </label>
+              )}
               <button
                 onClick={() => addTask(milestoneFilter !== "all" ? milestoneFilter : undefined)}
                 className="glass-button-primary"
@@ -1816,13 +1882,29 @@ useEffect(() => {
             aria-hidden={tasksCollapsed}
           >
             <div>
+              {view === "list" && listPriority && (
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-slate-600/90">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1 font-medium text-slate-700 shadow-sm">
+                    Showing {STATUS_PRIORITY_LABELS[listPriority] ?? "selected"} tasks first
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setListPriority(null)}
+                    className="glass-button text-xs"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
               {view === "list" ? (
                 <TaskChecklist
-                  tasks={filteredTasks}
+                  tasks={listViewTasks}
                   team={team}
                   milestones={milestones}
                   onUpdate={(id, patch) => updateTask(id, patch)}
                   onEdit={(id) => setEditing({ courseId: state.course.id, taskId: id })}
+                  statusPriority={listPriority}
+                  sortMode={taskSortMode}
                 />
               ) : view === "board" ? (
                 <BoardView
@@ -1879,11 +1961,21 @@ useEffect(() => {
 // =====================================================
 // Table + Board components
 // =====================================================
-function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }) {
+function DashboardRing({ title, subtitle, value, color, icon, mode = "percent", onClick, ariaLabel }) {
   const display = mode === "percent" ? `${value}%` : value;
   const pct = mode === "percent" ? value : undefined;
+  const interactive = typeof onClick === "function";
+  const Component = interactive ? "button" : "div";
+  const baseClass = "glass-card flex items-center gap-4 p-4";
+  const interactiveClass =
+    "w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 transition";
   return (
-    <div className="glass-card flex items-center gap-4 p-4">
+    <Component
+      type={interactive ? "button" : undefined}
+      onClick={onClick}
+      className={`${baseClass}${interactive ? ` ${interactiveClass}` : ""}`}
+      aria-label={interactive ? ariaLabel ?? title : undefined}
+    >
       <Ring
         className="w-16 h-16 xs:w-20 xs:h-20 sm:w-24 sm:h-24"
         stroke={10}
@@ -1904,7 +1996,7 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent" }
         </div>
         <div className="text-sm font-medium truncate">{subtitle}</div>
       </div>
-    </div>
+    </Component>
   );
 }
 function Toggle({ value, onChange, options }) {
