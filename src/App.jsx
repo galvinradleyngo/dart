@@ -1863,7 +1863,13 @@ useEffect(() => {
                   <span className="hidden sm:inline">Sort by</span>
                   <select
                     value={taskSortMode}
-                    onChange={(event) => setTaskSortMode(event.target.value)}
+                    onChange={(event) => {
+                      const nextMode = event.target.value;
+                      setTaskSortMode(nextMode);
+                      if (nextMode === "dueDate" && listPriority) {
+                        setListPriority(null);
+                      }
+                    }}
                     className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     aria-label="Sort tasks"
                   >
