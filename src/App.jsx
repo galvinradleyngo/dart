@@ -570,6 +570,12 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
     setLinkLibraryCollapsed((value) => !value);
   }, []);
 
+  const handleTasksHeaderClick = useCallback(() => {
+    if (tasksCollapsed) {
+      setTasksCollapsed(false);
+    }
+  }, [tasksCollapsed]);
+
   const scrollToSection = useCallback((ref) => {
     if (ref?.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1846,7 +1852,10 @@ useEffect(() => {
 
         {/* Tasks */}
         <section ref={tasksSectionRef} className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
+          <div
+            className="flex flex-wrap items-center justify-between mb-3 gap-2"
+            onClick={handleTasksHeaderClick}
+          >
             <h2 className="font-semibold flex items-center gap-2">☑ Course Tasks</h2>
             <div className="flex items-center gap-2">
               <Toggle
