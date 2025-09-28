@@ -116,6 +116,7 @@ export function syncLinkLibraryWithMilestone({
       : '';
     const shouldUseTaskLabel = hasMultipleUniqueUrls && data.taskIds.size === 1 && taskTitle;
     const label = shouldUseTaskLabel ? `${baseLabel} - ${taskTitle}` : baseLabel;
+    const pinned = existing?.pinned === true;
 
     return {
       id: existing?.id ?? uidFn(),
@@ -124,6 +125,7 @@ export function syncLinkLibraryWithMilestone({
       milestoneId,
       taskId: representativeTaskId,
       source: 'task',
+      pinned,
     };
   });
 
