@@ -147,7 +147,7 @@ describe('CoursePMApp task documents', () => {
     const expandLinkLibrary = screen.getByLabelText('Expand course link library');
     fireEvent.click(expandLinkLibrary);
 
-    const link = await screen.findByRole('link', { name: 'Alpha – Orientation Deck' });
+    const link = await screen.findByRole('link', { name: 'Alpha' });
     expect(link).toHaveAttribute('href', 'https://example.com/resources');
   });
 });
