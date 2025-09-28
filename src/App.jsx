@@ -451,11 +451,68 @@ const remapSeed = (s) => {
           const label =
             typeof link.label === "string" && link.label ? link.label : url;
           const id = typeof link.id === "string" && link.id ? link.id : uid();
-          return { id, label, url };
+          const source = typeof link.source === "string" ? link.source : undefined;
+          const base = { id, label, url };
+          if (source === "task") {
+            const rawMilestoneId = link.milestoneId;
+            const milestoneId =
+              typeof rawMilestoneId === "string" && rawMilestoneId
+                ? rawMilestoneId
+                : rawMilestoneId === null
+                ? null
+                : null;
+            const taskId = typeof link.taskId === "string" && link.taskId ? link.taskId : undefined;
+            return {
+              ...base,
+              source,
+              milestoneId,
+              ...(taskId ? { taskId } : {}),
+            };
+          }
+          if (source) {
+            return { ...base, source };
+          }
+          return base;
         })
         .filter(Boolean)
     : [];
-  s.linkLibrary = sanitizedLinks;
+
+  const tasksForLibrary = Array.isArray(s.tasks) ? s.tasks : [];
+  const milestonesForLibrary = Array.isArray(s.milestones) ? s.milestones : [];
+  const processedMilestoneIds = new Set();
+
+  let derivedLibrary = sanitizedLinks;
+  milestonesForLibrary.forEach((milestone) => {
+    if (!milestone || typeof milestone !== "object") return;
+    const milestoneId = milestone.id ?? null;
+    if (processedMilestoneIds.has(milestoneId)) return;
+    processedMilestoneIds.add(milestoneId);
+    const milestoneTitle =
+      typeof milestone.title === "string" ? milestone.title : "";
+    derivedLibrary = syncLinkLibraryWithMilestone({
+      tasks: tasksForLibrary,
+      library: derivedLibrary,
+      milestoneId,
+      milestoneTitle,
+      uidFn: uid,
+    });
+  });
+
+  const hasUnassignedTasks = tasksForLibrary.some(
+    (task) => (task?.milestoneId ?? null) === null
+  );
+
+  if (hasUnassignedTasks && !processedMilestoneIds.has(null)) {
+    derivedLibrary = syncLinkLibraryWithMilestone({
+      tasks: tasksForLibrary,
+      library: derivedLibrary,
+      milestoneId: null,
+      milestoneTitle: "",
+      uidFn: uid,
+    });
+  }
+
+  s.linkLibrary = derivedLibrary;
   return s;
 };
 
