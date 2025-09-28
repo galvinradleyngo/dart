@@ -20,7 +20,7 @@ import TaskChecklist from "./components/TaskChecklist.jsx";
 import TaskCard from "./TaskCard.jsx";
 import LinkReminderModal from "./components/LinkReminderModal.jsx";
 import BlockDialog from "./components/BlockDialog.jsx";
-import { applyLinkPatch } from "./linkUtils.js";
+import { applyLinkPatch, syncLinkLibraryWithMilestone } from "./linkUtils.js";
 import { SoundContext } from "./sound-context.js";
 import pkg from "../package.json";
 import defaultMilestoneTemplates from "../scripts/defaultMilestoneTemplates.json";
@@ -1009,41 +1009,38 @@ useEffect(() => {
     });
   const patchTaskLinks = (id, op, payload) =>
     updateCourseState((s) => {
-      const tasks = applyLinkPatch(s.tasks, id, op, payload);
-      if (op !== 'add') {
-        return { ...s, tasks };
+      let processedPayload = payload;
+      if (op === 'add') {
+        if (typeof payload !== 'string') {
+          return s;
+        }
+        const normalizedUrl = normalizeUrl(payload);
+        const finalUrl = normalizedUrl || payload.trim();
+        if (!finalUrl) {
+          return s;
+        }
+        processedPayload = finalUrl;
       }
 
-      const normalizedUrl = typeof payload === 'string' ? normalizeUrl(payload) : null;
-      const finalUrl = normalizedUrl || (typeof payload === 'string' ? payload.trim() : '');
-      if (!finalUrl) {
-        return { ...s, tasks };
-      }
-
-      const existingLibrary = Array.isArray(s.linkLibrary) ? s.linkLibrary : [];
-      if (existingLibrary.some((link) => link.url === finalUrl)) {
-        return { ...s, tasks };
-      }
-
+      const tasks = applyLinkPatch(s.tasks, id, op, processedPayload);
       const task = tasks.find((t) => t.id === id);
-      const milestoneTitle = task?.milestoneId
-        ? s.milestones.find((m) => m.id === task.milestoneId)?.title
-        : '';
-      const taskTitle = typeof task?.title === 'string' ? task.title : '';
-      const labelParts = [];
-      if (typeof milestoneTitle === 'string' && milestoneTitle.trim()) {
-        labelParts.push(milestoneTitle.trim());
+      if (!task) {
+        return { ...s, tasks };
       }
-      if (taskTitle.trim()) {
-        labelParts.push(taskTitle.trim());
-      }
-      const label = labelParts.join(' – ') || finalUrl;
-      const nextEntry = { id: uid(), label, url: finalUrl };
+
+      const milestone = s.milestones.find((m) => m.id === task.milestoneId) || null;
+      const nextLibrary = syncLinkLibraryWithMilestone({
+        tasks,
+        library: s.linkLibrary,
+        milestoneId: task.milestoneId ?? null,
+        milestoneTitle: milestone?.title ?? '',
+        uidFn: uid,
+      });
 
       return {
         ...s,
         tasks,
-        linkLibrary: [...existingLibrary, nextEntry],
+        linkLibrary: nextLibrary,
       };
     });
   const deleteTask = (id) => updateCourseState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
@@ -2595,9 +2592,40 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     updateCourses((cs) =>
       cs.map((course) => {
         if (courseIdOf(course) !== courseId) return course;
+
+        let processedPayload = payload;
+        if (op === 'add') {
+          if (typeof payload !== 'string') {
+            return course;
+          }
+          const normalizedUrl = normalizeUrl(payload);
+          const finalUrl = normalizedUrl || payload.trim();
+          if (!finalUrl) {
+            return course;
+          }
+          processedPayload = finalUrl;
+        }
+
+        const tasks = applyLinkPatch(ensureArray(course.tasks), id, op, processedPayload);
+        const task = tasks.find((item) => item.id === id);
+        if (!task) {
+          return { ...course, tasks };
+        }
+
+        const milestoneList = ensureArray(course.milestones);
+        const milestone = milestoneList.find((m) => m.id === task.milestoneId) || null;
+        const nextLibrary = syncLinkLibraryWithMilestone({
+          tasks,
+          library: course.linkLibrary,
+          milestoneId: task.milestoneId ?? null,
+          milestoneTitle: milestone?.title ?? '',
+          uidFn: uid,
+        });
+
         return {
           ...course,
-          tasks: applyLinkPatch(ensureArray(course.tasks), id, op, payload),
+          tasks,
+          linkLibrary: nextLibrary,
         };
       })
     );
