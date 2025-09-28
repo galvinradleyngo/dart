@@ -192,4 +192,47 @@ describe('CoursePMApp task documents', () => {
     const link = screen.getByRole('link', { name: 'Alpha' });
     expect(link).toHaveAttribute('href', 'https://example.com/orientation');
   });
+
+  it('allows pinning course links to keep them at the top', () => {
+    render(
+      <CoursePMApp
+        boot={createBootState()}
+        onBack={() => {}}
+        onStateChange={() => {}}
+        people={[]}
+        milestoneTemplates={[]}
+        onChangeMilestoneTemplates={() => {}}
+        onOpenUser={() => {}}
+      />
+    );
+
+    const toggle = screen.getByLabelText('Expand course link library');
+    fireEvent.click(toggle);
+    const courseSection = toggle.closest('section');
+    expect(courseSection).not.toBeNull();
+    if (!courseSection) throw new Error('Course link library section not found');
+
+    const labelInput = within(courseSection).getByLabelText('Label');
+    const urlInput = within(courseSection).getByLabelText('URL');
+    const addButton = within(courseSection).getByRole('button', { name: 'Add Link' });
+
+    fireEvent.change(labelInput, { target: { value: 'First Link' } });
+    fireEvent.change(urlInput, { target: { value: 'https://example.com/first' } });
+    fireEvent.click(addButton);
+
+    fireEvent.change(labelInput, { target: { value: 'Second Link' } });
+    fireEvent.change(urlInput, { target: { value: 'https://example.com/second' } });
+    fireEvent.click(addButton);
+
+    let items = within(courseSection).getAllByRole('listitem');
+    expect(within(items[0]).getByRole('link', { name: 'First Link' })).toBeInTheDocument();
+    expect(within(items[1]).getByRole('link', { name: 'Second Link' })).toBeInTheDocument();
+
+    const pinButton = within(items[1]).getByRole('button', { name: 'Pin link' });
+    fireEvent.click(pinButton);
+
+    items = within(courseSection).getAllByRole('listitem');
+    expect(within(items[0]).getByRole('link', { name: 'Second Link' })).toBeInTheDocument();
+    expect(within(items[0]).getByRole('button', { name: 'Unpin link' })).toBeInTheDocument();
+  });
 });

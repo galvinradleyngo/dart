@@ -62,6 +62,8 @@ import {
   Users,
   Upload,
   Download,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import {
   uid,
@@ -323,6 +325,16 @@ const saveLinkLibraryRemote = async (links) => {
   } catch {}
 };
 
+const sortLinksByPinned = (links) =>
+  (Array.isArray(links) ? links : [])
+    .map((link, index) => ({ link, index }))
+    .sort((a, b) => {
+      const pinnedDiff = Number(Boolean(b.link?.pinned)) - Number(Boolean(a.link?.pinned));
+      if (pinnedDiff !== 0) return pinnedDiff;
+      return a.index - b.index;
+    })
+    .map((item) => item.link);
+
 // =====================================================
 // Seed + Migration
 // =====================================================
@@ -452,7 +464,8 @@ const remapSeed = (s) => {
             typeof link.label === "string" && link.label ? link.label : url;
           const id = typeof link.id === "string" && link.id ? link.id : uid();
           const source = typeof link.source === "string" ? link.source : undefined;
-          const base = { id, label, url };
+          const pinned = link.pinned === true;
+          const base = { id, label, url, pinned };
           if (source === "task") {
             const rawMilestoneId = link.milestoneId;
             const milestoneId =
@@ -898,6 +911,7 @@ useEffect(() => {
   }, [tasksRaw]);
 
   const linkLibrary = Array.isArray(state.linkLibrary) ? state.linkLibrary : [];
+  const sortedCourseLinkLibrary = useMemo(() => sortLinksByPinned(linkLibrary), [linkLibrary]);
 
   const handleAddCourseLink = useCallback(
     (event) => {
@@ -912,6 +926,7 @@ useEffect(() => {
         id: uid(),
         label: label || parsed.hostname || finalUrl,
         url: finalUrl,
+        pinned: false,
       };
       persistCourseLinkLibrary([...linkLibrary, entry]);
       setNewLinkLabel("");
@@ -961,6 +976,22 @@ useEffect(() => {
       persistCourseLinkLibrary,
       handleCancelEditCourseLink,
     ]
+  );
+
+  const handleToggleCourseLinkPin = useCallback(
+    (id) => {
+      persistCourseLinkLibrary(
+        linkLibrary.map((link) =>
+          link.id === id
+            ? {
+                ...link,
+                pinned: !link.pinned,
+              }
+            : link
+        )
+      );
+    },
+    [linkLibrary, persistCourseLinkLibrary]
   );
 
 
@@ -1594,7 +1625,7 @@ useEffect(() => {
                   </div>
                 ) : (
                   <ul className="space-y-2">
-                    {linkLibrary.map((link) => (
+                    {sortedCourseLinkLibrary.map((link) => (
                       <li
                         key={link.id}
                         className="glass-card p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
@@ -1642,17 +1673,38 @@ useEffect(() => {
                         ) : (
                           <>
                             <div className="min-w-0 space-y-1">
-                              <a
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-medium text-slate-800 hover:underline break-words"
-                              >
-                                {link.label}
-                              </a>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <a
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-slate-800 hover:underline break-words"
+                                >
+                                  {link.label}
+                                </a>
+                                {link.pinned && (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/80 bg-amber-50/80 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                    <Pin className="icon h-3 w-3" aria-hidden="true" />
+                                    Pinned
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
                             </div>
                             <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleCourseLinkPin(link.id)}
+                                className={`glass-icon-button w-9 h-9 ${
+                                  link.pinned
+                                    ? 'text-amber-600 hover:text-amber-700'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                                aria-label={link.pinned ? 'Unpin link' : 'Pin link'}
+                                aria-pressed={link.pinned ? true : false}
+                              >
+                                {link.pinned ? <Pin className="icon" /> : <PinOff className="icon" />}
+                              </button>
                               <a
                                 href={link.url}
                                 target="_blank"
@@ -3825,6 +3877,7 @@ export function CoursesHub({
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
   const [linkLibrary, setLinkLibrary] = useState(() => loadLinkLibrary());
+  const sortedLinkLibrary = useMemo(() => sortLinksByPinned(linkLibrary), [linkLibrary]);
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
   const [workweekCollapsed, setWorkweekCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
@@ -4047,6 +4100,7 @@ export function CoursesHub({
         id: uid(),
         label: label || parsed.hostname || finalUrl,
         url: finalUrl,
+        pinned: false,
       };
       persistLinkLibrary([...linkLibrary, entry]);
       setNewLinkLabel("");
@@ -4096,6 +4150,22 @@ export function CoursesHub({
       persistLinkLibrary,
       handleCancelEditLink,
     ]
+  );
+
+  const handleToggleLinkPin = useCallback(
+    (id) => {
+      persistLinkLibrary(
+        linkLibrary.map((link) =>
+          link.id === id
+            ? {
+                ...link,
+                pinned: !link.pinned,
+              }
+            : link
+        )
+      );
+    },
+    [linkLibrary, persistLinkLibrary]
   );
 
   const blockAggregates = useMemo(
@@ -4686,7 +4756,7 @@ export function CoursesHub({
                   </div>
                 ) : (
                   <ul className="space-y-2">
-                    {linkLibrary.map((link) => (
+                    {sortedLinkLibrary.map((link) => (
                       <li
                         key={link.id}
                         className="glass-card p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
@@ -4734,17 +4804,38 @@ export function CoursesHub({
                         ) : (
                           <>
                             <div className="min-w-0 space-y-1">
-                              <a
-                                href={link.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="font-medium text-slate-800 hover:underline break-words"
-                              >
-                                {link.label}
-                              </a>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <a
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-slate-800 hover:underline break-words"
+                                >
+                                  {link.label}
+                                </a>
+                                {link.pinned && (
+                                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-200/80 bg-amber-50/80 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                    <Pin className="icon h-3 w-3" aria-hidden="true" />
+                                    Pinned
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-xs text-slate-600/80 break-all">{link.url}</div>
                             </div>
                             <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleLinkPin(link.id)}
+                                className={`glass-icon-button w-9 h-9 ${
+                                  link.pinned
+                                    ? 'text-amber-600 hover:text-amber-700'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                                aria-label={link.pinned ? 'Unpin link' : 'Pin link'}
+                                aria-pressed={link.pinned ? true : false}
+                              >
+                                {link.pinned ? <Pin className="icon" /> : <PinOff className="icon" />}
+                              </button>
                               <a
                                 href={link.url}
                                 target="_blank"
