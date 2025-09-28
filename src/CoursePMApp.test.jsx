@@ -84,6 +84,29 @@ const createBootStateWithTask = () => ({
   ],
 });
 
+const createBootStateWithExistingLink = () => ({
+  ...createBootState(),
+  tasks: [
+    {
+      id: 'task-1',
+      order: 0,
+      title: 'Orientation Deck',
+      details: '',
+      note: '',
+      links: ['https://example.com/orientation'],
+      blocks: [],
+      depTaskId: null,
+      assigneeId: null,
+      milestoneId: 'm2',
+      status: 'todo',
+      startDate: '',
+      workDays: 0,
+      dueDate: '',
+      completedDate: '',
+    },
+  ],
+});
+
 describe('CoursePMApp milestones collapse ordering', () => {
   const renderApp = () =>
     render(
@@ -149,5 +172,24 @@ describe('CoursePMApp task documents', () => {
 
     const link = await screen.findByRole('link', { name: 'Alpha' });
     expect(link).toHaveAttribute('href', 'https://example.com/resources');
+  });
+
+  it('populates the link library from existing task links on load', () => {
+    render(
+      <CoursePMApp
+        boot={createBootStateWithExistingLink()}
+        onBack={() => {}}
+        onStateChange={() => {}}
+        people={[]}
+        milestoneTemplates={[]}
+        onChangeMilestoneTemplates={() => {}}
+        onOpenUser={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByLabelText('Expand course link library'));
+
+    const link = screen.getByRole('link', { name: 'Alpha' });
+    expect(link).toHaveAttribute('href', 'https://example.com/orientation');
   });
 });
