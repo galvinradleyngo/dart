@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, beforeEach, beforeAll, expect, vi } from 'vitest';
 import { CoursePMApp } from './App.jsx';
 
@@ -61,6 +61,29 @@ const createBootState = () => ({
   tasks: [],
 });
 
+const createBootStateWithTask = () => ({
+  ...createBootState(),
+  tasks: [
+    {
+      id: 'task-1',
+      order: 0,
+      title: 'Orientation Deck',
+      details: '',
+      note: '',
+      links: [],
+      blocks: [],
+      depTaskId: null,
+      assigneeId: null,
+      milestoneId: 'm2',
+      status: 'todo',
+      startDate: '',
+      workDays: 0,
+      dueDate: '',
+      completedDate: '',
+    },
+  ],
+});
+
 describe('CoursePMApp milestones collapse ordering', () => {
   const renderApp = () =>
     render(
@@ -92,5 +115,39 @@ describe('CoursePMApp milestones collapse ordering', () => {
     fireEvent.click(collapseButton);
 
     expect(getMilestoneTitles(section)).toEqual(['Alpha', 'Beta', 'Gamma']);
+  });
+});
+
+describe('CoursePMApp task documents', () => {
+  it('adds new task links to the course link library with task context', async () => {
+    render(
+      <CoursePMApp
+        boot={createBootStateWithTask()}
+        onBack={() => {}}
+        onStateChange={() => {}}
+        people={[]}
+        milestoneTemplates={[]}
+        onChangeMilestoneTemplates={() => {}}
+        onOpenUser={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /expand course tasks/i }));
+    fireEvent.click(screen.getByRole('button', { name: /board/i }));
+
+    const taskCard = await screen.findByTestId('task-card');
+    const expandTaskButton = within(taskCard).getByTitle('Expand');
+    fireEvent.click(expandTaskButton);
+
+    const documentInput = within(taskCard).getByPlaceholderText('Paste link and press Enter');
+    fireEvent.change(documentInput, { target: { value: 'example.com/resources' } });
+    const addDocumentButton = within(taskCard).getByRole('button', { name: /add document/i });
+    fireEvent.click(addDocumentButton);
+
+    const expandLinkLibrary = screen.getByLabelText('Expand course link library');
+    fireEvent.click(expandLinkLibrary);
+
+    const link = await screen.findByRole('link', { name: 'Alpha – Orientation Deck' });
+    expect(link).toHaveAttribute('href', 'https://example.com/resources');
   });
 });

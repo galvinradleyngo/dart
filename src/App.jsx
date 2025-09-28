@@ -1008,10 +1008,44 @@ useEffect(() => {
       return { ...s, tasks: [...s.tasks, clone] };
     });
   const patchTaskLinks = (id, op, payload) =>
-    updateCourseState((s) => ({
-      ...s,
-      tasks: applyLinkPatch(s.tasks, id, op, payload),
-    }));
+    updateCourseState((s) => {
+      const tasks = applyLinkPatch(s.tasks, id, op, payload);
+      if (op !== 'add') {
+        return { ...s, tasks };
+      }
+
+      const normalizedUrl = typeof payload === 'string' ? normalizeUrl(payload) : null;
+      const finalUrl = normalizedUrl || (typeof payload === 'string' ? payload.trim() : '');
+      if (!finalUrl) {
+        return { ...s, tasks };
+      }
+
+      const existingLibrary = Array.isArray(s.linkLibrary) ? s.linkLibrary : [];
+      if (existingLibrary.some((link) => link.url === finalUrl)) {
+        return { ...s, tasks };
+      }
+
+      const task = tasks.find((t) => t.id === id);
+      const milestoneTitle = task?.milestoneId
+        ? s.milestones.find((m) => m.id === task.milestoneId)?.title
+        : '';
+      const taskTitle = typeof task?.title === 'string' ? task.title : '';
+      const labelParts = [];
+      if (typeof milestoneTitle === 'string' && milestoneTitle.trim()) {
+        labelParts.push(milestoneTitle.trim());
+      }
+      if (taskTitle.trim()) {
+        labelParts.push(taskTitle.trim());
+      }
+      const label = labelParts.join(' – ') || finalUrl;
+      const nextEntry = { id: uid(), label, url: finalUrl };
+
+      return {
+        ...s,
+        tasks,
+        linkLibrary: [...existingLibrary, nextEntry],
+      };
+    });
   const deleteTask = (id) => updateCourseState((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
   const handleDeleteUnassignedTasksClick = () => {
     if (!window.confirm("Delete all unassigned tasks? This action cannot be undone.")) return;
