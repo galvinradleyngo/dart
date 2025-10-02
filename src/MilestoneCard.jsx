@@ -8,6 +8,8 @@ export default function MilestoneCard({
   tasksAll = [],
   team = [],
   milestones = [],
+  taskSort: taskSortProp = 'numeric',
+  onTaskSortChange,
   onUpdate,
   onDelete,
   onDuplicate,
@@ -23,6 +25,15 @@ export default function MilestoneCard({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(milestone.title);
   const detailsRef = useRef(null);
+  const isTaskSortControlled = typeof onTaskSortChange === 'function';
+  const [internalTaskSort, setInternalTaskSort] = useState(taskSortProp);
+
+  useEffect(() => {
+    if (isTaskSortControlled) return;
+    setInternalTaskSort(taskSortProp);
+  }, [taskSortProp, isTaskSortControlled]);
+
+  const taskSort = isTaskSortControlled ? taskSortProp : internalTaskSort;
 
   useEffect(() => setTitleDraft(milestone.title), [milestone.title]);
 
@@ -38,15 +49,159 @@ export default function MilestoneCard({
   const { pct, tasksSorted } = useMemo(() => {
     const completedCount = tasks.filter((t) => t.status === 'done' || t.status === 'skip').length;
     const pct = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
-    const tasksSorted = [...tasks].sort(
-      (a, b) =>
-        (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99) ||
-        a.order - b.order,
-    );
+    const toTimestamp = (task) => {
+      const value = task?.dueDate;
+      if (!value) return null;
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+      if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.getTime();
+      if (typeof value === 'string') {
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      if (value && typeof value.toMillis === 'function') {
+        const millis = value.toMillis();
+        return Number.isFinite(millis) ? millis : null;
+      }
+      if (value && typeof value.toDate === 'function') {
+        const date = value.toDate();
+        if (date instanceof Date && !Number.isNaN(date.getTime())) return date.getTime();
+      }
+      if (value && typeof value.seconds === 'number') {
+        return value.seconds * 1000;
+      }
+      return null;
+    };
+    const compareTitle = (a, b) =>
+      (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+    const compareStatus = (a, b) =>
+      (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99) ||
+      (a.order ?? 0) - (b.order ?? 0);
+    const extractNumeric = (task) => {
+      const match = (task?.title ?? '').match(/\d+/);
+      if (!match) return null;
+      const [raw] = match;
+      const normalized = raw.replace(/^0+/, '') || '0';
+      const value = Number.parseInt(normalized, 10);
+      if (!Number.isFinite(value)) return null;
+      return {
+        length: normalized.length,
+        value,
+        index: match.index ?? 0,
+      };
+    };
+    const compareNumeric = (a, b) => {
+      const aNum = extractNumeric(a);
+      const bNum = extractNumeric(b);
+      if (aNum && bNum) {
+        if (aNum.length !== bNum.length) return aNum.length - bNum.length;
+        if (aNum.value !== bNum.value) return aNum.value - bNum.value;
+        if (aNum.index !== bNum.index) return aNum.index - bNum.index;
+        return compareTitle(a, b) || compareStatus(a, b);
+      }
+      if (aNum) return -1;
+      if (bNum) return 1;
+      return compareTitle(a, b) || compareStatus(a, b);
+    };
+    const analyzeTitleNumeric = (task) => {
+      const title = task?.title ?? '';
+      if (!title) return null;
+      const leadingMatch = title.match(/^\s*(\d+)/);
+      if (leadingMatch) {
+        const digits = leadingMatch[1];
+        const normalized = digits.replace(/^0+/, '') || '0';
+        const value = Number.parseInt(normalized, 10);
+        if (!Number.isFinite(value)) return null;
+        const remainder = title
+          .slice(leadingMatch[0].length)
+          .trimStart();
+        return {
+          type: 'leading',
+          length: normalized.length,
+          value,
+          remainder,
+        };
+      }
+      const anywhereMatch = title.match(/\d+/);
+      if (!anywhereMatch) return null;
+      const normalized = anywhereMatch[0].replace(/^0+/, '') || '0';
+      const value = Number.parseInt(normalized, 10);
+      if (!Number.isFinite(value)) return null;
+      return {
+        type: 'embedded',
+        length: normalized.length,
+        value,
+        index: anywhereMatch.index ?? 0,
+        remainder: title
+          .slice((anywhereMatch.index ?? 0) + anywhereMatch[0].length)
+          .trimStart(),
+      };
+    };
+    const compareTitleAlpha = (a, b) => {
+      const aInfo = analyzeTitleNumeric(a);
+      const bInfo = analyzeTitleNumeric(b);
+      const titleRemainderCompare = (aRem, bRem) =>
+        (aRem || '').localeCompare(bRem || '', undefined, { sensitivity: 'base' });
+
+      if (aInfo?.type === 'leading' && bInfo?.type === 'leading') {
+        if (aInfo.length !== bInfo.length) return aInfo.length - bInfo.length;
+        if (aInfo.value !== bInfo.value) return aInfo.value - bInfo.value;
+        const remainderCmp = titleRemainderCompare(aInfo.remainder, bInfo.remainder);
+        if (remainderCmp !== 0) return remainderCmp;
+        return compareStatus(a, b);
+      }
+      if (aInfo?.type === 'leading') return -1;
+      if (bInfo?.type === 'leading') return 1;
+
+      if (aInfo && bInfo) {
+        if (aInfo.length !== bInfo.length) return aInfo.length - bInfo.length;
+        if (aInfo.value !== bInfo.value) return aInfo.value - bInfo.value;
+        if (aInfo.index !== bInfo.index) return aInfo.index - bInfo.index;
+        const remainderCmp = titleRemainderCompare(aInfo.remainder, bInfo.remainder);
+        if (remainderCmp !== 0) return remainderCmp;
+        return compareStatus(a, b);
+      }
+      if (aInfo) return -1;
+      if (bInfo) return 1;
+      const titleCmp = compareTitle(a, b);
+      if (titleCmp !== 0) return titleCmp;
+      return compareStatus(a, b);
+    };
+    const now = Date.now();
+    const compareDeadline = (a, b) => {
+      const aTs = toTimestamp(a);
+      const bTs = toTimestamp(b);
+      if (aTs === null && bTs === null) return compareTitle(a, b);
+      if (aTs === null) return 1;
+      if (bTs === null) return -1;
+      const aDiff = Math.abs(aTs - now);
+      const bDiff = Math.abs(bTs - now);
+      if (aDiff !== bDiff) return aDiff - bDiff;
+      if (aTs !== bTs) return aTs - bTs;
+      return compareTitle(a, b);
+    };
+    const sorter = taskSort === 'deadline'
+      ? compareDeadline
+      : taskSort === 'title'
+        ? compareTitleAlpha
+        : taskSort === 'status'
+          ? (a, b) => compareStatus(a, b) || compareTitle(a, b)
+          : compareNumeric;
+    const tasksSorted = [...tasks].sort(sorter);
     return { pct, tasksSorted };
-  }, [tasks]);
+  }, [tasks, taskSort]);
 
   const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
+
+  const handleTaskSortChange = (event) => {
+    const { value } = event.target;
+    if (value === taskSort) return;
+    if (isTaskSortControlled) {
+      onTaskSortChange?.(value);
+      return;
+    }
+    setInternalTaskSort(value);
+    onTaskSortChange?.(value);
+  };
 
   const triggerAddTask = () => {
     if (detailsRef.current) {
@@ -163,10 +318,28 @@ export default function MilestoneCard({
           )}
         </div>
       </summary>
-      <div className="p-4 flex flex-col gap-2">
-        {milestone.goal && (
-          <p className="text-sm text-black/60 mb-2">{milestone.goal}</p>
-        )}
+      <div className="p-4 flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          {milestone.goal && (
+            <p className="text-sm text-black/60 max-w-xl">{milestone.goal}</p>
+          )}
+          <label className="flex items-center gap-2 rounded-2xl border border-black/10 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">
+            <span className="hidden sm:inline text-xs uppercase tracking-wide text-slate-500">
+              Sort by
+            </span>
+            <select
+              value={taskSort}
+              onChange={handleTaskSortChange}
+              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
+              aria-label="Sort tasks within milestones"
+            >
+              <option value="numeric">1–N</option>
+              <option value="status">Status</option>
+              <option value="title">A–Z</option>
+              <option value="deadline">Deadline</option>
+            </select>
+          </label>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {tasksSorted.map((t) => (
             <TaskCard
