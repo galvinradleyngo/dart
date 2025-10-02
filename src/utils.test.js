@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { uid, normalizeUrl } from './utils.js';
+import { uid, normalizeUrl, ensureHexColor, withAlpha } from './utils.js';
 
 describe('uid', () => {
   it('returns a valid UUID v4', () => {
@@ -16,6 +16,31 @@ describe('uid', () => {
       expect(ids.has(id)).toBe(false);
       ids.add(id);
     }
+  });
+});
+
+describe('ensureHexColor', () => {
+  it('returns a normalized 6 digit hex when valid', () => {
+    expect(ensureHexColor('#FF00AA')).toBe('#ff00aa');
+  });
+
+  it('strips alpha when provided', () => {
+    expect(ensureHexColor('#123456cc')).toBe('#123456');
+  });
+
+  it('falls back when invalid', () => {
+    expect(ensureHexColor('not-a-color', '#abcdef')).toBe('#abcdef');
+  });
+});
+
+describe('withAlpha', () => {
+  it('appends the correct alpha channel', () => {
+    expect(withAlpha('#123456', 0.5)).toBe('#12345680');
+  });
+
+  it('clamps the provided alpha value', () => {
+    expect(withAlpha('#123456', 2)).toBe('#123456ff');
+    expect(withAlpha('#123456', -1)).toBe('#12345600');
   });
 });
 
