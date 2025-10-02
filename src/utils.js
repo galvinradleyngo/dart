@@ -2,8 +2,18 @@ export function uid() {
   return crypto.randomUUID();
 }
 
-export const todayStr = () => new Date().toISOString().slice(0, 10);
-export const fmt = (d) => new Date(d).toISOString().slice(0, 10);
+const formatLocalDate = (date) => {
+  if (Number.isNaN(date.getTime())) {
+    throw new RangeError("Invalid time value");
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const todayStr = () => formatLocalDate(new Date());
+export const fmt = (d) => formatLocalDate(new Date(d));
 export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 
 const tryParseUrl = (value) => {
