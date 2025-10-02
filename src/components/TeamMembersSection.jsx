@@ -1,6 +1,6 @@
 import React from "react";
-import { X, ChevronDown, ChevronUp, Users, UserPlus } from "lucide-react";
-import { rolePalette } from "../utils.js";
+import { X, ChevronDown, ChevronUp, Users, UserPlus, Palette } from "lucide-react";
+import { rolePalette, roleColor, ensureHexColor, withAlpha } from "../utils.js";
 import Avatar from "./Avatar.jsx";
 
 function TeamMemberCard({
@@ -16,6 +16,11 @@ function TeamMemberCard({
   const openUser = () => {
     onOpenUser?.(member.id);
   };
+  const cardColor = ensureHexColor(
+    member.accentColor ?? member.color ?? roleColor(member.roleType),
+    roleColor(member.roleType)
+  );
+  const translucent = withAlpha(cardColor, 0.2);
   const handleCardClick = (event) => {
     if (event.defaultPrevented) {
       return;
@@ -31,7 +36,7 @@ function TeamMemberCard({
   };
   return (
     <div
-      className="group glass-card p-3 flex items-center justify-between cursor-pointer"
+      className="group glass-card p-3 flex items-center justify-between cursor-pointer border-2"
       role="button"
       tabIndex={0}
       onClick={handleCardClick}
@@ -44,8 +49,14 @@ function TeamMemberCard({
           openUser();
         }
       }}
+      style={{ borderColor: cardColor, backgroundColor: translucent }}
     >
       <div className="flex items-center gap-2 min-w-0">
+        <span
+          className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+          style={{ backgroundColor: cardColor, boxShadow: `0 0 8px ${withAlpha(cardColor, 0.6)}` }}
+          aria-hidden="true"
+        />
         <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
         <span className="font-medium truncate text-left hover:underline">{member.name}</span>
       </div>
@@ -64,6 +75,30 @@ function TeamMemberCard({
               </option>
             ))}
           </select>
+          <label
+            className="glass-icon-button w-9 h-9 relative overflow-hidden"
+            title="Pick card color"
+            data-team-card-control="true"
+          >
+            <Palette className="icon" />
+            <input
+              type="color"
+              value={cardColor}
+              onChange={(e) => onUpdate(member.id, { accentColor: e.target.value })}
+              aria-label={`Set card color for ${member.name}`}
+              className="absolute inset-0 cursor-pointer opacity-0"
+              data-team-card-control="true"
+            />
+          </label>
+          <button
+            className="glass-button text-xs px-3 py-1"
+            onClick={() => onUpdate(member.id, { accentColor: null })}
+            title="Reset to role color"
+            aria-label={`Reset ${member.name}'s card color to role default`}
+            data-team-card-control="true"
+          >
+            Role color
+          </button>
           {(member.roleType === "LD" || member.roleType === "SME") && (
             <label
               className="text-sm inline-flex items-center gap-1 cursor-pointer text-slate-600"

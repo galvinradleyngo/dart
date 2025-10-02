@@ -74,6 +74,8 @@ import {
   roleOrder,
   roleColor,
   nextMemberName,
+  ensureHexColor,
+  withAlpha,
   isHoliday,
   isWorkday,
   addBusinessDays,
@@ -132,6 +134,32 @@ const AVATAR_CHOICES = [
   "🤖","👻","🦋","🐙","🦉","🦜","🦚","🦥","🦦","🦘",
   "🦨","🦩","🦢","🐳","🐬","🦈","🐊","🦀","🦂","🐞"
 ];
+
+const CARD_COLOR_CHOICES = Array.from(
+  new Set([
+    "#4f46e5",
+    "#16a34a",
+    "#0891b2",
+    "#ea580c",
+    "#a855f7",
+    "#f97316",
+    "#22c55e",
+    "#22d3ee",
+    "#38bdf8",
+    "#facc15",
+    "#ef4444",
+    "#f472b6",
+    "#6366f1",
+    "#0ea5e9",
+    "#14b8a6",
+  ])
+);
+
+const resolveMemberColor = (member) =>
+  ensureHexColor(
+    member?.accentColor ?? member?.color ?? roleColor(member?.roleType),
+    roleColor(member?.roleType || "Other")
+  );
 
 const mergeById = (base = [], extra = []) => {
   const map = new Map(base.map(t => [t.id, t]));
@@ -357,11 +385,11 @@ export const seed = ({ withSampleData = false } = {}) => {
     course: { id: uid(), name: "Intro to Learning Design", description: "From analysis to deployment, track the whole build.", accent: "from-fuchsia-500 via-pink-500 to-rose-500", courseLDIds: [], courseSMEIds: [] },
     schedule: { workweek: [1,2,3,4,5], holidays: [] }, // back-compat; overridden by global
     team: [
-      { id: uid(), name: "Alex Cruz", roleType: "LD",  color: roleColor("LD"),  avatar: "" },
-      { id: uid(), name: "Dr. Reyes", roleType: "SME", color: roleColor("SME"), avatar: "" },
-      { id: uid(), name: "Pat Santos", roleType: "PM",  color: roleColor("PM"),  avatar: "" },
-      { id: uid(), name: "Jae Lim", roleType: "MM",     color: roleColor("MM"),   avatar: "" },
-      { id: uid(), name: "Rio Tan", roleType: "PA",     color: roleColor("PA"),   avatar: "" },
+      { id: uid(), name: "Alex Cruz", roleType: "LD",  color: roleColor("LD"),  accentColor: null, avatar: "" },
+      { id: uid(), name: "Dr. Reyes", roleType: "SME", color: roleColor("SME"), accentColor: null, avatar: "" },
+      { id: uid(), name: "Pat Santos", roleType: "PM",  color: roleColor("PM"),  accentColor: null, avatar: "" },
+      { id: uid(), name: "Jae Lim", roleType: "MM",     color: roleColor("MM"),   accentColor: null, avatar: "" },
+      { id: uid(), name: "Rio Tan", roleType: "PA",     color: roleColor("PA"),   accentColor: null, avatar: "" },
     ],
     milestones: [],
     tasks: [],
@@ -445,7 +473,12 @@ const remapSeed = (s) => {
     return { ...t, milestoneId, workDays, startDate, dueDate, links, note, blocks, depTaskId: t.depTaskId ?? null, completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : "") };
   });
   s.milestones = s.milestones.map((m) => { const { due, ...rest } = m; return rest; });
-  s.team = s.team.map((m) => ({ ...m, color: roleColor(m.roleType), avatar: m.avatar || "" }));
+  s.team = s.team.map((m) => ({
+    ...m,
+    color: ensureHexColor(m.color ?? roleColor(m.roleType), roleColor(m.roleType)),
+    accentColor: m.accentColor ?? null,
+    avatar: m.avatar || "",
+  }));
   const LD = s.team.find((m) => m.roleType === "LD");
   const SME = s.team.find((m) => m.roleType === "SME");
   s.course.courseLDIds  = s.course.courseLDIds?.length  ? s.course.courseLDIds  : (LD  ? [LD.id]  : []);
@@ -1289,8 +1322,45 @@ useEffect(() => {
   };
 
   // Members
-  const updateMember = (id, patch) => updateCourseState((s)=>({ ...s, team: s.team.map((m)=>{ if(m.id!==id) return m; const next={...m,...patch}; if(patch.roleType) next.color = roleColor(patch.roleType); return next; }) }));
-  const addMember    = () => updateCourseState((s)=>({ ...s, team: [...s.team, { id: uid(), name: nextMemberName(s.team), roleType:"Other", color: roleColor("Other"), avatar: "" }] }));
+  const updateMember = (id, patch) =>
+    updateCourseState((s) => ({
+      ...s,
+      team: s.team.map((m) => {
+        if (m.id !== id) return m;
+        const next = { ...m, ...patch };
+        if (Object.prototype.hasOwnProperty.call(patch, 'accentColor')) {
+          next.accentColor =
+            patch.accentColor === null
+              ? null
+              : ensureHexColor(patch.accentColor, roleColor(next.roleType));
+        }
+        if (patch.roleType) {
+          next.color = roleColor(patch.roleType);
+          if (!next.accentColor) {
+            next.accentColor = null;
+          }
+        }
+        if (!next.color) {
+          next.color = roleColor(next.roleType);
+        }
+        return next;
+      }),
+    }));
+  const addMember = () =>
+    updateCourseState((s) => ({
+      ...s,
+      team: [
+        ...s.team,
+        {
+          id: uid(),
+          name: nextMemberName(s.team),
+          roleType: "Other",
+          color: roleColor("Other"),
+          accentColor: null,
+          avatar: "",
+        },
+      ],
+    }));
   const addExistingMember = (pid) => updateCourseState((s)=>{
     if (s.team.some((m)=>m.id===pid)) return s;
     const person = people.find((p)=>p.id===pid);
@@ -4500,16 +4570,32 @@ export function CoursesHub({
   const open = (id) => onOpenCourse(id);
   const addPerson = () => {
     const name = nextMemberName(people);
-    const p = { id: uid(), name, roleType: 'Other', color: roleColor('Other'), avatar: '' };
+    const p = { id: uid(), name, roleType: 'Other', color: roleColor('Other'), accentColor: null, avatar: '' };
     onPeopleChange([...people, p]);
   };
   const updatePerson = (id, updates) => {
     onPeopleChange(
-      people.map((p) =>
-        p.id === id
-          ? { ...p, ...updates, ...(updates.roleType ? { color: roleColor(updates.roleType) } : {}) }
-          : p
-      )
+      people.map((p) => {
+        if (p.id !== id) return p;
+        const next = { ...p, ...updates };
+        if (Object.prototype.hasOwnProperty.call(updates, 'accentColor')) {
+          next.accentColor =
+            updates.accentColor === null
+              ? null
+              : ensureHexColor(updates.accentColor, roleColor(next.roleType));
+        }
+        if (updates.roleType) {
+          next.roleType = updates.roleType;
+          next.color = roleColor(updates.roleType);
+          if (!next.accentColor) {
+            next.accentColor = null;
+          }
+        }
+        if (!next.color) {
+          next.color = roleColor(next.roleType);
+        }
+        return next;
+      })
     );
   };
   const renamePerson = (id, name) => updatePerson(id, { name });
@@ -4595,6 +4681,10 @@ export function CoursesHub({
                 })
                 .map((m) => {
                   const interactive = !membersEditing;
+                  const cardColor = resolveMemberColor(m);
+                  const accentValue = ensureHexColor(m.accentColor ?? cardColor, cardColor);
+                  const backgroundTint = withAlpha(cardColor, 0.18);
+                  const glow = withAlpha(cardColor, 0.4);
                   const cardProps = interactive
                     ? {
                         role: "button",
@@ -4609,20 +4699,24 @@ export function CoursesHub({
                         "aria-label": `Open ${m.name}`,
                       }
                     : {};
-                return (
-                  <div
-                    key={m.id}
-                    className={`group glass-card p-4 flex flex-col items-center text-center border-2 ${
-                      interactive
-                        ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
-                        : ""
-                    }`}
-                    style={{ borderColor: m.color, backgroundColor: `${m.color}20` }}
-                    {...cardProps}
-                  >
-                    <Avatar
-                      name={m.name}
-                      roleType={m.roleType}
+                  return (
+                    <div
+                      key={m.id}
+                      className={`group glass-card p-4 flex flex-col items-center text-center border-2 ${
+                        interactive
+                          ? "cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
+                          : ""
+                      }`}
+                      style={{
+                        borderColor: cardColor,
+                        backgroundColor: backgroundTint,
+                        boxShadow: `0 18px 36px -24px ${glow}`,
+                      }}
+                      {...cardProps}
+                    >
+                      <Avatar
+                        name={m.name}
+                        roleType={m.roleType}
                         avatar={m.avatar}
                         className="w-12 h-12 text-2xl mb-2"
                       />
@@ -4656,6 +4750,54 @@ export function CoursesHub({
                               </option>
                             ))}
                           </select>
+                          <div className="mt-2 w-full">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Card color</div>
+                            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                              {CARD_COLOR_CHOICES.map((color) => {
+                                const normalized = ensureHexColor(color, cardColor);
+                                const isActive =
+                                  m.accentColor != null
+                                    ? ensureHexColor(m.accentColor, cardColor) === normalized
+                                    : normalized === cardColor;
+                                return (
+                                  <button
+                                    key={color}
+                                    type="button"
+                                    className={`h-7 w-7 rounded-full border transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-500 ${
+                                      isActive ? 'ring-2 ring-offset-2 ring-white/70' : ''
+                                    }`}
+                                    style={{
+                                      backgroundColor: normalized,
+                                      borderColor: isActive ? withAlpha('#0f172a', 0.35) : 'transparent',
+                                      boxShadow: isActive ? `0 0 0 2px ${withAlpha(normalized, 0.5)}` : 'none',
+                                    }}
+                                    onClick={() => updatePerson(m.id, { accentColor: normalized })}
+                                    aria-label={`Set ${m.name}'s card color to ${normalized}`}
+                                  />
+                                );
+                              })}
+                              <label
+                                className="relative inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-slate-500"
+                                title="Pick a custom color"
+                              >
+                                <span className="h-4 w-4 rounded-full" style={{ backgroundColor: accentValue }} aria-hidden="true" />
+                                <input
+                                  type="color"
+                                  value={accentValue}
+                                  onChange={(e) => updatePerson(m.id, { accentColor: e.target.value })}
+                                  className="absolute inset-0 opacity-0 cursor-pointer"
+                                  aria-label={`Choose a custom card color for ${m.name}`}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => updatePerson(m.id, { accentColor: null })}
+                                className="glass-button text-xs px-3 py-1"
+                              >
+                                Role color
+                              </button>
+                            </div>
+                          </div>
                           <div className="mt-2 flex gap-2">
                             <button
                               onClick={() => onOpenUser(m.id)}
@@ -4673,6 +4815,13 @@ export function CoursesHub({
                         </>
                       ) : (
                         <>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className="inline-flex h-2 w-10 rounded-full"
+                              style={{ backgroundColor: cardColor, boxShadow: `0 0 10px ${withAlpha(cardColor, 0.6)}` }}
+                              aria-hidden="true"
+                            />
+                          </div>
                           <div className="font-medium leading-tight group-hover:underline">{m.name}</div>
                           <div className="text-sm text-slate-600/90">{m.roleType}</div>
                         </>
