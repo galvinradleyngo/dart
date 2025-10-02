@@ -1993,6 +1993,7 @@ useEffect(() => {
                       tasks={groupedTasks[m.id] || []}
                       tasksAll={tasksRaw}
                       taskSort={milestoneTaskSort}
+                      onTaskSortChange={setMilestoneTaskSort}
                       team={team}
                       milestones={milestones}
                       onUpdate={updateTask}

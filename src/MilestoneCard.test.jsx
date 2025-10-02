@@ -26,8 +26,7 @@ describe('MilestoneCard', () => {
     ];
     render(<MilestoneCard milestone={milestone} tasks={tasks} />);
     const pct = 50;
-    const hue = 330 + (pct / 100) * (120 - 330);
-    const color = `hsl(${hue}, 70%, 50%)`;
+    const color = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
     const bar = screen.getByTestId('progress-fill');
     expect(bar.getAttribute('style')).toContain(`background-color: ${color}`);
   });

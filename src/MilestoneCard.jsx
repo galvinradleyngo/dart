@@ -9,6 +9,7 @@ export default function MilestoneCard({
   team = [],
   milestones = [],
   taskSort = 'status',
+  onTaskSortChange = () => {},
   onUpdate,
   onDelete,
   onDuplicate,
@@ -89,6 +90,10 @@ export default function MilestoneCard({
   }, [tasks, taskSort]);
 
   const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
+
+  const handleTaskSortChange = (event) => {
+    onTaskSortChange(event.target.value);
+  };
 
   const triggerAddTask = () => {
     if (detailsRef.current) {
@@ -205,10 +210,27 @@ export default function MilestoneCard({
           )}
         </div>
       </summary>
-      <div className="p-4 flex flex-col gap-2">
-        {milestone.goal && (
-          <p className="text-sm text-black/60 mb-2">{milestone.goal}</p>
-        )}
+      <div className="p-4 flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          {milestone.goal && (
+            <p className="text-sm text-black/60 max-w-xl">{milestone.goal}</p>
+          )}
+          <label className="flex items-center gap-2 rounded-2xl border border-black/10 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">
+            <span className="hidden sm:inline text-xs uppercase tracking-wide text-slate-500">
+              Sort by
+            </span>
+            <select
+              value={taskSort}
+              onChange={handleTaskSortChange}
+              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
+              aria-label="Sort tasks within milestones"
+            >
+              <option value="status">Status</option>
+              <option value="title">A–Z</option>
+              <option value="deadline">Deadline</option>
+            </select>
+          </label>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {tasksSorted.map((t) => (
             <TaskCard
