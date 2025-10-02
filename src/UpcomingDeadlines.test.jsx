@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UserDashboard, UPCOMING_DAYS } from './App.jsx';
-import { fmt } from './utils.js';
+import { fmt, todayStr } from './utils.js';
 
 vi.mock('./firebase.js', () => ({ db: {} }));
 vi.mock('firebase/firestore', () => ({
@@ -13,6 +13,26 @@ vi.mock('firebase/firestore', () => ({
 describe('Upcoming Deadlines window', () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  it('formats today and due dates without relying on UTC conversions', () => {
+    const originalToISOString = Date.prototype.toISOString;
+    const sample = new Date(2024, 0, 1, 23, 45, 0);
+    const expected = `${sample.getFullYear()}-${String(sample.getMonth() + 1).padStart(2, "0")}-${String(sample.getDate()).padStart(2, "0")}`;
+
+    try {
+      Date.prototype.toISOString = vi.fn(() => {
+        throw new Error('toISOString should not be called');
+      });
+      vi.useFakeTimers();
+      vi.setSystemTime(sample);
+
+      expect(fmt(sample)).toBe(expected);
+      expect(todayStr()).toBe(expected);
+    } finally {
+      vi.useRealTimers();
+      Date.prototype.toISOString = originalToISOString;
+    }
   });
 
   it('shows tasks due within the upcoming window', async () => {
