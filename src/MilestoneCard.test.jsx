@@ -45,13 +45,11 @@ describe('MilestoneCard', () => {
     expect(details?.open).toBe(true);
   });
 
-  it('sorts tasks by status by default', () => {
+  it('sorts tasks by numeric order by default', () => {
     const tasks = [
-      { id: 't1', title: 'Done task', status: 'done', order: 0 },
-      { id: 't2', title: 'Todo task', status: 'todo', order: 2 },
-      { id: 't3', title: 'Blocked task', status: 'blocked', order: 1 },
-      { id: 't4', title: 'In progress task', status: 'inprogress', order: 3 },
-      { id: 't5', title: 'Skipped task', status: 'skip', order: 4 },
+      { id: 't1', title: 'First task', status: 'todo', order: 1 },
+      { id: 't2', title: 'Zeroth task', status: 'todo', order: 0 },
+      { id: 't3', title: 'Second task', status: 'todo', order: 2 },
     ];
 
     render(<MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />);
@@ -60,13 +58,7 @@ describe('MilestoneCard', () => {
       .getAllByTestId('task-card')
       .map((card) => within(card).getByTitle('Click to edit').textContent);
 
-    expect(titles).toEqual([
-      'Todo task',
-      'In progress task',
-      'Blocked task',
-      'Done task',
-      'Skipped task',
-    ]);
+    expect(titles).toEqual(['Zeroth task', 'First task', 'Second task']);
   });
 
   it('sorts tasks alphabetically when requested', () => {
@@ -85,6 +77,37 @@ describe('MilestoneCard', () => {
       .map((card) => within(card).getByTitle('Click to edit').textContent);
 
     expect(titles).toEqual(['Alpha', 'beta', 'zeta']);
+  });
+
+  it('sorts tasks by status when requested', () => {
+    const tasks = [
+      { id: 't1', title: 'Done task', status: 'done', order: 0 },
+      { id: 't2', title: 'Todo task', status: 'todo', order: 2 },
+      { id: 't3', title: 'Blocked task', status: 'blocked', order: 1 },
+      { id: 't4', title: 'In progress task', status: 'inprogress', order: 3 },
+      { id: 't5', title: 'Skipped task', status: 'skip', order: 4 },
+    ];
+
+    render(
+      <MilestoneCard
+        milestone={milestone}
+        tasks={tasks}
+        tasksAll={tasks}
+        taskSort="status"
+      />,
+    );
+
+    const titles = screen
+      .getAllByTestId('task-card')
+      .map((card) => within(card).getByTitle('Click to edit').textContent);
+
+    expect(titles).toEqual([
+      'Todo task',
+      'In progress task',
+      'Blocked task',
+      'Done task',
+      'Skipped task',
+    ]);
   });
 
   it('sorts tasks by deadline recency when requested', () => {
@@ -153,12 +176,15 @@ describe('CoursePMApp milestone task sorting', () => {
           .getAllByTestId('task-card')
           .map((card) => within(card).getByTitle('Click to edit').textContent);
 
-      expect(readTaskTitles()).toEqual(['Gamma task', 'beta task', 'Alpha task']);
+      expect(readTaskTitles()).toEqual(['Alpha task', 'beta task', 'Gamma task']);
 
       const select = screen.getByLabelText('Sort tasks within milestones');
 
       fireEvent.change(select, { target: { value: 'title' } });
       expect(readTaskTitles()).toEqual(['Alpha task', 'beta task', 'Gamma task']);
+
+      fireEvent.change(select, { target: { value: 'status' } });
+      expect(readTaskTitles()).toEqual(['Gamma task', 'beta task', 'Alpha task']);
 
       fireEvent.change(select, { target: { value: 'deadline' } });
       expect(readTaskTitles()).toEqual(['beta task', 'Gamma task', 'Alpha task']);
