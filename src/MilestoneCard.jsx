@@ -120,7 +120,10 @@ export default function MilestoneCard({
   const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
 
   const handleTaskSortChange = (event) => {
-    onTaskSortChange(event.target.value);
+    const { value } = event.target;
+    if (value !== taskSort) {
+      onTaskSortChange(value);
+    }
   };
 
   const triggerAddTask = () => {
