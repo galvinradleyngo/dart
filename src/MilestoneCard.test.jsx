@@ -5,6 +5,11 @@ import { CoursePMApp } from './App.jsx';
 
 const milestone = { id: 'm1', title: 'Milestone 1', goal: '', start: '' };
 
+const readCardTitles = () =>
+  screen
+    .getAllByTestId('task-card')
+    .map((card) => within(card).getByTitle('Click to edit').textContent);
+
 describe('MilestoneCard', () => {
   it('edits milestone title', () => {
     const onUpdateMilestone = vi.fn();
