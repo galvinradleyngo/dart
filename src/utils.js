@@ -70,3 +70,24 @@ export const addBusinessDays = (dateStr, workdays, workweek = [1,2,3,4,5], holid
   }
   return fmt(cur);
 };
+
+export const ensureHexColor = (value, fallback = rolePalette.Other) => {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  if (/^#[0-9A-Fa-f]{6}$/.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+  if (/^#[0-9A-Fa-f]{8}$/.test(trimmed)) {
+    return trimmed.slice(0, 7).toLowerCase();
+  }
+  return fallback;
+};
+
+export const withAlpha = (hex, alpha = 0.16) => {
+  const base = ensureHexColor(hex);
+  const boundedAlpha = clamp(alpha, 0, 1);
+  const alphaHex = Math.round(boundedAlpha * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return `${base}${alphaHex}`;
+};
