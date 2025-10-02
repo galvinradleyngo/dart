@@ -1882,6 +1882,21 @@ useEffect(() => {
                         </div>
                       )}
                     </div>
+                    <label className="flex items-center gap-2 rounded-2xl border border-white/60 bg-white/80 px-3 py-2 text-sm shadow-sm w-full sm:w-auto">
+                      <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Sort by
+                      </span>
+                      <select
+                        value={milestoneTaskSort}
+                        onChange={(event) => setMilestoneTaskSort(event.target.value)}
+                        className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
+                        aria-label="Sort tasks within milestones"
+                      >
+                        <option value="status">Status</option>
+                        <option value="title">A–Z</option>
+                        <option value="deadline">Deadline</option>
+                      </select>
+                    </label>
                     {milestoneTemplates.length > 0 && (
                       <div className="flex items-center gap-2 w-full sm:w-auto">
                         <select
