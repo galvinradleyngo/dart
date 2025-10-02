@@ -1,17 +1,79 @@
+function buildDependencyMap(tasks) {
+  const map = new Map();
+  tasks.forEach((task) => {
+    const parent = task?.depTaskId;
+    if (typeof parent !== 'string' || !parent) return;
+    if (!map.has(parent)) map.set(parent, new Set());
+    map.get(parent).add(task.id);
+  });
+  return map;
+}
+
+function collectDependentTaskIds(dependencyMap, targetId) {
+  const result = new Set();
+  const queue = dependencyMap.has(targetId)
+    ? [...dependencyMap.get(targetId)]
+    : [];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (result.has(current)) continue;
+    result.add(current);
+    const next = dependencyMap.get(current);
+    if (next) queue.push(...next);
+  }
+  return result;
+}
+
 export function applyLinkPatch(tasks, targetId, op, payload) {
+  const dependencyMap = buildDependencyMap(tasks);
+  const dependentIds = collectDependentTaskIds(dependencyMap, targetId);
+
   return tasks.map((task) => {
-    if (task.id !== targetId) return task;
+    const isTarget = task.id === targetId;
+    const shouldCascade = dependentIds.has(task.id);
+    if (!isTarget && !shouldCascade) return task;
+
+    const links = Array.isArray(task.links) ? [...task.links] : [];
+
     if (op === 'add') {
-      if (typeof payload !== 'string') return task;
-      const links = Array.isArray(task.links) ? [...task.links] : [];
-      if (!links.includes(payload)) links.push(payload);
-      return { ...task, links };
+      if (typeof payload !== 'string' || !payload) return task;
+      if (links.includes(payload)) return task;
+      return { ...task, links: [...links, payload] };
     }
+
     if (op === 'remove') {
-      const links = Array.isArray(task.links) ? [...task.links] : [];
-      links.splice(payload, 1);
-      return { ...task, links };
+      const removalMeta =
+        payload && typeof payload === 'object'
+          ? payload
+          : { index: payload, url: undefined };
+      if (isTarget) {
+        const { index, url } = removalMeta;
+        const idx = typeof index === 'number' ? index : links.indexOf(url);
+        if (idx >= 0 && idx < links.length) {
+          const nextLinks = [...links];
+          nextLinks.splice(idx, 1);
+          return { ...task, links: nextLinks };
+        }
+        if (url) {
+          const valueIdx = links.indexOf(url);
+          if (valueIdx >= 0) {
+            const nextLinks = [...links];
+            nextLinks.splice(valueIdx, 1);
+            return { ...task, links: nextLinks };
+          }
+        }
+        return task;
+      }
+
+      const { url } = removalMeta || {};
+      if (!url) return task;
+      const idx = links.indexOf(url);
+      if (idx === -1) return task;
+      const nextLinks = [...links];
+      nextLinks.splice(idx, 1);
+      return { ...task, links: nextLinks };
     }
+
     return task;
   });
 }
@@ -63,14 +125,25 @@ export function syncLinkLibraryWithMilestone({
       const url = raw.trim();
       if (!url) return;
       if (!linkMap.has(url)) {
-        linkMap.set(url, { url, taskIds: new Set(), firstTaskId: task.id });
+        linkMap.set(url, {
+          url,
+          taskIds: new Set(),
+          earliestTaskId: task.id,
+          earliestOrder: tasksOrder.get(task.id) ?? Number.MAX_SAFE_INTEGER,
+          latestTaskId: task.id,
+          latestOrder: tasksOrder.get(task.id) ?? Number.MIN_SAFE_INTEGER,
+        });
       }
       const entry = linkMap.get(url);
       entry.taskIds.add(task.id);
-      const firstOrder = tasksOrder.get(entry.firstTaskId) ?? Number.MAX_SAFE_INTEGER;
       const currentOrder = tasksOrder.get(task.id) ?? Number.MAX_SAFE_INTEGER;
-      if (currentOrder < firstOrder) {
-        entry.firstTaskId = task.id;
+      if (currentOrder < entry.earliestOrder) {
+        entry.earliestOrder = currentOrder;
+        entry.earliestTaskId = task.id;
+      }
+      if (currentOrder > entry.latestOrder) {
+        entry.latestOrder = currentOrder;
+        entry.latestTaskId = task.id;
       }
     });
   });
@@ -85,7 +158,6 @@ export function syncLinkLibraryWithMilestone({
       entry &&
       typeof entry === 'object' &&
       entry.source === 'task' &&
-      (entry.milestoneId ?? null) === milestoneId &&
       typeof entry.url === 'string'
     ) {
       existingByUrl.set(entry.url, entry);
@@ -107,9 +179,11 @@ export function syncLinkLibraryWithMilestone({
   const newEntries = urls.map((url) => {
     const data = linkMap.get(url);
     const existing = existingByUrl.get(url);
-    const representativeTaskId = existing?.taskId && data.taskIds.has(existing.taskId)
-      ? existing.taskId
-      : selectRepresentativeTaskId(data, tasksOrder);
+    const preferredTaskId = data.latestTaskId ?? data.earliestTaskId ?? null;
+    const representativeTaskId =
+      existing?.taskId && data.taskIds.has(existing.taskId)
+        ? existing.taskId
+        : preferredTaskId || selectRepresentativeTaskId(data, tasksOrder);
     const representativeTask = milestoneTasks.find((task) => task.id === representativeTaskId) || null;
     const taskTitle = representativeTask && typeof representativeTask.title === 'string'
       ? representativeTask.title.trim()
@@ -130,11 +204,18 @@ export function syncLinkLibraryWithMilestone({
   });
 
   newEntries.sort((a, b) => {
-    const orderA = tasksOrder.get(linkMap.get(a.url)?.firstTaskId ?? '') ?? Number.MAX_SAFE_INTEGER;
-    const orderB = tasksOrder.get(linkMap.get(b.url)?.firstTaskId ?? '') ?? Number.MAX_SAFE_INTEGER;
+    const orderA = tasksOrder.get(linkMap.get(a.url)?.earliestTaskId ?? '') ?? Number.MAX_SAFE_INTEGER;
+    const orderB = tasksOrder.get(linkMap.get(b.url)?.earliestTaskId ?? '') ?? Number.MAX_SAFE_INTEGER;
     if (orderA !== orderB) return orderA - orderB;
     return a.label.localeCompare(b.label);
   });
 
-  return [...preserved, ...newEntries];
+  const newUrls = new Set(newEntries.map((entry) => entry.url));
+  const dedupedPreserved = preserved.filter((entry) => {
+    if (!newUrls.has(entry.url)) return true;
+    if (!entry || typeof entry !== 'object') return true;
+    return entry.source !== 'task';
+  });
+
+  return [...dedupedPreserved, ...newEntries];
 }

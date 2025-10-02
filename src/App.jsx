@@ -1144,6 +1144,14 @@ useEffect(() => {
         processedPayload = finalUrl;
       }
 
+      if (op === 'remove') {
+        const targetTask = s.tasks.find((task) => task.id === id);
+        const links = Array.isArray(targetTask?.links) ? targetTask.links : [];
+        const index = typeof payload === 'number' ? payload : -1;
+        const url = index >= 0 && index < links.length ? links[index] : undefined;
+        processedPayload = { index, url };
+      }
+
       const tasks = applyLinkPatch(s.tasks, id, op, processedPayload);
       const task = tasks.find((t) => t.id === id);
       if (!task) {
@@ -2801,6 +2809,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             return course;
           }
           processedPayload = finalUrl;
+        }
+
+        if (op === 'remove') {
+          const targetTask = ensureArray(course.tasks).find((task) => task.id === id);
+          const links = Array.isArray(targetTask?.links) ? targetTask.links : [];
+          const index = typeof payload === 'number' ? payload : -1;
+          const url = index >= 0 && index < links.length ? links[index] : undefined;
+          processedPayload = { index, url };
         }
 
         const tasks = applyLinkPatch(ensureArray(course.tasks), id, op, processedPayload);
