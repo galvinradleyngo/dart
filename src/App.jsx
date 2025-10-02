@@ -607,6 +607,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [view, setView] = useState("list");
   const [milestoneFilter, setMilestoneFilter] = useState("all");
   const [milestonesCollapsed, setMilestonesCollapsed] = useState(false);
+  const [milestoneTaskSort, setMilestoneTaskSort] = useState("numeric");
   const [teamCollapsed, setTeamCollapsed] = useState(true);
   const [tasksCollapsed, setTasksCollapsed] = useState(true);
   const [listPriority, setListPriority] = useState(null);
@@ -1976,6 +1977,8 @@ useEffect(() => {
                       milestone={m}
                       tasks={groupedTasks[m.id] || []}
                       tasksAll={tasksRaw}
+                      taskSort={milestoneTaskSort}
+                      onTaskSortChange={setMilestoneTaskSort}
                       team={team}
                       milestones={milestones}
                       onUpdate={updateTask}
@@ -2517,7 +2520,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     const validTabs = new Set(['deadlines','courses','milestones','board','calendar']);
     return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
-  const [milestoneSort, setMilestoneSort] = useState('status');
+  const milestoneSort = 'status';
   const { fireOnDone } = useCompletionConfetti();
 
   useEffect(() => {
@@ -3498,22 +3501,6 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'milestones' && (
             <SectionCard
               title="My Milestones"
-              actions={
-                myCourses.length > 0 ? (
-                  <label className="text-sm text-slate-600 flex items-center gap-2">
-                    <span className="hidden sm:inline">Sort by</span>
-                    <select
-                      value={milestoneSort}
-                      onChange={(event) => setMilestoneSort(event.target.value)}
-                      className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      aria-label="Sort milestones"
-                    >
-                      <option value="status">Status</option>
-                      <option value="recent">Most Recent</option>
-                    </select>
-                  </label>
-                ) : null
-              }
             >
               {myCourses.length === 0 ? (
                 <div className="text-sm text-slate-600/90">No milestones</div>
