@@ -87,11 +87,11 @@ export default function MilestoneCard({
         if (aNum.length !== bNum.length) return aNum.length - bNum.length;
         if (aNum.value !== bNum.value) return aNum.value - bNum.value;
         if (aNum.index !== bNum.index) return aNum.index - bNum.index;
-        return compareStatus(a, b) || compareTitle(a, b);
+        return compareTitle(a, b) || compareStatus(a, b);
       }
       if (aNum) return -1;
       if (bNum) return 1;
-      return compareStatus(a, b) || compareTitle(a, b);
+      return compareTitle(a, b) || compareStatus(a, b);
     };
     const now = Date.now();
     const compareDeadline = (a, b) => {
