@@ -50,121 +50,38 @@ describe('MilestoneCard', () => {
     expect(details?.open).toBe(true);
   });
 
-  it('sorts tasks numerically by default', () => {
+  it('sorts tasks by numeric order by default', () => {
     const tasks = [
-      { id: 't1', title: 'Task 12', status: 'todo', order: 0 },
-      { id: 't2', title: 'Task 3', status: 'inprogress', order: 1 },
-      { id: 't3', title: 'Task 22', status: 'blocked', order: 2 },
-      { id: 't4', title: 'Task 1', status: 'todo', order: 3 },
-      { id: 't5', title: 'Task without number', status: 'todo', order: 4 },
-      { id: 't6', title: 'Task 105', status: 'todo', order: 5 },
-      { id: 't7', title: 'Task 10', status: 'todo', order: 6 },
-      { id: 't8', title: 'Task 9', status: 'todo', order: 7 },
-      { id: 't9', title: 'Task 007', status: 'todo', order: 8 },
+      { id: 't1', title: 'First task', status: 'todo', order: 1 },
+      { id: 't2', title: 'Zeroth task', status: 'todo', order: 0 },
+      { id: 't3', title: 'Second task', status: 'todo', order: 2 },
     ];
 
     render(<MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />);
 
-    expect(readCardTitles()).toEqual([
-      'Task 1',
-      'Task 3',
-      'Task 007',
-      'Task 9',
-      'Task 10',
-      'Task 12',
-      'Task 22',
-      'Task 105',
-      'Task without number',
-    ]);
+    const titles = screen
+      .getAllByTestId('task-card')
+      .map((card) => within(card).getByTitle('Click to edit').textContent);
+
+    expect(titles).toEqual(['Zeroth task', 'First task', 'Second task']);
   });
 
-  it('sorts tasks alphabetically with numeric-aware precedence when requested', () => {
+  it('sorts tasks alphabetically when requested', () => {
     const tasks = [
-      { id: 't1', title: 'Task 12', status: 'todo', order: 0 },
-      { id: 't2', title: '2 Kickoff', status: 'todo', order: 1 },
-      { id: 't3', title: 'Task 3', status: 'todo', order: 2 },
-      { id: 't4', title: '1 Outline', status: 'todo', order: 3 },
-      { id: 't5', title: 'Task 22', status: 'todo', order: 4 },
-      { id: 't6', title: 'Alpha brief', status: 'todo', order: 5 },
-      { id: 't7', title: 'Task 007', status: 'todo', order: 6 },
-      { id: 't8', title: 'beta sync', status: 'todo', order: 7 },
+      { id: 't1', title: 'zeta', status: 'todo', order: 0 },
+      { id: 't2', title: 'Alpha', status: 'todo', order: 1 },
+      { id: 't3', title: 'beta', status: 'todo', order: 2 },
     ];
 
     render(
-      <MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />,
+      <MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} taskSort="title" />,
     );
 
-    const select = screen.getByLabelText('Sort tasks within milestones');
-    fireEvent.change(select, { target: { value: 'title' } });
+    const titles = screen
+      .getAllByTestId('task-card')
+      .map((card) => within(card).getByTitle('Click to edit').textContent);
 
-    expect(readCardTitles()).toEqual([
-      '1 Outline',
-      '2 Kickoff',
-      'Task 3',
-      'Task 007',
-      'Task 12',
-      'Task 22',
-      'Alpha brief',
-      'beta sync',
-    ]);
-  });
-
-  it('groups leading numeric titles by digit length before plain text in A–Z mode', () => {
-    const tasks = [
-      { id: 't1', title: '100 Wrap up', status: 'todo', order: 0 },
-      { id: 't2', title: '1 Setup', status: 'todo', order: 1 },
-      { id: 't3', title: 'Alpha Task', status: 'todo', order: 2 },
-      { id: 't4', title: '12 Review', status: 'todo', order: 3 },
-      { id: 't5', title: '02 Outline', status: 'todo', order: 4 },
-    ];
-
-    render(
-      <MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />,
-    );
-
-    const select = screen.getByLabelText('Sort tasks within milestones');
-    fireEvent.change(select, { target: { value: 'title' } });
-
-    expect(readCardTitles()).toEqual([
-      '1 Setup',
-      '02 Outline',
-      '12 Review',
-      '100 Wrap up',
-      'Alpha Task',
-    ]);
-  });
-
-  it('resets numeric sorting when rendering a different milestone', () => {
-    const firstTasks = [
-      { id: 't1', title: 'Task Alpha', status: 'todo', order: 0 },
-      { id: 't2', title: 'Task 2', status: 'inprogress', order: 1 },
-    ];
-    const secondTasks = [
-      { id: 't3', title: 'Task 14', status: 'todo', order: 0 },
-      { id: 't4', title: 'Task 3', status: 'todo', order: 1 },
-      { id: 't5', title: 'Task 1', status: 'todo', order: 2 },
-    ];
-
-    const { rerender } = render(
-      <MilestoneCard milestone={milestone} tasks={firstTasks} tasksAll={firstTasks} />,
-    );
-
-    const select = screen.getByLabelText('Sort tasks within milestones');
-    fireEvent.change(select, { target: { value: 'status' } });
-    expect(select.value).toBe('status');
-
-    rerender(
-      <MilestoneCard
-        milestone={{ ...milestone, id: 'm2', title: 'Milestone 2' }}
-        tasks={secondTasks}
-        tasksAll={secondTasks}
-      />,
-    );
-
-    const selectAfter = screen.getByLabelText('Sort tasks within milestones');
-    expect(selectAfter.value).toBe('numeric');
-
-    expect(readCardTitles()).toEqual(['Task 1', 'Task 3', 'Task 14']);
+    expect(titles).toEqual(['Alpha', 'beta', 'zeta']);
   });
 
   it('sorts tasks by status when requested', () => {
@@ -177,13 +94,19 @@ describe('MilestoneCard', () => {
     ];
 
     render(
-      <MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />,
+      <MilestoneCard
+        milestone={milestone}
+        tasks={tasks}
+        tasksAll={tasks}
+        taskSort="status"
+      />,
     );
 
-    const select = screen.getByLabelText('Sort tasks within milestones');
-    fireEvent.change(select, { target: { value: 'status' } });
+    const titles = screen
+      .getAllByTestId('task-card')
+      .map((card) => within(card).getByTitle('Click to edit').textContent);
 
-    expect(readCardTitles()).toEqual([
+    expect(titles).toEqual([
       'Todo task',
       'In progress task',
       'Blocked task',
@@ -205,13 +128,14 @@ describe('MilestoneCard', () => {
       ];
 
       render(
-        <MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />,
+        <MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} taskSort="deadline" />,
       );
 
-      const select = screen.getByLabelText('Sort tasks within milestones');
-      fireEvent.change(select, { target: { value: 'deadline' } });
+      const titles = screen
+        .getAllByTestId('task-card')
+        .map((card) => within(card).getByTitle('Click to edit').textContent);
 
-      expect(readCardTitles()).toEqual(['Due today', 'Due earlier', 'Due soon', 'No due date']);
+      expect(titles).toEqual(['Due today', 'Due earlier', 'Due soon', 'No due date']);
     } finally {
       vi.useRealTimers();
     }
@@ -231,9 +155,9 @@ describe('CoursePMApp milestone task sorting', () => {
           { id: 'm1', title: 'Alpha Milestone', goal: '' },
         ],
         tasks: [
-          { id: 't1', title: '11 Review', status: 'todo', order: 2, milestoneId: 'm1', dueDate: '2024-05-11' },
-          { id: 't2', title: '2 Kickoff', status: 'inprogress', order: 1, milestoneId: 'm1', dueDate: '2024-05-09' },
-          { id: 't3', title: 'Beta Task', status: 'blocked', order: 0, milestoneId: 'm1', dueDate: '2024-05-15' },
+          { id: 't1', title: 'Gamma task', status: 'todo', order: 2, milestoneId: 'm1', dueDate: '2024-05-11' },
+          { id: 't2', title: 'beta task', status: 'inprogress', order: 1, milestoneId: 'm1', dueDate: '2024-05-09' },
+          { id: 't3', title: 'Alpha task', status: 'blocked', order: 0, milestoneId: 'm1', dueDate: '' },
         ],
         linkLibrary: [],
         schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
@@ -257,18 +181,18 @@ describe('CoursePMApp milestone task sorting', () => {
           .getAllByTestId('task-card')
           .map((card) => within(card).getByTitle('Click to edit').textContent);
 
-      expect(readTaskTitles()).toEqual(['2 Kickoff', '11 Review', 'Beta Task']);
+      expect(readTaskTitles()).toEqual(['Alpha task', 'beta task', 'Gamma task']);
 
       const select = screen.getByLabelText('Sort tasks within milestones');
 
       fireEvent.change(select, { target: { value: 'title' } });
-      expect(readTaskTitles()).toEqual(['2 Kickoff', '11 Review', 'Beta Task']);
+      expect(readTaskTitles()).toEqual(['Alpha task', 'beta task', 'Gamma task']);
 
       fireEvent.change(select, { target: { value: 'status' } });
-      expect(readTaskTitles()).toEqual(['11 Review', '2 Kickoff', 'Beta Task']);
+      expect(readTaskTitles()).toEqual(['Gamma task', 'beta task', 'Alpha task']);
 
       fireEvent.change(select, { target: { value: 'deadline' } });
-      expect(readTaskTitles()).toEqual(['2 Kickoff', '11 Review', 'Beta Task']);
+      expect(readTaskTitles()).toEqual(['beta task', 'Gamma task', 'Alpha task']);
     } finally {
       vi.useRealTimers();
     }
