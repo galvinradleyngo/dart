@@ -8,6 +8,8 @@ export default function MilestoneCard({
   tasksAll = [],
   team = [],
   milestones = [],
+  taskSort = 'status',
+  onTaskSortChange = () => {},
   onUpdate,
   onDelete,
   onDuplicate,
@@ -38,15 +40,60 @@ export default function MilestoneCard({
   const { pct, tasksSorted } = useMemo(() => {
     const completedCount = tasks.filter((t) => t.status === 'done' || t.status === 'skip').length;
     const pct = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
-    const tasksSorted = [...tasks].sort(
-      (a, b) =>
-        (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99) ||
-        a.order - b.order,
-    );
+    const toTimestamp = (task) => {
+      const value = task?.dueDate;
+      if (!value) return null;
+      if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+      if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value.getTime();
+      if (typeof value === 'string') {
+        const parsed = Date.parse(value);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      if (value && typeof value.toMillis === 'function') {
+        const millis = value.toMillis();
+        return Number.isFinite(millis) ? millis : null;
+      }
+      if (value && typeof value.toDate === 'function') {
+        const date = value.toDate();
+        if (date instanceof Date && !Number.isNaN(date.getTime())) return date.getTime();
+      }
+      if (value && typeof value.seconds === 'number') {
+        return value.seconds * 1000;
+      }
+      return null;
+    };
+    const compareTitle = (a, b) =>
+      (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+    const compareStatus = (a, b) =>
+      (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99) ||
+      (a.order ?? 0) - (b.order ?? 0);
+    const now = Date.now();
+    const compareDeadline = (a, b) => {
+      const aTs = toTimestamp(a);
+      const bTs = toTimestamp(b);
+      if (aTs === null && bTs === null) return compareTitle(a, b);
+      if (aTs === null) return 1;
+      if (bTs === null) return -1;
+      const aDiff = Math.abs(aTs - now);
+      const bDiff = Math.abs(bTs - now);
+      if (aDiff !== bDiff) return aDiff - bDiff;
+      if (aTs !== bTs) return aTs - bTs;
+      return compareTitle(a, b);
+    };
+    const sorter = taskSort === 'deadline'
+      ? compareDeadline
+      : taskSort === 'title'
+        ? (a, b) => compareTitle(a, b) || compareStatus(a, b)
+        : (a, b) => compareStatus(a, b) || compareTitle(a, b);
+    const tasksSorted = [...tasks].sort(sorter);
     return { pct, tasksSorted };
-  }, [tasks]);
+  }, [tasks, taskSort]);
 
   const progressColor = `hsl(${210 + (pct / 100) * (140 - 210)}, 70%, 50%)`;
+
+  const handleTaskSortChange = (event) => {
+    onTaskSortChange(event.target.value);
+  };
 
   const triggerAddTask = () => {
     if (detailsRef.current) {
@@ -163,10 +210,27 @@ export default function MilestoneCard({
           )}
         </div>
       </summary>
-      <div className="p-4 flex flex-col gap-2">
-        {milestone.goal && (
-          <p className="text-sm text-black/60 mb-2">{milestone.goal}</p>
-        )}
+      <div className="p-4 flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          {milestone.goal && (
+            <p className="text-sm text-black/60 max-w-xl">{milestone.goal}</p>
+          )}
+          <label className="flex items-center gap-2 rounded-2xl border border-black/10 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">
+            <span className="hidden sm:inline text-xs uppercase tracking-wide text-slate-500">
+              Sort by
+            </span>
+            <select
+              value={taskSort}
+              onChange={handleTaskSortChange}
+              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none"
+              aria-label="Sort tasks within milestones"
+            >
+              <option value="status">Status</option>
+              <option value="title">A–Z</option>
+              <option value="deadline">Deadline</option>
+            </select>
+          </label>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {tasksSorted.map((t) => (
             <TaskCard
