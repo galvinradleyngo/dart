@@ -5,6 +5,11 @@ import { CoursePMApp } from './App.jsx';
 
 const milestone = { id: 'm1', title: 'Milestone 1', goal: '', start: '' };
 
+const readCardTitles = () =>
+  screen
+    .getAllByTestId('task-card')
+    .map((card) => within(card).getByTitle('Click to edit').textContent);
+
 describe('MilestoneCard', () => {
   it('edits milestone title', () => {
     const onUpdateMilestone = vi.fn();
@@ -60,11 +65,7 @@ describe('MilestoneCard', () => {
 
     render(<MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />);
 
-    const titles = screen
-      .getAllByTestId('task-card')
-      .map((card) => within(card).getByTitle('Click to edit').textContent);
-
-    expect(titles).toEqual([
+    expect(readCardTitles()).toEqual([
       'Task 1',
       'Task 3',
       'Task 007',
@@ -96,11 +97,7 @@ describe('MilestoneCard', () => {
     const select = screen.getByLabelText('Sort tasks within milestones');
     fireEvent.change(select, { target: { value: 'title' } });
 
-    const titles = screen
-      .getAllByTestId('task-card')
-      .map((card) => within(card).getByTitle('Click to edit').textContent);
-
-    expect(titles).toEqual([
+    expect(readCardTitles()).toEqual([
       '1 Outline',
       '2 Kickoff',
       'Task 3',
@@ -128,11 +125,7 @@ describe('MilestoneCard', () => {
     const select = screen.getByLabelText('Sort tasks within milestones');
     fireEvent.change(select, { target: { value: 'title' } });
 
-    const titles = screen
-      .getAllByTestId('task-card')
-      .map((card) => within(card).getByTitle('Click to edit').textContent);
-
-    expect(titles).toEqual([
+    expect(readCardTitles()).toEqual([
       '1 Setup',
       '02 Outline',
       '12 Review',
@@ -171,11 +164,7 @@ describe('MilestoneCard', () => {
     const selectAfter = screen.getByLabelText('Sort tasks within milestones');
     expect(selectAfter.value).toBe('numeric');
 
-    const titles = screen
-      .getAllByTestId('task-card')
-      .map((card) => within(card).getByTitle('Click to edit').textContent);
-
-    expect(titles).toEqual(['Task 1', 'Task 3', 'Task 14']);
+    expect(readCardTitles()).toEqual(['Task 1', 'Task 3', 'Task 14']);
   });
 
   it('sorts tasks by status when requested', () => {
@@ -194,11 +183,7 @@ describe('MilestoneCard', () => {
     const select = screen.getByLabelText('Sort tasks within milestones');
     fireEvent.change(select, { target: { value: 'status' } });
 
-    const titles = screen
-      .getAllByTestId('task-card')
-      .map((card) => within(card).getByTitle('Click to edit').textContent);
-
-    expect(titles).toEqual([
+    expect(readCardTitles()).toEqual([
       'Todo task',
       'In progress task',
       'Blocked task',
@@ -226,11 +211,7 @@ describe('MilestoneCard', () => {
       const select = screen.getByLabelText('Sort tasks within milestones');
       fireEvent.change(select, { target: { value: 'deadline' } });
 
-      const titles = screen
-        .getAllByTestId('task-card')
-        .map((card) => within(card).getByTitle('Click to edit').textContent);
-
-      expect(titles).toEqual(['Due today', 'Due earlier', 'Due soon', 'No due date']);
+      expect(readCardTitles()).toEqual(['Due today', 'Due earlier', 'Due soon', 'No due date']);
     } finally {
       vi.useRealTimers();
     }
