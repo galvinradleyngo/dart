@@ -53,6 +53,8 @@ describe('MilestoneCard', () => {
       { id: 't4', title: 'Task 1', status: 'todo', order: 3 },
       { id: 't5', title: 'Task without number', status: 'todo', order: 4 },
       { id: 't6', title: 'Task 105', status: 'todo', order: 5 },
+      { id: 't7', title: 'Task 10', status: 'todo', order: 6 },
+      { id: 't8', title: 'Task 9', status: 'todo', order: 7 },
     ];
 
     render(<MilestoneCard milestone={milestone} tasks={tasks} tasksAll={tasks} />);
@@ -64,6 +66,8 @@ describe('MilestoneCard', () => {
     expect(titles).toEqual([
       'Task 1',
       'Task 3',
+      'Task 9',
+      'Task 10',
       'Task 12',
       'Task 22',
       'Task 105',
