@@ -62,8 +62,28 @@ export default function MilestoneCard({
       }
       return null;
     };
-    const compareTitle = (a, b) =>
-      (a.title || '').localeCompare(b.title || '', undefined, { sensitivity: 'base' });
+    const extractTitleSortInfo = (task) => {
+      const rawTitle = (task?.title ?? '').trim();
+      const match = rawTitle.match(/^(\d{1,2})\b/);
+      if (match) {
+        const digits = match[1].length;
+        return {
+          group: digits === 1 ? 0 : 1,
+          number: Number(match[1]),
+          title: rawTitle,
+        };
+      }
+      return { group: 2, number: null, title: rawTitle };
+    };
+    const compareTitle = (a, b) => {
+      const infoA = extractTitleSortInfo(a);
+      const infoB = extractTitleSortInfo(b);
+      if (infoA.group !== infoB.group) return infoA.group - infoB.group;
+      if (infoA.group !== 2 && infoA.number !== infoB.number) {
+        return infoA.number - infoB.number;
+      }
+      return infoA.title.localeCompare(infoB.title, undefined, { sensitivity: 'base' });
+    };
     const compareStatus = (a, b) =>
       (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99) ||
       (a.order ?? 0) - (b.order ?? 0);
