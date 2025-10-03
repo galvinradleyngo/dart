@@ -25,11 +25,6 @@ export default function MilestoneCard({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(milestone.title);
   const detailsRef = useRef(null);
-  const collator = useMemo(() => (
-    typeof Intl !== 'undefined' && typeof Intl.Collator === 'function'
-      ? new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
-      : { compare: (a = '', b = '') => (a || '').localeCompare(b || '', undefined, { sensitivity: 'base' }) }
-  ), []);
 
   useEffect(() => setTitleDraft(milestone.title), [milestone.title]);
 
