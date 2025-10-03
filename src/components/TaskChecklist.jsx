@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { useCompletionConfetti } from "../hooks/use-completion-confetti.js";
+import { getAssigneeIds } from "../utils.js";
 
 const STATUS_LABELS = {
   todo: "To Do",
@@ -103,7 +104,12 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
               <ul className="space-y-2">
                 {items.map((t) => {
                   const milestone = milestones.find((m) => m.id === t.milestoneId);
-                  const assignee = team.find((m) => m.id === t.assigneeId);
+                  const assigneesForTask = getAssigneeIds(t)
+                    .map((id) => team.find((m) => m.id === id) || null)
+                    .filter(Boolean);
+                  const assigneeLabel = assigneesForTask.length
+                    ? assigneesForTask.map((member) => member.name).join(", ")
+                    : "Unassigned";
                   const dueDate = t.dueDate ? new Date(t.dueDate) : null;
                   const dueKey = dueDate ? dueDate.toDateString() : "";
                   const isOverdue = !!dueDate && dueDate < today;
@@ -162,7 +168,7 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                             {t.title || "Untitled task"}
                           </div>
                           <div className="mt-0.5 truncate text-xs opacity-70">
-                            for {milestone ? milestone.title : "Unassigned"} • {assignee ? assignee.name : "Unassigned"}
+                            for {milestone ? milestone.title : "Unassigned"} • {assigneeLabel}
                           </div>
                         </button>
                         <div className="flex flex-col items-end gap-1 text-[11px] font-semibold uppercase tracking-wide">
@@ -193,7 +199,12 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
           <ul className="space-y-2">
             {doneTasks.map((t) => {
               const milestone = milestones.find((m) => m.id === t.milestoneId);
-              const assignee = team.find((m) => m.id === t.assigneeId);
+              const assigneesForTask = getAssigneeIds(t)
+                .map((id) => team.find((m) => m.id === id) || null)
+                .filter(Boolean);
+              const assigneeLabel = assigneesForTask.length
+                ? assigneesForTask.map((member) => member.name).join(", ")
+                : "Unassigned";
               return (
                 <li key={t.id}>
                   <div className="flex items-center gap-3 rounded-3xl border border-emerald-200/80 bg-emerald-50/80 px-4 py-3 text-emerald-700 shadow-[0_18px_32px_-20px_rgba(15,23,42,0.45)] backdrop-blur">
@@ -218,7 +229,7 @@ export default function TaskChecklist({ tasks, team, milestones, onUpdate, onEdi
                         {t.title || "Untitled task"}
                       </div>
                       <div className="mt-0.5 truncate text-xs opacity-70">
-                        for {milestone ? milestone.title : "Unassigned"} • {assignee ? assignee.name : "Unassigned"}
+                        for {milestone ? milestone.title : "Unassigned"} • {assigneeLabel}
                       </div>
                       <div className="mt-1 text-xs font-semibold opacity-80">
                         Completed: {t.completedDate ? formatDate(t.completedDate) : "—"}

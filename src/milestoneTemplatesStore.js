@@ -1,22 +1,26 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase.js";
-import { uid } from "./utils.js";
+import { uid, getAssigneeIds } from "./utils.js";
 
 const MILESTONE_TPL_KEY = "healthPM:milestoneTemplates:v1";
 
-const migrateTask = (t = {}) => ({
-  title: t.title || "",
-  details: t.details || "",
-  note: t.note || "",
-  links: t.links || [],
-  depTaskId: t.depTaskId ?? null,
-  assigneeId: t.assigneeId ?? null,
-  status: t.status || "todo",
-  startDate: t.startDate || "",
-  workDays: t.workDays ?? 1,
-  dueDate: t.dueDate || "",
-  completedDate: t.completedDate || "",
-});
+const migrateTask = (t = {}) => {
+  const assigneeIds = getAssigneeIds(t);
+  return {
+    title: t.title || "",
+    details: t.details || "",
+    note: t.note || "",
+    links: t.links || [],
+    depTaskId: t.depTaskId ?? null,
+    assigneeIds,
+    assigneeId: assigneeIds[0] ?? null,
+    status: t.status || "todo",
+    startDate: t.startDate || "",
+    workDays: t.workDays ?? 1,
+    dueDate: t.dueDate || "",
+    completedDate: t.completedDate || "",
+  };
+};
 
 export const loadMilestoneTemplates = () => {
   try {
