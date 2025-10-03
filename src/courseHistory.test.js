@@ -79,6 +79,7 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ id: fallbackEntry.id, courseId: 'course-1', action: 'delete' });
+    expect(entries[0].kind).toBe('course');
     expect(entries[0].course.course.name).toBe('Course One');
     expect(loadCourseHistoryCache()).toHaveLength(1);
     expect(loadPendingEntries()).toHaveLength(1);
@@ -117,6 +118,7 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].id).toBe('remote-1');
     expect(entries[0].clientId).toBe(fallbackEntry.id);
+    expect(entries[0].kind).toBe('course');
     expect(loadPendingEntries()).toHaveLength(0);
     expect(loadCourseHistoryCache().map((entry) => entry.id)).toEqual(['remote-1']);
   });
@@ -152,6 +154,7 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
 
     expect(entries).toHaveLength(2);
     expect(entries.map((entry) => entry.id)).toEqual(['remote-2', fallbackEntry.id]);
+    expect(entries.every((entry) => entry.kind === 'course')).toBe(true);
     expect(loadPendingEntries().map((entry) => entry.id)).toEqual([fallbackEntry.id]);
     const cachedIds = loadCourseHistoryCache().map((entry) => entry.id);
     expect(cachedIds).toEqual(['remote-2', fallbackEntry.id]);
@@ -187,6 +190,66 @@ describe('loadCourseHistoryEntries local fallbacks', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0].id).toBe('remote-index-fallback');
+    expect(entries[0].kind).toBe('course');
     expect(getDocsMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps active platform backups and drops expired ones locally', () => {
+    const now = Date.now();
+    const active = addCourseHistoryEntryLocal({
+      kind: 'backup',
+      id: 'backup-active',
+      snapshot: { courses: [], schedule: {}, linkLibrary: [] },
+      summary: { courseCount: 0 },
+      createdAt: now,
+      expiresAt: now + 1_000,
+    });
+    const expired = addCourseHistoryEntryLocal({
+      kind: 'backup',
+      id: 'backup-expired',
+      snapshot: { courses: [], schedule: {}, linkLibrary: [] },
+      createdAt: now - 10_000,
+      expiresAt: now - 1,
+    });
+
+    expect(active?.kind).toBe('backup');
+    expect(expired?.kind).toBe('backup');
+
+    const cache = loadCourseHistoryCache();
+    const ids = cache.map((entry) => entry.id);
+    expect(ids).toContain(active.id);
+    expect(ids).not.toContain(expired.id);
+  });
+
+  it('loads remote platform backups with snapshots intact', async () => {
+    const backupSnapshot = {
+      courses: [{ id: 'c-1', course: { id: 'c-1', name: 'Archived' }, tasks: [] }],
+      schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
+      linkLibrary: [],
+      people: [],
+    };
+
+    getDocsMock.mockResolvedValueOnce({
+      docs: [
+        {
+          id: 'remote-backup',
+          data: () => ({
+            password: 'passthesalt',
+            kind: 'backup',
+            snapshot: backupSnapshot,
+            summary: { courseCount: 1 },
+            createdAt: { toMillis: () => 5_000 },
+            expiresAt: 9_000,
+          }),
+        },
+      ],
+    });
+
+    const entries = await loadCourseHistoryEntries();
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].kind).toBe('backup');
+    expect(entries[0].snapshot.courses[0].course.name).toBe('Archived');
+    expect(entries[0].expiresAt).toBe(9_000);
   });
 });

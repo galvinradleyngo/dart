@@ -234,10 +234,30 @@ const saveGlobalSchedule = (sched) => { try { localStorage.setItem(GLOBAL_SCHEDU
 // =====================================================
 const TEMPLATE_KEY = "healthPM:template:v1";
 const COURSES_KEY  = "healthPM:courses:v1";
+const PLATFORM_BACKUP_LAST_RUN_KEY = "healthPM:platformBackupLastRun:v1";
+const PLATFORM_BACKUP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+const PLATFORM_BACKUP_LABEL = "PLATFORM BACKUP";
 const saveTemplate = (state) => { try { localStorage.setItem(TEMPLATE_KEY, JSON.stringify(state)); } catch {} };
 const loadTemplate = () => { try { const raw = localStorage.getItem(TEMPLATE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const saveCourses = (arr) => { try { localStorage.setItem(COURSES_KEY, JSON.stringify(arr)); } catch {} };
 const loadCourses = () => { try { const raw = localStorage.getItem(COURSES_KEY); return raw ? JSON.parse(raw) : []; } catch { return []; } };
+const loadPlatformBackupLastRun = () => {
+  try {
+    const raw = localStorage.getItem(PLATFORM_BACKUP_LAST_RUN_KEY);
+    return raw ? Number(raw) : null;
+  } catch {
+    return null;
+  }
+};
+const savePlatformBackupLastRun = (value) => {
+  try {
+    if (value == null) {
+      localStorage.removeItem(PLATFORM_BACKUP_LAST_RUN_KEY);
+    } else {
+      localStorage.setItem(PLATFORM_BACKUP_LAST_RUN_KEY, String(value));
+    }
+  } catch {}
+};
 const loadTemplateRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'template'));
@@ -263,6 +283,62 @@ const saveCoursesRemote = async (arr) => {
   try {
     await setDoc(doc(db, 'app', 'courses'), { courses: arr });
   } catch {}
+};
+
+const getMostRecentSixAmBoundary = (timestamp = Date.now()) => {
+  const date = new Date(timestamp);
+  date.setHours(6, 0, 0, 0);
+  if (timestamp < date.getTime()) {
+    date.setDate(date.getDate() - 1);
+  }
+  return date.getTime();
+};
+
+const readSoundPreference = () => {
+  try {
+    const stored = localStorage.getItem('soundEnabled');
+    return stored !== 'false';
+  } catch {
+    return true;
+  }
+};
+
+const collectPlatformSnapshot = () => {
+  const now = Date.now();
+  return {
+    createdAt: now,
+    courses: cloneDeep(loadCourses()),
+    schedule: cloneDeep(loadGlobalSchedule()),
+    linkLibrary: cloneDeep(loadLinkLibrary()),
+    milestoneTemplates: cloneDeep(loadMilestoneTemplates()),
+    template: cloneDeep(loadTemplate()),
+    people: cloneDeep(loadPeople()),
+    soundEnabled: readSoundPreference(),
+  };
+};
+
+const summarizePlatformSnapshot = (snapshot = {}) => {
+  const courses = ensureArray(snapshot.courses);
+  const people = ensureArray(snapshot.people);
+  const linkLibrary = ensureArray(snapshot.linkLibrary);
+  const milestoneTemplatesList = ensureArray(snapshot.milestoneTemplates);
+  const courseCount = courses.length;
+  const milestoneCount = courses.reduce(
+    (total, course) => total + ensureArray(course?.milestones).length,
+    0
+  );
+  const taskCount = courses.reduce(
+    (total, course) => total + ensureArray(course?.tasks).length,
+    0
+  );
+  return {
+    courseCount,
+    milestoneCount,
+    taskCount,
+    peopleCount: people.length,
+    linkCount: linkLibrary.length,
+    templateCount: milestoneTemplatesList.length,
+  };
 };
 
 
@@ -4088,6 +4164,7 @@ export function CoursesHub({
   onPeopleChange,
   onRemoveCourse,
   onDuplicateCourse,
+  onApplyPlatformBackup,
 }) {
   const [courses, setCourses] = useState(() => loadCourses());
   const [schedule, setSchedule] = useState(() => loadGlobalSchedule());
@@ -4111,6 +4188,7 @@ export function CoursesHub({
   const [blockPanels, setBlockPanels] = useState({});
   const [blockTabs, setBlockTabs] = useState({});
   const [resolveRequest, setResolveRequest] = useState(null);
+  const courseHistoryEntriesRef = useRef(courseHistoryEntries);
 
   const sanitizeCourseHistoryEntry = useCallback(
     (entry) => sanitizeCourseHistoryEntryData(entry),
@@ -4173,6 +4251,10 @@ export function CoursesHub({
   }, [initialCourseHistory.length, updateCourseHistoryEntries]);
 
   useEffect(() => {
+    courseHistoryEntriesRef.current = courseHistoryEntries;
+  }, [courseHistoryEntries]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const interval = window.setInterval(() => {
       updateCourseHistoryEntries((prev) => prev);
@@ -4180,12 +4262,92 @@ export function CoursesHub({
     return () => window.clearInterval(interval);
   }, [updateCourseHistoryEntries]);
 
+  const createPlatformBackup = useCallback(async () => {
+    const snapshot = collectPlatformSnapshot();
+    const summary = summarizePlatformSnapshot(snapshot);
+    const createdAt = Date.now();
+    const backupEntry = {
+      kind: 'backup',
+      snapshot,
+      summary,
+      metadata: { summary },
+      label: PLATFORM_BACKUP_LABEL,
+      createdAt,
+      expiresAt: createdAt + PLATFORM_BACKUP_RETENTION_MS,
+    };
+    const fallbackEntry = addCourseHistoryEntryLocal(backupEntry);
+    if (!fallbackEntry) return null;
+    upsertCourseHistoryEntry(fallbackEntry);
+    try {
+      const remote = await recordCourseHistoryEntry(fallbackEntry);
+      if (remote) {
+        upsertCourseHistoryEntry(remote, { removeIds: [fallbackEntry.id] });
+        return remote;
+      }
+    } catch {}
+    return fallbackEntry;
+  }, [upsertCourseHistoryEntry]);
+
+  const purgeExpiredBackups = useCallback(async () => {
+    const now = Date.now();
+    const expired = courseHistoryEntriesRef.current.filter(
+      (entry) =>
+        entry &&
+        entry.kind === 'backup' &&
+        entry.expiresAt != null &&
+        entry.expiresAt <= now
+    );
+    if (!expired.length) return;
+    const ids = expired.map((entry) => entry.id);
+    removeCourseHistoryEntriesLocal(ids);
+    updateCourseHistoryEntries((prev) =>
+      prev.filter((entry) => !ids.includes(entry.id))
+    );
+    await Promise.all(
+      ids.map((id) => deleteCourseHistoryEntryRemote(id).catch(() => {}))
+    );
+  }, [updateCourseHistoryEntries]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    let cancelled = false;
+    let running = false;
+    const tick = async () => {
+      if (cancelled || running) return;
+      running = true;
+      try {
+        await purgeExpiredBackups();
+        const now = Date.now();
+        const boundary = getMostRecentSixAmBoundary(now);
+        const lastRun = loadPlatformBackupLastRun() ?? 0;
+        if (boundary > lastRun) {
+          const entry = await createPlatformBackup();
+          if (entry) {
+            savePlatformBackupLastRun(boundary);
+          }
+        }
+      } finally {
+        running = false;
+      }
+    };
+    tick();
+    const interval = window.setInterval(tick, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [createPlatformBackup, purgeExpiredBackups]);
+
   const handleDeleteHistoryEntry = useCallback(
     async (entry) => {
       if (!entry || !entry.id) return;
       if (deletingHistoryIds.has(entry.id)) return;
       if (typeof window !== 'undefined') {
-        const confirmDelete = window.confirm('Remove this deleted course from history?');
+        const confirmDelete = window.confirm(
+          entry.kind === 'backup'
+            ? 'Delete this platform backup?'
+            : 'Remove this deleted course from history?'
+        );
         if (!confirmDelete) return;
       }
       const id = entry.id;
@@ -4681,8 +4843,31 @@ export function CoursesHub({
     }
   };
   const handleRetrieveHistoryEntry = useCallback(
-    (entry) => {
-      if (!entry || !entry.course) return;
+    async (entry) => {
+      if (!entry) return;
+      if (entry.kind === 'backup') {
+        if (!entry.snapshot) return;
+        let appliedState = null;
+        if (typeof onApplyPlatformBackup === 'function') {
+          try {
+            appliedState = await onApplyPlatformBackup(entry);
+          } catch {}
+        }
+        const state = appliedState && typeof appliedState === 'object'
+          ? appliedState
+          : entry.snapshot;
+        const snapshotCourses = ensureArray(state.courses ?? entry.snapshot.courses);
+        const snapshotSchedule = state.schedule ?? entry.snapshot.schedule ?? defaultSchedule;
+        const snapshotLinks = ensureArray(state.linkLibrary ?? entry.snapshot.linkLibrary);
+        const snapshotPeople = ensureArray(state.people ?? entry.snapshot.people);
+        setCourses(cloneDeep(snapshotCourses));
+        setSchedule(cloneDeep(snapshotSchedule));
+        setLinkLibrary(cloneDeep(snapshotLinks));
+        onPeopleChange(snapshotPeople);
+        setHistoryModalOpen(false);
+        return;
+      }
+      if (!entry.course) return;
       setCourses((prev) => {
         const filtered = prev.filter((item) => (item.course?.id ?? item.id) !== entry.courseId);
         const next = [...filtered];
@@ -4704,7 +4889,7 @@ export function CoursesHub({
       });
       setHistoryModalOpen(false);
     },
-    [pushHistory]
+    [onApplyPlatformBackup, onPeopleChange, pushHistory]
   );
   const handleAddCourse = () => {
     pushHistory({ type: 'bulk', snapshot: courses });
@@ -5498,10 +5683,79 @@ export function CoursesHub({
               ) : (
                 <ul className="space-y-3">
                   {courseHistoryEntries.map((entry) => {
+                    const isDeleting = deletingHistoryIds.has(entry.id);
+                    if (entry.kind === 'backup') {
+                      const summary = entry.summary || {};
+                      const fallbackCourses = ensureArray(entry.snapshot?.courses);
+                      const fallbackPeople = ensureArray(entry.snapshot?.people);
+                      const fallbackLinks = ensureArray(entry.snapshot?.linkLibrary);
+                      const fallbackTemplates = ensureArray(entry.snapshot?.milestoneTemplates);
+                      const fallbackMilestones = fallbackCourses.reduce(
+                        (total, course) => total + ensureArray(course?.milestones).length,
+                        0
+                      );
+                      const fallbackTasks = fallbackCourses.reduce(
+                        (total, course) => total + ensureArray(course?.tasks).length,
+                        0
+                      );
+                      const courseCount = summary.courseCount ?? fallbackCourses.length;
+                      const taskCount = summary.taskCount ?? fallbackTasks;
+                      const milestoneCount = summary.milestoneCount ?? fallbackMilestones;
+                      const peopleCount = summary.peopleCount ?? fallbackPeople.length;
+                      const linkCount = summary.linkCount ?? fallbackLinks.length;
+                      const templateCount = summary.templateCount ?? fallbackTemplates.length;
+                      return (
+                        <li
+                          key={entry.id}
+                          className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                                <span>Platform backup</span>
+                                <span className="inline-flex items-center rounded-full bg-slate-900 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
+                                  {entry.label || PLATFORM_BACKUP_LABEL}
+                                </span>
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Created {formatHistoryTimestamp(entry.createdAt)}
+                              </div>
+                              {entry.expiresAt ? (
+                                <div className="text-xs text-slate-500">
+                                  Expires {formatHistoryTimestamp(entry.expiresAt)}
+                                </div>
+                              ) : null}
+                              <div className="text-xs text-slate-500">
+                                Courses {courseCount} · Tasks {taskCount} · Milestones {milestoneCount}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                People {peopleCount} · Links {linkCount} · Templates {templateCount}
+                              </div>
+                            </div>
+                            <div className="flex flex-row gap-2 sm:flex-col sm:items-end">
+                              <button
+                                type="button"
+                                onClick={() => handleRetrieveHistoryEntry(entry)}
+                                className="glass-button-primary whitespace-nowrap"
+                              >
+                                Retrieve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteHistoryEntry(entry)}
+                                className="glass-button whitespace-nowrap text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isDeleting}
+                              >
+                                {isDeleting ? 'Removing…' : 'Delete'}
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    }
                     const courseMeta = entry.course?.course || entry.course;
                     const courseName = courseMeta?.name || 'Untitled course';
                     const description = courseMeta?.description || '';
-                    const isDeleting = deletingHistoryIds.has(entry.id);
                     return (
                       <li
                         key={entry.id}
@@ -5618,6 +5872,65 @@ export default function PMApp() {
     savePeopleRemote(next).catch(() => {});
     syncPeopleToCourses(next);
   };
+  const handleApplyPlatformBackup = useCallback(
+    async (entry) => {
+      if (!entry || entry.kind !== 'backup') return null;
+      const snapshot = entry.snapshot || {};
+      const courses = Array.isArray(snapshot.courses)
+        ? cloneDeep(snapshot.courses)
+        : [];
+      const schedule = snapshot.schedule ? cloneDeep(snapshot.schedule) : defaultSchedule;
+      const linkLibrary = Array.isArray(snapshot.linkLibrary)
+        ? cloneDeep(snapshot.linkLibrary)
+        : [];
+      const peopleSnapshot = Array.isArray(snapshot.people)
+        ? cloneDeep(snapshot.people)
+        : [];
+      const milestoneTemplatesSnapshot = Array.isArray(snapshot.milestoneTemplates)
+        ? cloneDeep(snapshot.milestoneTemplates)
+        : [];
+      const templateSnapshot = snapshot.template ? cloneDeep(snapshot.template) : null;
+      const sound = snapshot.soundEnabled !== false;
+
+      saveCourses(courses);
+      saveCoursesRemote(courses).catch(() => {});
+      saveGlobalSchedule(schedule);
+      saveScheduleRemote(schedule).catch(() => {});
+      saveLinkLibrary(linkLibrary);
+      saveLinkLibraryRemote(linkLibrary).catch(() => {});
+      savePeople(peopleSnapshot);
+      savePeopleRemote(peopleSnapshot).catch(() => {});
+      saveMilestoneTemplates(milestoneTemplatesSnapshot);
+      saveMilestoneTemplatesRemote(milestoneTemplatesSnapshot).catch(() => {});
+      if (templateSnapshot) {
+        saveTemplate(templateSnapshot);
+        saveTemplateRemote(templateSnapshot).catch(() => {});
+      } else {
+        try {
+          localStorage.removeItem(TEMPLATE_KEY);
+        } catch {}
+        saveTemplateRemote(null).catch(() => {});
+      }
+      try {
+        localStorage.setItem('soundEnabled', sound ? 'true' : 'false');
+      } catch {}
+
+      setPeople(peopleSnapshot);
+      setMilestoneTemplates(milestoneTemplatesSnapshot);
+      setSoundEnabled(sound);
+
+      return {
+        courses,
+        schedule,
+        linkLibrary,
+        people: peopleSnapshot,
+        milestoneTemplates: milestoneTemplatesSnapshot,
+        template: templateSnapshot,
+        soundEnabled: sound,
+      };
+    },
+    [setPeople, setMilestoneTemplates, setSoundEnabled]
+  );
   useEffect(() => {
     (async () => {
       const remote = await loadPeopleRemote();
@@ -5670,6 +5983,7 @@ export default function PMApp() {
         onPeopleChange={handlePeopleChange}
         onRemoveCourse={() => {}}
         onDuplicateCourse={() => {}}
+        onApplyPlatformBackup={handleApplyPlatformBackup}
       />
     );
   } else if (view === "user") {
