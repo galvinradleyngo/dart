@@ -5,9 +5,10 @@ import DocumentInput from "./DocumentInput.jsx";
 import { LinkChips } from "./LinksEditor.jsx";
 import DepPicker from "./DepPicker.jsx";
 import DuePill from "./DuePill.jsx";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useCompletionConfetti } from "../hooks/use-completion-confetti.js";
 import BlockDialog from "./BlockDialog.jsx";
+import { getAssigneeIds } from "../utils.js";
 
 function statusBg(status) {
   if (status === "done") return "bg-emerald-50";
@@ -67,7 +68,32 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
   }, [task, handleClose]);
 
   if (!task) return null;
-  const assignee = team.find((m) => m.id === task.assigneeId);
+  const assigneeIds = getAssigneeIds(task);
+  const assigneeSlots = assigneeIds.length ? assigneeIds : [""];
+  const assignees = assigneeSlots.map((id) => team.find((m) => m.id === id) || null);
+  const canAddAssignee = team.some((member) => !assigneeIds.includes(member.id));
+  const commitAssignees = (ids) => {
+    const unique = Array.from(new Set(ids.filter(Boolean)));
+    onUpdate(task.id, { assigneeIds: unique, assigneeId: unique[0] ?? null });
+  };
+  const handleAssigneeChange = (index, value) => {
+    const next = [...assigneeIds];
+    if (!value) {
+      if (index < next.length) {
+        next.splice(index, 1);
+      }
+    } else if (index < next.length) {
+      next[index] = value;
+    } else {
+      next.push(value);
+    }
+    commitAssignees(next);
+  };
+  const handleAddAssignee = () => {
+    const available = team.find((member) => !assigneeIds.includes(member.id));
+    if (!available) return;
+    commitAssignees([...assigneeIds, available.id]);
+  };
   return (
     <div
       className={`fixed inset-0 bg-black/40 flex items-center justify-center z-50 transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
@@ -122,23 +148,41 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
               </option>
             ))}
           </select>
-          <div className="flex items-center gap-1">
-            {assignee ? (
-              <Avatar name={assignee.name} roleType={assignee.roleType} avatar={assignee.avatar} />
-            ) : (
-              <span className="text-black/40">—</span>
+          <div className="flex flex-wrap items-center gap-2">
+            {assigneeSlots.map((value, index) => {
+              const member = assignees[index];
+              return (
+                <div key={`${value || 'empty'}-${index}`} className="flex items-center gap-1">
+                  {member ? (
+                    <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
+                  ) : (
+                    <span className="text-black/40">—</span>
+                  )}
+                  <select
+                    value={value || ""}
+                    onChange={(e) => handleAssigneeChange(index, e.target.value)}
+                  >
+                    <option value="">Unassigned</option>
+                    {team.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.roleType})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+            {canAddAssignee && (
+              <button
+                type="button"
+                onClick={handleAddAssignee}
+                className="glass-icon-button w-7 h-7"
+                title="Add assignee"
+                aria-label="Add assignee"
+              >
+                <Plus className="icon" />
+              </button>
             )}
-            <select
-              value={task.assigneeId || ""}
-              onChange={(e) => onUpdate(task.id, { assigneeId: e.target.value || null })}
-            >
-              <option value="">Unassigned</option>
-              {team.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.roleType})
-                </option>
-              ))}
-            </select>
           </div>
           <select
             value={task.status}

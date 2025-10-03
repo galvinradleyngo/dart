@@ -42,6 +42,18 @@ export const rolePalette = {
 export const roleOrder = Object.keys(rolePalette);
 export const roleColor = (roleType) => rolePalette[roleType] || rolePalette.Other;
 
+export const ensureArray = (value) => (Array.isArray(value) ? value : []);
+
+export const getAssigneeIds = (task) => {
+  if (!task) return [];
+  const ids = ensureArray(task.assigneeIds);
+  if (ids.length > 0) {
+    return ids.filter((id) => typeof id === "string" && id.trim() !== "");
+  }
+  const fallback = typeof task.assigneeId === "string" && task.assigneeId.trim() !== "" ? [task.assigneeId] : [];
+  return fallback;
+};
+
 export const nextMemberName = (list) => {
   const base = "New Member";
   const names = new Set(list.map((m) => m.name));

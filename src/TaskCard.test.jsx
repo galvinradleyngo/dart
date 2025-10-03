@@ -12,6 +12,8 @@ const sampleTask = {
   status: 'todo',
   milestoneId: 'm1',
   blocks: [],
+  assigneeIds: [],
+  assigneeId: null,
 };
 
 const milestones = [
@@ -122,7 +124,7 @@ describe('TaskCard', () => {
     ];
     render(
       <TaskCard
-        task={{ ...sampleTask, assigneeId: 'u1' }}
+        task={{ ...sampleTask, assigneeIds: ['u1'], assigneeId: 'u1' }}
         milestones={milestones}
         team={team}
         onUpdate={onUpdate}
@@ -131,8 +133,12 @@ describe('TaskCard', () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText('Assignee'), { target: { value: 'u2' } });
-    expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, { assigneeId: 'u2' });
+    const [assigneeSelect] = screen.getAllByLabelText('Assignee');
+    fireEvent.change(assigneeSelect, { target: { value: 'u2' } });
+    expect(onUpdate).toHaveBeenCalledWith(sampleTask.id, {
+      assigneeIds: ['u2'],
+      assigneeId: 'u2',
+    });
   });
 
   it('allows editing start date when status is todo', () => {

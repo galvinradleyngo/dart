@@ -74,12 +74,14 @@ import {
   roleOrder,
   roleColor,
   nextMemberName,
+  ensureArray,
   ensureHexColor,
   withAlpha,
   isHoliday,
   isWorkday,
   addBusinessDays,
   normalizeUrl,
+  getAssigneeIds,
 } from "./utils.js";
 import { aggregateBlocksByCourse, applyBlockResolution } from "./blockUtils.js";
 import {
@@ -373,11 +375,11 @@ const createSampleMilestones = (today) => ([
 ]);
 
 const createSampleTasks = (today) => ([
-  { id: uid(), order: 0, title: "Draft course outcomes", details: "Bloom + alignment checks", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 0, status: "todo",       startDate: "",      workDays: 3, dueDate: "",                          depTaskId: null, completedDate: "" },
-  { id: uid(), order: 1, title: "Collect source materials", details: "Slides, readings, datasets", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 0, status: "inprogress", startDate: today, workDays: 2, dueDate: addBusinessDays(today,2), depTaskId: null, completedDate: "" },
-  { id: uid(), order: 2, title: "Storyboard videos",    details: "3 explainer videos", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 5, dueDate: "",                          depTaskId: null, completedDate: "" },
-  { id: uid(), order: 3, title: "Build Canvas shell",   details: "Modules, pages, nav", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 2, status: "todo",       startDate: "",      workDays: 4, dueDate: "",                          depTaskId: null, completedDate: "" },
-  { id: uid(), order: 4, title: "SME review: A–D",      details: "Async comments", note: "", links: [], blocks: [], assigneeId: null, milestoneId: 0, status: "done",        startDate: today, workDays: 1, dueDate: addBusinessDays(today,1), depTaskId: null, completedDate: today },
+  { id: uid(), order: 0, title: "Draft course outcomes", details: "Bloom + alignment checks", note: "", links: [], blocks: [], assigneeIds: [], milestoneId: 0, status: "todo",       startDate: "",      workDays: 3, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 1, title: "Collect source materials", details: "Slides, readings, datasets", note: "", links: [], blocks: [], assigneeIds: [], milestoneId: 0, status: "inprogress", startDate: today, workDays: 2, dueDate: addBusinessDays(today,2), depTaskId: null, completedDate: "" },
+  { id: uid(), order: 2, title: "Storyboard videos",    details: "3 explainer videos", note: "", links: [], blocks: [], assigneeIds: [], milestoneId: 2, status: "todo",       startDate: "",      workDays: 5, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 3, title: "Build Canvas shell",   details: "Modules, pages, nav", note: "", links: [], blocks: [], assigneeIds: [], milestoneId: 2, status: "todo",       startDate: "",      workDays: 4, dueDate: "",                          depTaskId: null, completedDate: "" },
+  { id: uid(), order: 4, title: "SME review: A–D",      details: "Async comments", note: "", links: [], blocks: [], assigneeIds: [], milestoneId: 0, status: "done",        startDate: today, workDays: 1, dueDate: addBusinessDays(today,1), depTaskId: null, completedDate: today },
 ]);
 
 export const seed = ({ withSampleData = false } = {}) => {
@@ -470,7 +472,21 @@ const remapSeed = (s) => {
       : [];
     if (t.status === "todo") { startDate = ""; dueDate = ""; }
     if (!dueDate && startDate) dueDate = addBusinessDays(startDate, workDays, s.schedule.workweek, s.schedule.holidays);
-    return { ...t, milestoneId, workDays, startDate, dueDate, links, note, blocks, depTaskId: t.depTaskId ?? null, completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : "") };
+    const sanitizedAssigneeIds = getAssigneeIds(t);
+    return {
+      ...t,
+      milestoneId,
+      workDays,
+      startDate,
+      dueDate,
+      links,
+      note,
+      blocks,
+      depTaskId: t.depTaskId ?? null,
+      completedDate: t.completedDate ?? (t.status === "done" ? todayStr() : ""),
+      assigneeIds: sanitizedAssigneeIds,
+      assigneeId: sanitizedAssigneeIds[0] ?? null,
+    };
   });
   s.milestones = s.milestones.map((m) => { const { due, ...rest } = m; return rest; });
   s.team = s.team.map((m) => ({
@@ -483,10 +499,12 @@ const remapSeed = (s) => {
   const SME = s.team.find((m) => m.roleType === "SME");
   s.course.courseLDIds  = s.course.courseLDIds?.length  ? s.course.courseLDIds  : (LD  ? [LD.id]  : []);
   s.course.courseSMEIds = s.course.courseSMEIds?.length ? s.course.courseSMEIds : (SME ? [SME.id] : []);
-  if (s.course.courseLDIds.length) {
-    const defaultLd = s.course.courseLDIds[0];
-    s.tasks = s.tasks.map((t) => ({ ...t, assigneeId: t.assigneeId ?? defaultLd }));
-  }
+  const defaultLd = s.course.courseLDIds[0] ?? null;
+  s.tasks = s.tasks.map((t) => {
+    const ids = getAssigneeIds(t);
+    const nextIds = ids.length ? [...new Set(ids)] : defaultLd ? [defaultLd] : [];
+    return { ...t, assigneeIds: nextIds, assigneeId: nextIds[0] ?? null };
+  });
   const sanitizedLinks = Array.isArray(s.linkLibrary)
     ? s.linkLibrary
         .map((link) => {
@@ -1086,6 +1104,8 @@ useEffect(() => {
     updateCourseState((s) => {
       const desiredId = milestoneId ?? null;
       const validMilestoneId = desiredId && s.milestones.some((m) => m.id === desiredId) ? desiredId : null;
+      const defaultAssignee =
+        s.course.courseLDIds[0] || (s.team.find((m) => m.roleType === 'LD')?.id ?? null);
       return {
         ...s,
         tasks: [
@@ -1099,7 +1119,8 @@ useEffect(() => {
             links: [],
             blocks: [],
             depTaskId: null,
-            assigneeId: s.course.courseLDIds[0] || (s.team.find((m) => m.roleType === 'LD')?.id ?? null),
+            assigneeIds: defaultAssignee ? [defaultAssignee] : [],
+            assigneeId: defaultAssignee ?? null,
             milestoneId: validMilestoneId,
             status: "todo",
             startDate: "",
@@ -1115,6 +1136,7 @@ useEffect(() => {
       const orig = s.tasks.find((t) => t.id === id);
       if (!orig) return s;
       const cloneStatus = orig.status === "done" ? "todo" : orig.status === "blocked" ? "blocked" : "todo";
+      const originalAssignees = getAssigneeIds(orig);
       const clone = {
         ...orig,
         id: uid(),
@@ -1126,6 +1148,8 @@ useEffect(() => {
         completedDate: "",
         depTaskId: null,
         blocks: Array.isArray(orig.blocks) ? orig.blocks.map((b) => ({ ...b })) : [],
+        assigneeIds: [...originalAssignees],
+        assigneeId: originalAssignees[0] ?? null,
       };
       return { ...s, tasks: [...s.tasks, clone] };
     });
@@ -1204,7 +1228,8 @@ useEffect(() => {
         ...t,
         id: uid(),
         order: nextOrder + i,
-        assigneeId: ld,
+        assigneeIds: ld ? [ld] : [],
+        assigneeId: ld ?? null,
         milestoneId: newMsId,
         status: 'todo',
         startDate: '',
@@ -1375,7 +1400,24 @@ useEffect(() => {
     if (!person) return s;
     return { ...s, team: [...s.team, { ...person }] };
   });
-  const deleteMember = (id) => updateCourseState((s)=>({ ...s, team: s.team.filter((m)=>m.id!==id), course: { ...s.course, courseLDIds: s.course.courseLDIds.filter((mId)=>mId!==id), courseSMEIds: s.course.courseSMEIds.filter((mId)=>mId!==id) }, tasks: s.tasks.map((t)=>(t.assigneeId===id?{...t, assigneeId:null}:t)) }));
+  const deleteMember = (id) =>
+    updateCourseState((s) => ({
+      ...s,
+      team: s.team.filter((m) => m.id !== id),
+      course: {
+        ...s.course,
+        courseLDIds: s.course.courseLDIds.filter((mId) => mId !== id),
+        courseSMEIds: s.course.courseSMEIds.filter((mId) => mId !== id),
+      },
+      tasks: s.tasks.map((t) => {
+        const ids = getAssigneeIds(t);
+        if (!ids.includes(id)) {
+          return { ...t, assigneeIds: ids, assigneeId: ids[0] ?? null };
+        }
+        const nextIds = ids.filter((memberId) => memberId !== id);
+        return { ...t, assigneeIds: nextIds, assigneeId: nextIds[0] ?? null };
+      }),
+    }));
   const toggleCourseWide = (kind, id) =>
     updateCourseState((s) => {
       const key = kind === "LD" ? "courseLDIds" : "courseSMEIds";
@@ -1385,9 +1427,15 @@ useEffect(() => {
       let tasks = s.tasks;
       if (kind === "LD") {
         const defaultLd = course.courseLDIds[0] || null;
-        tasks = s.tasks.map((t) =>
-          t.assigneeId ? t : { ...t, assigneeId: defaultLd }
-        );
+        tasks = s.tasks.map((t) => {
+          const ids = getAssigneeIds(t);
+          if (ids.length) {
+            const unique = [...new Set(ids)];
+            return { ...t, assigneeIds: unique, assigneeId: unique[0] ?? null };
+          }
+          const fallback = defaultLd ? [defaultLd] : [];
+          return { ...t, assigneeIds: fallback, assigneeId: fallback[0] ?? null };
+        });
       }
       return { ...s, course, tasks };
     });
@@ -2487,7 +2535,37 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
           <div key={c.id} className={`rounded-xl border border-black/10 p-3 ${columnBackground[c.id] || 'bg-white/60'}`} onDragOver={onDragOverCol} onDrop={onDropToCol(c.id)}>
             <div className="flex items-center justify-between mb-2"><div className="text-sm font-medium text-black/70">{c.title}</div></div>
             <div className="space-y-2 min-h-[140px]">
-              {byCol(c.id).map((t) => { const a = team.find((m)=>m.id===t.assigneeId); const collapsed = isCollapsed(t.id); return (
+              {byCol(c.id).map((t) => {
+                const assigneeIdsForTask = getAssigneeIds(t);
+                const assigneeSlots = assigneeIdsForTask.length ? assigneeIdsForTask : [''];
+                const assigneesForTask = assigneeSlots.map((id) => team.find((m) => m.id === id) || null);
+                const canAddAssignee = team.some((member) => !assigneeIdsForTask.includes(member.id));
+                const collapsed = isCollapsed(t.id);
+                const commitAssignees = (ids) => {
+                  const unique = Array.from(new Set(ids.filter(Boolean)));
+                  onUpdate(t.id, { assigneeIds: unique, assigneeId: unique[0] ?? null });
+                };
+                const handleAssigneeChange = (index, value) => {
+                  const next = [...assigneeIdsForTask];
+                  if (!value) {
+                    if (index < next.length) {
+                      next.splice(index, 1);
+                    }
+                  } else if (index < next.length) {
+                    next[index] = value;
+                  } else {
+                    next.push(value);
+                  }
+                  commitAssignees(next);
+                };
+                const handleAddAssignee = () => {
+                  const available = team.find((member) => !assigneeIdsForTask.includes(member.id));
+                  if (!available) return;
+                  commitAssignees([...assigneeIdsForTask, available.id]);
+                };
+                const assignedNames = assigneesForTask.filter(Boolean).map((member) => member.name);
+                const assigneeLabel = assignedNames.length ? assignedNames.join(', ') : 'Unassigned';
+                return (
                   <motion.div
                     key={t.id}
                     data-testid="task-card"
@@ -2506,7 +2584,33 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                       <div className="mt-1">{renderStatusControl(t)}</div>
                       <div className="text-sm text-slate-600/90 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-sm text-slate-600 mt-1 flex items-center gap-1 truncate"><StickyNote className="icon flex-shrink-0 text-amber-500" />{t.note}</div>}
-                      <div className="mt-2 flex items-center justify-between text-sm"><div className="flex items-center gap-2 min-w-0">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40 text-sm">—</span>}<span className="truncate">{a ? `${a.name} (${a.roleType})` : 'Unassigned'}</span></div><div className="flex items-center gap-2"><DuePill date={t.dueDate} status={t.status} />{t.status === "done" && <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>}</div></div>
+                      <div className="mt-2 flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex -space-x-2">
+                            {assigneesForTask.some(Boolean) ? (
+                              assigneesForTask
+                                .filter(Boolean)
+                                .map((member) => (
+                                  <Avatar
+                                    key={member.id}
+                                    name={member.name}
+                                    roleType={member.roleType}
+                                    avatar={member.avatar}
+                                  />
+                                ))
+                            ) : (
+                              <span className="text-black/40 text-sm">—</span>
+                            )}
+                          </div>
+                          <span className="truncate">{assigneeLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DuePill date={t.dueDate} status={t.status} />
+                          {t.status === "done" && (
+                            <span className="text-slate-500">Completed: {t.completedDate || "—"}</span>
+                          )}
+                        </div>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -2524,7 +2628,43 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                             </option>
                           ))}
                         </select>
-                        <div className="flex items-center gap-1">{a ? <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} /> : <span className="text-black/40 text-sm">—</span>}<select value={t.assigneeId || ""} onChange={(e)=>onUpdate(t.id,{ assigneeId:e.target.value || null })} className="border rounded px-1.5 py-1"><option value="">Unassigned</option>{taskAssignableMembers.map((m)=>(<option key={m.id} value={m.id}>{m.name} ({m.roleType})</option>))}</select></div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {assigneeSlots.map((value, index) => {
+                            const member = assigneesForTask[index];
+                            return (
+                              <div key={`${value || 'empty'}-${index}`} className="flex items-center gap-1">
+                                {member ? (
+                                  <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
+                                ) : (
+                                  <span className="text-black/40 text-sm">—</span>
+                                )}
+                                <select
+                                  value={value || ""}
+                                  onChange={(e) => handleAssigneeChange(index, e.target.value)}
+                                  className="border rounded px-1.5 py-1"
+                                >
+                                  <option value="">Unassigned</option>
+                                  {taskAssignableMembers.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.name} ({m.roleType})
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            );
+                          })}
+                          {canAddAssignee && (
+                            <button
+                              type="button"
+                              onClick={handleAddAssignee}
+                              className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-black/10 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                              title="Add assignee"
+                              aria-label="Add assignee"
+                            >
+                              <Plus className="icon" />
+                            </button>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2"><span>Start</span><input type="date" value={t.startDate || ""} onChange={(e)=>{ const patch = { startDate: e.target.value }; if (t.status === 'todo') patch.status = 'inprogress'; onUpdate(t.id, patch); }} className="border rounded px-1.5 py-1" /></div>
                         <div className="flex items-center gap-2"><span># of Workdays</span><input type="number" min={0} value={t.workDays ?? 0} onChange={(e)=>onUpdate(t.id,{ workDays:Number(e.target.value) })} className="w-20 border rounded px-1.5 py-1" /></div>
                         <div className="basis-full w-full"><DocumentInput onAdd={(url)=>onAddLink(t.id,url)} />{t.links && t.links.length>0 && (<LinkChips links={t.links} onRemove={(i)=>onRemoveLink(t.id,i)} />)}</div>
@@ -2570,7 +2710,6 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
 // =====================================================
 export const UPCOMING_DAYS = 15;
 
-const ensureArray = (value) => (Array.isArray(value) ? value : []);
 const courseIdOf = (course) => course?.course?.id ?? course?.id ?? null;
 
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
@@ -2909,6 +3048,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       note: '',
       links: [],
       blocks: [],
+      assigneeIds: userId ? [userId] : [],
       assigneeId: userId || null,
       milestoneId: null,
       status: 'todo',
@@ -3116,7 +3256,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       const courseName = course?.course?.name ?? course?.name ?? "Untitled course";
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
-        if (!task || task.assigneeId !== userId || task.status === 'skip') return;
+        if (!task) return;
+        if (task.status === 'skip') return;
+        if (!getAssigneeIds(task).includes(userId)) return;
         const milestoneName =
           milestones.find((m) => m.id === task.milestoneId)?.title || "";
         arr.push({
@@ -3551,10 +3693,10 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     const tasks = ensureArray(c?.tasks);
                     const courseId = c?.course?.id ?? c?.id ?? '';
                     const courseName = c?.course?.name ?? c?.name ?? 'Untitled course';
-                    const tTotal = tasks.filter((t) => t?.assigneeId === userId).length;
+                    const tTotal = tasks.filter((t) => getAssigneeIds(t).includes(userId)).length;
                     const tDone = tasks.filter(
                       (t) =>
-                        t?.assigneeId === userId &&
+                        getAssigneeIds(t).includes(userId) &&
                         (t?.status === 'done' || t?.status === 'skip')
                     ).length;
                     const pct = tTotal ? Math.round((tDone / tTotal) * 100) : 0;
@@ -3598,8 +3740,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                     const courseTasks = ensureArray(c?.tasks);
                     const milestones = ensureArray(c?.milestones);
                     const milestoneEntries = milestones.map((m) => {
-                      const tasksForMilestone = courseTasks.filter(
-                        (t) => t?.milestoneId === m.id && t?.assigneeId === userId
+                    const tasksForMilestone = courseTasks.filter(
+                        (t) => t?.milestoneId === m.id && getAssigneeIds(t).includes(userId)
                       );
                       const sortedTasks = [...tasksForMilestone].sort((a, b) => {
                         const statusDiff =

@@ -12,6 +12,7 @@ import BlockDialog from './components/BlockDialog.jsx';
 import { SoundContext } from './sound-context.js';
 import { Plus, Minus, Copy, Trash2, Pencil, StickyNote } from 'lucide-react';
 import { useCompletionConfetti } from './hooks/use-completion-confetti.js';
+import { getAssigneeIds } from './utils.js';
 
 export default function TaskCard({ task: t, team = [], milestones = [], tasks = [], onUpdate, onDelete, onDuplicate, onAddLink, onRemoveLink, dragHandlers = {}, reporter = null, variant = 'default' }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -65,7 +66,32 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const [statusOpen, setStatusOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [linkModal, setLinkModal] = useState(false);
-  const a = team.find((m) => m.id === t.assigneeId);
+  const assigneeIds = getAssigneeIds(t);
+  const assigneeSlots = assigneeIds.length ? assigneeIds : [''];
+  const assignees = assigneeSlots.map((id) => team.find((m) => m.id === id) || null);
+  const canAddAssignee = team.some((member) => !assigneeIds.includes(member.id));
+  const commitAssignees = (ids) => {
+    const unique = Array.from(new Set(ids.filter(Boolean)));
+    update(t.id, { assigneeIds: unique, assigneeId: unique[0] ?? null });
+  };
+  const handleAssigneeChange = (index, value) => {
+    const next = [...assigneeIds];
+    if (!value) {
+      if (index < next.length) {
+        next.splice(index, 1);
+      }
+    } else if (index < next.length) {
+      next[index] = value;
+    } else {
+      next.push(value);
+    }
+    commitAssignees(next);
+  };
+  const handleAddAssignee = () => {
+    const available = team.find((member) => !assigneeIds.includes(member.id));
+    if (!available) return;
+    commitAssignees([...assigneeIds, available.id]);
+  };
   const milestone = milestones.find((m) => m.id === t.milestoneId);
   const isUserBoardVariant = variant === 'user-board';
   const isUserBoardCollapsed = isUserBoardVariant && collapsed;
@@ -275,30 +301,48 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               </div>
             )}
             <div className="mt-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-sm">
-              <div className="flex items-start gap-2 min-w-0">
-                {a ? (
-                  <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
-                ) : (
-                  <span className="text-slate-400 text-sm">—</span>
-                )}
-                <div className="flex flex-col min-w-0">
-                  <select
-                    aria-label="Assignee"
-                    value={t.assigneeId || ''}
-                    onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
-                    className="min-w-[8rem] max-w-full w-auto rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm flex-1"
-                    title={team.find((m) => m.id === t.assigneeId)?.name}
-                  >
-                    <option value="">Unassigned</option>
-                    {team.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({m.roleType})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="text-xs text-slate-500/90 mt-1 truncate">
-                    {milestone ? milestone.title : '—'}
-                  </div>
+              <div className="flex flex-col min-w-0 gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {assigneeSlots.map((value, index) => {
+                    const member = assignees[index];
+                    return (
+                      <div key={`${value || 'empty'}-${index}`} className="flex items-center gap-2">
+                        {member ? (
+                          <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
+                        ) : (
+                          <span className="text-slate-400 text-sm">—</span>
+                        )}
+                        <select
+                          aria-label="Assignee"
+                          value={value || ''}
+                          onChange={(e) => handleAssigneeChange(index, e.target.value)}
+                          className="min-w-[8rem] max-w-full w-auto rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm"
+                          title={member?.name}
+                        >
+                          <option value="">Unassigned</option>
+                          {team.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name} ({m.roleType})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                  {canAddAssignee && (
+                    <button
+                      type="button"
+                      onClick={handleAddAssignee}
+                      className="glass-icon-button w-7 h-7"
+                      title="Add assignee"
+                      aria-label="Add assignee"
+                    >
+                      <Plus className="icon" />
+                    </button>
+                  )}
+                </div>
+                <div className="text-xs text-slate-500/90 mt-1 truncate">
+                  {milestone ? milestone.title : '—'}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -390,26 +434,44 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 </button>
               </div>
             )}
-            <div className="flex items-start gap-1">
-              {a ? (
-                <Avatar name={a.name} roleType={a.roleType} avatar={a.avatar} />
-              ) : (
-                <span className="text-slate-400 text-sm">—</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {assigneeSlots.map((value, index) => {
+                const member = assignees[index];
+                return (
+                  <div key={`${value || 'empty'}-${index}`} className="flex items-center gap-2">
+                    {member ? (
+                      <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} />
+                    ) : (
+                      <span className="text-slate-400 text-sm">—</span>
+                    )}
+                    <select
+                      aria-label="Assignee"
+                      value={value || ''}
+                      onChange={(e) => handleAssigneeChange(index, e.target.value)}
+                      className="min-w-[8rem] max-w-full w-auto rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm flex-1"
+                      title={member?.name}
+                    >
+                      <option value="">Unassigned</option>
+                      {team.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.roleType})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+              {canAddAssignee && (
+                <button
+                  type="button"
+                  onClick={handleAddAssignee}
+                  className="glass-icon-button w-7 h-7"
+                  title="Add assignee"
+                  aria-label="Add assignee"
+                >
+                  <Plus className="icon" />
+                </button>
               )}
-              <select
-                aria-label="Assignee"
-                value={t.assigneeId || ''}
-                onChange={(e) => update(t.id, { assigneeId: e.target.value || null })}
-                className="min-w-[8rem] max-w-full w-auto rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm flex-1"
-                title={team.find((m) => m.id === t.assigneeId)?.name}
-              >
-                <option value="">Unassigned</option>
-                {team.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.roleType})
-                  </option>
-                ))}
-              </select>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2">
