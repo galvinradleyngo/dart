@@ -29,9 +29,41 @@ describe('applyLinkPatch', () => {
       { id: 't1', milestoneId: 'm1', links: ['a'] },
       { id: 't2', milestoneId: 'm1', links: ['a'] },
     ];
-    const result = applyLinkPatch(withLink, 't1', 'remove', 0);
+    const result = applyLinkPatch(withLink, 't1', 'remove', { index: 0, url: 'a' });
     expect(result.find((t) => t.id === 't1').links).toHaveLength(0);
     expect(result.find((t) => t.id === 't2').links).toEqual(['a']);
+  });
+
+  it('propagates added links to dependent tasks', () => {
+    const tasks = [
+      { id: 'parent', milestoneId: 'm1', links: [], depTaskId: null },
+      { id: 'child', milestoneId: 'm1', links: [], depTaskId: 'parent' },
+      { id: 'grandchild', milestoneId: 'm1', links: [], depTaskId: 'child' },
+    ];
+    const result = applyLinkPatch(tasks, 'parent', 'add', 'https://example.com');
+    expect(result.find((t) => t.id === 'parent').links).toEqual(['https://example.com']);
+    expect(result.find((t) => t.id === 'child').links).toEqual(['https://example.com']);
+    expect(result.find((t) => t.id === 'grandchild').links).toEqual(['https://example.com']);
+  });
+
+  it('does not propagate links back to ancestors', () => {
+    const tasks = [
+      { id: 'parent', milestoneId: 'm1', links: [], depTaskId: null },
+      { id: 'child', milestoneId: 'm1', links: [], depTaskId: 'parent' },
+    ];
+    const result = applyLinkPatch(tasks, 'child', 'add', 'https://example.com');
+    expect(result.find((t) => t.id === 'child').links).toEqual(['https://example.com']);
+    expect(result.find((t) => t.id === 'parent').links).toEqual([]);
+  });
+
+  it('removes cascaded links from dependents when the parent removes them', () => {
+    const tasks = [
+      { id: 'parent', milestoneId: 'm1', links: ['https://example.com'], depTaskId: null },
+      { id: 'child', milestoneId: 'm1', links: ['https://example.com'], depTaskId: 'parent' },
+    ];
+    const result = applyLinkPatch(tasks, 'parent', 'remove', { index: 0, url: 'https://example.com' });
+    expect(result.find((t) => t.id === 'parent').links).toEqual([]);
+    expect(result.find((t) => t.id === 'child').links).toEqual([]);
   });
 });
 
@@ -96,7 +128,7 @@ describe('syncLinkLibraryWithMilestone', () => {
     ]);
   });
 
-  it('deduplicates shared links across tasks in the same milestone', () => {
+  it('deduplicates shared links across tasks in the same milestone and keeps the latest task reference', () => {
     const tasks = [
       { id: 'a', milestoneId: 'm', title: 'Task A', order: 0, links: ['https://example.com/shared'] },
       { id: 'b', milestoneId: 'm', title: 'Task B', order: 1, links: ['https://example.com/shared'] },
@@ -115,8 +147,44 @@ describe('syncLinkLibraryWithMilestone', () => {
         label: 'Milestone A',
         url: 'https://example.com/shared',
         milestoneId: 'm',
+        taskId: 'b',
+        source: 'task',
+      },
+    ]);
+  });
+
+  it('replaces older milestone entries that share the same url', () => {
+    const previous = [
+      {
+        id: 'old',
+        label: 'Milestone Z',
+        url: 'https://example.com/shared',
+        milestoneId: 'z',
+        taskId: 'legacy',
+        source: 'task',
+        pinned: true,
+      },
+    ];
+    const tasks = [
+      { id: 'a', milestoneId: 'm', title: 'Task A', order: 2, links: ['https://example.com/shared'] },
+    ];
+    const library = syncLinkLibraryWithMilestone({
+      tasks,
+      library: previous,
+      milestoneId: 'm',
+      milestoneTitle: 'Milestone A',
+      uidFn: () => 'new-id',
+    });
+
+    expect(library).toEqual([
+      {
+        id: 'old',
+        label: 'Milestone A',
+        url: 'https://example.com/shared',
+        milestoneId: 'm',
         taskId: 'a',
         source: 'task',
+        pinned: true,
       },
     ]);
   });
