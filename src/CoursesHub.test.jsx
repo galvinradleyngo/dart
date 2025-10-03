@@ -1,10 +1,11 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, beforeEach, expect, vi } from 'vitest';
 import { CoursesHub } from './App.jsx';
 
 vi.mock('./firebase.js', () => ({ db: {} }));
 const addDoc = vi.fn().mockResolvedValue({ id: 'history-doc' });
 const getDocs = vi.fn().mockResolvedValue({ forEach: () => {}, docs: [] });
+const deleteDoc = vi.fn().mockResolvedValue();
 
 vi.mock('firebase/firestore', () => ({
   getDoc: vi.fn().mockResolvedValue({ exists: () => false }),
@@ -18,6 +19,7 @@ vi.mock('firebase/firestore', () => ({
   orderBy: vi.fn((...args) => args),
   limit: vi.fn((...args) => args),
   serverTimestamp: vi.fn(() => ({ server: true })),
+  deleteDoc,
   Timestamp: {
     fromMillis: (ms) => ({ toMillis: () => ms }),
   },
@@ -46,19 +48,30 @@ describe('CoursesHub undo functionality', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     addDoc.mockClear();
     getDocs.mockClear();
+    deleteDoc.mockClear();
+    localStorage.setItem('healthPM:platformBackupLastRun:v1', String(Date.now()));
   });
 
-  const renderHub = () =>
-    render(
+  const renderHub = (props = {}) => {
+    const {
+      onApplyPlatformBackup = () => Promise.resolve(null),
+      people = [],
+      onPeopleChange = () => {},
+      ...rest
+    } = props;
+    return render(
       <CoursesHub
         onOpenCourse={() => {}}
         onEditTemplate={() => {}}
         onAddCourse={() => {}}
         onOpenUser={() => {}}
-        people={[]}
-        onPeopleChange={() => {}}
+        people={people}
+        onPeopleChange={onPeopleChange}
+        onApplyPlatformBackup={onApplyPlatformBackup}
+        {...rest}
       />
     );
+  };
 
   it('restores course list after deleting and undoing', async () => {
     const courses = [
@@ -237,6 +250,129 @@ describe('CoursesHub undo functionality', () => {
     const stored = JSON.parse(localStorage.getItem('healthPM:courses:v1'));
     expect(stored.map((c) => c.course.name)).toEqual(['Course 1', 'Course 2']);
     expect(addDoc).toHaveBeenCalled();
+  });
+
+  it('restores a platform backup snapshot from history', async () => {
+    const currentCourses = [
+      { id: 'c1', course: { id: 'c1', name: 'Original', description: '' }, tasks: [], team: [], schedule: {} },
+    ];
+    localStorage.setItem('healthPM:courses:v1', JSON.stringify(currentCourses));
+    const backupSnapshot = {
+      courses: [
+        { id: 'c2', course: { id: 'c2', name: 'Restored Course', description: 'New' }, tasks: [], team: [], schedule: {} },
+      ],
+      schedule: { workweek: [1, 2, 3, 4, 5], holidays: [] },
+      linkLibrary: [{ id: 'l1', label: 'Docs', url: 'https://example.com', pinned: false }],
+      people: [{ id: 'p1', name: 'Jamie', roleType: 'PM' }],
+      milestoneTemplates: [],
+      soundEnabled: false,
+    };
+    const backupEntry = {
+      id: 'backup-1',
+      kind: 'backup',
+      snapshot: backupSnapshot,
+      summary: { courseCount: 1, peopleCount: 1, linkCount: 1, taskCount: 0, milestoneCount: 0, templateCount: 0 },
+      label: 'PLATFORM BACKUP',
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 604_800_000,
+    };
+    localStorage.setItem('healthPM:courseHistoryCache:v1', JSON.stringify([backupEntry]));
+
+    const applyBackup = vi.fn().mockImplementation(async (entry) => {
+      expect(entry.kind).toBe('backup');
+      localStorage.setItem('healthPM:courses:v1', JSON.stringify(backupSnapshot.courses));
+      localStorage.setItem('healthPM:linkLibrary:v1', JSON.stringify(backupSnapshot.linkLibrary));
+      return backupSnapshot;
+    });
+
+    renderHub({ onApplyPlatformBackup: applyBackup });
+
+    fireEvent.click(screen.getByRole('button', { name: /Version history/i }));
+    await screen.findByText(/Platform backup/i);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retrieve' })[0]);
+
+    await waitFor(() => expect(applyBackup).toHaveBeenCalled());
+    expect(await screen.findByText('Restored Course')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /Course version history/i })).not.toBeInTheDocument();
+
+    const storedCourses = JSON.parse(localStorage.getItem('healthPM:courses:v1'));
+    expect(storedCourses).toHaveLength(1);
+    expect(storedCourses[0].course.name).toBe('Restored Course');
+  });
+
+  it('creates a daily platform backup and updates last run marker', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2024-01-05T07:15:00.000Z').getTime();
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    localStorage.setItem('healthPM:courses:v1', JSON.stringify([]));
+    localStorage.removeItem('healthPM:courseHistoryCache:v1');
+    localStorage.setItem('healthPM:platformBackupLastRun:v1', String(now - 86_400_000));
+
+    renderHub();
+
+    await act(async () => {
+      await Promise.resolve();
+      vi.runOnlyPendingTimers();
+      await Promise.resolve();
+    });
+
+    const cacheRaw = localStorage.getItem('healthPM:courseHistoryCache:v1');
+    expect(cacheRaw).toBeTruthy();
+    const cache = JSON.parse(cacheRaw);
+    expect(cache[0].kind).toBe('backup');
+    expect(cache[0].expiresAt - cache[0].createdAt).toBe(604_800_000);
+
+    const boundary = (() => {
+      const d = new Date(now);
+      d.setHours(6, 0, 0, 0);
+      if (now < d.getTime()) {
+        d.setDate(d.getDate() - 1);
+      }
+      return d.getTime();
+    })();
+    expect(Number(localStorage.getItem('healthPM:platformBackupLastRun:v1'))).toBe(boundary);
+
+    dateNowSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it('purges expired platform backups after seven days', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2024-01-10T08:00:00.000Z').getTime();
+    const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(now);
+    const active = {
+      id: 'backup-fresh',
+      kind: 'backup',
+      snapshot: { courses: [] },
+      createdAt: now,
+      expiresAt: now + 10_000,
+    };
+    const expired = {
+      id: 'backup-old',
+      kind: 'backup',
+      snapshot: { courses: [] },
+      createdAt: now - 10_000,
+      expiresAt: now - 1,
+    };
+    localStorage.setItem('healthPM:courseHistoryCache:v1', JSON.stringify([active, expired]));
+    localStorage.setItem('healthPM:courseHistoryPending:v1', JSON.stringify([]));
+    localStorage.setItem('healthPM:platformBackupLastRun:v1', String(now));
+
+    renderHub();
+
+    await act(async () => {
+      await Promise.resolve();
+      vi.runOnlyPendingTimers();
+      await Promise.resolve();
+    });
+
+    const cache = JSON.parse(localStorage.getItem('healthPM:courseHistoryCache:v1'));
+    expect(cache).toHaveLength(1);
+    expect(cache[0].id).toBe('backup-fresh');
+    expect(deleteDoc).toHaveBeenCalled();
+
+    dateNowSpy.mockRestore();
+    vi.useRealTimers();
   });
 });
 

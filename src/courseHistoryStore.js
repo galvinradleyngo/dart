@@ -60,12 +60,14 @@ const writeLocalEntries = (key, entries) => {
   } catch {}
 };
 
+const cloneIfObject = (value) => {
+  if (!value || typeof value !== 'object') return null;
+  return cloneDeep(value);
+};
+
 export const sanitizeCourseHistoryEntryData = (entry) => {
   if (!entry || typeof entry !== 'object') return null;
-  const course = entry.course ? cloneDeep(entry.course) : null;
-  const courseId =
-    entry.courseId ?? course?.course?.id ?? course?.id ?? null;
-  if (!course || !courseId) return null;
+  const kind = entry.kind === 'backup' ? 'backup' : 'course';
 
   const createdAt = toMillis(entry.createdAt, Date.now());
   const expiresAt =
@@ -78,10 +80,8 @@ export const sanitizeCourseHistoryEntryData = (entry) => {
 
   const sanitized = {
     id: providedId ?? uid(),
-    courseId,
-    course,
-    action: entry.action || 'delete',
-    position: typeof entry.position === 'number' ? entry.position : null,
+    kind,
+    action: entry.action || (kind === 'course' ? 'delete' : null),
     createdAt: Number.isFinite(createdAt) ? createdAt : Date.now(),
   };
 
@@ -92,6 +92,27 @@ export const sanitizeCourseHistoryEntryData = (entry) => {
 
   if (Number.isFinite(expiresAt)) {
     sanitized.expiresAt = expiresAt;
+  }
+
+  if (kind === 'course') {
+    const course = entry.course ? cloneDeep(entry.course) : null;
+    const courseId =
+      entry.courseId ?? course?.course?.id ?? course?.id ?? null;
+    if (!course || !courseId) return null;
+    sanitized.courseId = courseId;
+    sanitized.course = course;
+    sanitized.position =
+      typeof entry.position === 'number' ? entry.position : null;
+  } else {
+    const snapshot = cloneIfObject(entry.snapshot);
+    if (!snapshot) return null;
+    sanitized.snapshot = snapshot;
+    const summary = cloneIfObject(entry.summary);
+    if (summary) sanitized.summary = summary;
+    const metadata = cloneIfObject(entry.metadata);
+    if (metadata) sanitized.metadata = metadata;
+    const label = stringId(entry.label);
+    if (label) sanitized.label = label;
   }
 
   return sanitized;
@@ -187,13 +208,21 @@ export const loadCourseHistoryCache = () => {
 const buildRemotePayload = (entry) => {
   const payload = {
     password: FIRESTORE_PASSWORD_SENTINEL,
-    courseId: entry.courseId,
-    course: entry.course,
+    kind: entry.kind,
     action: entry.action,
-    position: entry.position,
     clientId: entry.clientId ?? entry.id,
     createdAt: serverTimestamp(),
   };
+  if (entry.kind === 'course') {
+    payload.courseId = entry.courseId;
+    payload.course = entry.course;
+    payload.position = entry.position;
+  } else if (entry.kind === 'backup') {
+    payload.snapshot = entry.snapshot;
+    if (entry.summary) payload.summary = entry.summary;
+    if (entry.metadata) payload.metadata = entry.metadata;
+    if (entry.label) payload.label = entry.label;
+  }
   if (entry.expiresAt != null) {
     payload.expiresAt = entry.expiresAt;
   }
@@ -354,9 +383,17 @@ export const loadCourseHistoryEntries = async () => {
     const remoteEntries = snapshot.docs
       .map((docSnap) => {
         const data = docSnap.data?.() ?? docSnap.data;
-        if (!data || !data.courseId || !data.course) return null;
+        if (!data || typeof data !== 'object') return null;
+        const kind = data.kind === 'backup' ? 'backup' : 'course';
+        if (kind === 'course' && (!data.courseId || !data.course)) {
+          return null;
+        }
+        if (kind === 'backup' && !data.snapshot) {
+          return null;
+        }
         return sanitizeCourseHistoryEntryData({
           ...data,
+          kind,
           id: docSnap.id,
           createdAt: data.createdAt,
         });
