@@ -50,6 +50,36 @@ describe('MilestoneCard', () => {
     expect(details?.open).toBe(true);
   });
 
+  it('saves a milestone into the course when requested', () => {
+    const onSaveMilestone = vi.fn();
+    render(
+      <MilestoneCard
+        milestone={milestone}
+        onSaveMilestone={onSaveMilestone}
+      />,
+    );
+
+    const saveButton = screen.getByLabelText('Save milestone to course');
+    fireEvent.click(saveButton);
+
+    expect(onSaveMilestone).toHaveBeenCalledWith('m1');
+  });
+
+  it('saves a milestone as a reusable template', () => {
+    const onSaveAsTemplate = vi.fn();
+    render(
+      <MilestoneCard
+        milestone={milestone}
+        onSaveAsTemplate={onSaveAsTemplate}
+      />,
+    );
+
+    const templateButton = screen.getByLabelText('Save as milestone template');
+    fireEvent.click(templateButton);
+
+    expect(onSaveAsTemplate).toHaveBeenCalledWith('m1');
+  });
+
   it('sorts tasks by numeric order by default', () => {
     const tasks = [
       { id: 't1', title: 'First task', status: 'todo', order: 1 },
