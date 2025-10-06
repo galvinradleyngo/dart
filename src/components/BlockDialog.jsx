@@ -169,7 +169,7 @@ export default function BlockDialog({
               {isResolveMode ? "Resolve Block" : "Mark as Blocked"}
             </h2>
             {task && (
-              <p className="text-sm text-slate-600/90">
+              <p className="text-sm text-slate-700">
                 {task.title || "Untitled task"}
               </p>
             )}
