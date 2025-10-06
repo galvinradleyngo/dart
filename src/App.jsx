@@ -791,6 +791,64 @@ function IconBadge({ children, className = "" }) {
   );
 }
 
+function UnassignedTasksPanel({
+  show,
+  tasks,
+  tasksAll,
+  team,
+  milestones,
+  onUpdateTask,
+  onDeleteTask,
+  onDuplicateTask,
+  onAddLink,
+  onRemoveLink,
+  onDeleteAll,
+}) {
+  if (!show || !tasks?.length) {
+    return null;
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
+            <p className="text-sm text-slate-600">
+              Assign these tasks to a milestone to track progress alongside the rest of your plan.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onDeleteAll}
+            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
+          >
+            <Trash2 className="icon" />
+            Delete all
+          </button>
+        </div>
+        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+          {tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              tasks={tasksAll}
+              team={team}
+              milestones={milestones}
+              onUpdate={onUpdateTask}
+              onDelete={onDeleteTask}
+              onDuplicate={onDuplicateTask}
+              onAddLink={onAddLink}
+              onRemoveLink={onRemoveLink}
+              reporter={null}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
@@ -2432,45 +2490,19 @@ useEffect(() => {
                 {dragMilestoneOverId === null && dragMilestoneId.current && (
                   <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
                 )}
-                {milestoneFilter === "all" && unassignedTasks.length > 0 && (
-                  <div className="mt-6">
-                    <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
-                          <p className="text-sm text-slate-600">
-                            Assign these tasks to a milestone to track progress alongside the rest of your plan.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleDeleteUnassignedTasksClick}
-                          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
-                        >
-                          <Trash2 className="icon" />
-                          Delete all
-                        </button>
-                      </div>
-                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {unassignedTasks.map((task) => (
-                          <TaskCard
-                            key={task.id}
-                            task={task}
-                            tasks={tasksRaw}
-                            team={team}
-                            milestones={milestones}
-                            onUpdate={updateTask}
-                            onDelete={deleteTask}
-                            onDuplicate={duplicateTask}
-                            onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
-                            onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
-                            reporter={null}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <UnassignedTasksPanel
+                  show={milestoneFilter === "all"}
+                  tasks={unassignedTasks}
+                  tasksAll={tasksRaw}
+                  team={team}
+                  milestones={milestones}
+                  onUpdateTask={updateTask}
+                  onDeleteTask={deleteTask}
+                  onDuplicateTask={duplicateTask}
+                  onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
+                  onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
+                  onDeleteAll={handleDeleteUnassignedTasksClick}
+                />
               </div>
             </div>
           </div>
