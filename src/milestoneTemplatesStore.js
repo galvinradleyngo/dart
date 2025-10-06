@@ -7,19 +7,41 @@ const MILESTONE_TPL_KEY = "healthPM:milestoneTemplates:v1";
 const migrateTask = (t = {}) => {
   const assigneeIds = getAssigneeIds(t);
   return {
+    id: t.id || uid(),
     title: t.title || "",
     details: t.details || "",
     note: t.note || "",
-    links: t.links || [],
+    links: Array.isArray(t.links) ? t.links : [],
     depTaskId: t.depTaskId ?? null,
     assigneeIds,
     assigneeId: assigneeIds[0] ?? null,
     status: t.status || "todo",
     startDate: t.startDate || "",
-    workDays: t.workDays ?? 1,
+    workDays: Number.isFinite(t.workDays) ? t.workDays : 1,
     dueDate: t.dueDate || "",
     completedDate: t.completedDate || "",
   };
+};
+
+const templateTaskDefaults = () => migrateTask({
+  title: "",
+  details: "",
+  note: "",
+  links: [],
+  status: "todo",
+  workDays: 1,
+});
+
+const persistTemplates = (templates) => {
+  saveMilestoneTemplates(templates);
+  saveMilestoneTemplatesRemote(templates).catch(() => {});
+  return templates;
+};
+
+const mutateTemplates = (mutator) => {
+  const templates = loadMilestoneTemplates();
+  const next = mutator(templates);
+  return persistTemplates(next);
 };
 
 export const loadMilestoneTemplates = () => {
@@ -55,23 +77,92 @@ export const saveMilestoneTemplatesRemote = async (arr) => {
 };
 
 export const addTemplate = (template) => {
-  const templates = loadMilestoneTemplates();
-  const next = [...templates, template];
-  saveMilestoneTemplates(next);
-  saveMilestoneTemplatesRemote(next).catch(() => {});
-  return next;
+  return mutateTemplates((templates) => {
+    const nextTemplate = {
+      ...template,
+      tasks: Array.isArray(template.tasks)
+        ? template.tasks.map(migrateTask)
+        : [],
+    };
+    return [...templates, nextTemplate];
+  });
 };
 
 export const removeTemplate = (id) => {
-  const templates = loadMilestoneTemplates().filter((t) => t.id !== id);
-  saveMilestoneTemplates(templates);
-  saveMilestoneTemplatesRemote(templates).catch(() => {});
-  return templates;
+  return mutateTemplates((templates) => templates.filter((t) => t.id !== id));
+};
+
+export const updateTemplate = (id, updates = {}) => {
+  return mutateTemplates((templates) =>
+    templates.map((tpl) =>
+      tpl.id === id
+        ? {
+            ...tpl,
+            ...updates,
+            tasks: Array.isArray(updates.tasks)
+              ? updates.tasks.map(migrateTask)
+              : tpl.tasks,
+          }
+        : tpl
+    )
+  );
 };
 
 export const createTemplateFromMilestone = (milestone, tasks = []) => {
-  const templateTasks = tasks.map(({ id, order, milestoneId, ...rest }) => ({ ...rest }));
+  const templateTasks = tasks.map(({ id, order, milestoneId, ...rest }) =>
+    migrateTask(rest)
+  );
   const template = { id: uid(), title: milestone.title, goal: milestone.goal, tasks: templateTasks };
   return addTemplate(template);
 };
+
+export const createEmptyTemplate = () => {
+  const template = { id: uid(), title: "New template", goal: "", tasks: [] };
+  return addTemplate(template);
+};
+
+export const addTaskToTemplate = (templateId) =>
+  mutateTemplates((templates) =>
+    templates.map((tpl) =>
+      tpl.id === templateId
+        ? { ...tpl, tasks: [...(tpl.tasks || []), templateTaskDefaults()] }
+        : tpl
+    )
+  );
+
+export const updateTaskInTemplate = (templateId, taskId, updates = {}) =>
+  mutateTemplates((templates) =>
+    templates.map((tpl) => {
+      if (tpl.id !== templateId) return tpl;
+      const tasks = Array.isArray(tpl.tasks) ? tpl.tasks : [];
+      const nextTasks = tasks.map((task) =>
+        task.id === taskId ? migrateTask({ ...task, ...updates, id: task.id }) : task
+      );
+      return { ...tpl, tasks: nextTasks };
+    })
+  );
+
+export const removeTaskFromTemplate = (templateId, taskId) =>
+  mutateTemplates((templates) =>
+    templates.map((tpl) =>
+      tpl.id === templateId
+        ? { ...tpl, tasks: (tpl.tasks || []).filter((task) => task.id !== taskId) }
+        : tpl
+    )
+  );
+
+export const duplicateTaskInTemplate = (templateId, taskId) =>
+  mutateTemplates((templates) =>
+    templates.map((tpl) => {
+      if (tpl.id !== templateId) return tpl;
+      const tasks = Array.isArray(tpl.tasks) ? tpl.tasks : [];
+      const target = tasks.find((task) => task.id === taskId);
+      if (!target) return tpl;
+      const duplicated = migrateTask({ ...target, id: null });
+      const index = tasks.findIndex((task) => task.id === taskId);
+      const nextTasks = [...tasks];
+      nextTasks.splice(index + 1, 0, duplicated);
+      return { ...tpl, tasks: nextTasks };
+    })
+  );
 
