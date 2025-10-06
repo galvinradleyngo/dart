@@ -1993,7 +1993,11 @@ useEffect(() => {
               <span>Back to Courses</span>
             </button>
           )}
-          <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${state.course.accent} shadow-[0_12px_32px_rgba(15,23,42,0.2)]`} />
+          <img
+            src="/Horizontal Logo Coloured.png"
+            alt="DART logo"
+            className="h-9 w-auto max-w-[150px] object-contain drop-shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
+          />
           {/* DART banner title */}
           <div className="hidden sm:block text-[15px] font-semibold text-slate-700/90 tracking-tight truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
@@ -5441,7 +5445,11 @@ export function CoursesHub({
       <header className="sticky top-0 z-20 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"/>
+            <img
+              src="/Horizontal Logo Coloured.png"
+              alt="DART logo"
+              className="h-9 w-auto max-w-[150px] object-contain drop-shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
+            />
             <div className="min-w-0">
               <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
               <div className="text-sm text-slate-700 truncate flex items-center gap-2">
