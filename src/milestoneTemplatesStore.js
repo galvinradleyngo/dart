@@ -108,6 +108,16 @@ export const updateTemplate = (id, updates = {}) => {
   );
 };
 
+export const updateTemplate = (id, updates = {}) => {
+  const templates = loadMilestoneTemplates();
+  const next = templates.map((tpl) =>
+    tpl.id === id ? { ...tpl, ...updates } : tpl
+  );
+  saveMilestoneTemplates(next);
+  saveMilestoneTemplatesRemote(next).catch(() => {});
+  return next;
+};
+
 export const createTemplateFromMilestone = (milestone, tasks = []) => {
   const templateTasks = tasks.map(({ id, order, milestoneId, ...rest }) =>
     migrateTask(rest)

@@ -1529,6 +1529,8 @@ useEffect(() => {
         [created.id]: { title: created.title || "", goal: created.goal || "" },
       }));
     }
+    const next = createEmptyMilestoneTemplate();
+    onChangeMilestoneTemplates?.(next);
     setTemplateLibraryOpen(true);
   };
 
@@ -2619,6 +2621,7 @@ useEffect(() => {
                                 </>
                               )}
                             </button>
+                          <div className="flex flex-col gap-2 sm:w-48">
                             <button
                               type="button"
                               onClick={() => handleAddTemplateToCourse(tpl.id)}
