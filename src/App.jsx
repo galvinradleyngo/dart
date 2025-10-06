@@ -33,6 +33,10 @@ import {
   removeTemplate as removeMilestoneTemplateStore,
   updateTemplate as updateMilestoneTemplateStore,
   createEmptyTemplate as createEmptyMilestoneTemplate,
+  addTaskToTemplate as addTaskToMilestoneTemplateStore,
+  updateTaskInTemplate as updateTaskInMilestoneTemplateStore,
+  removeTaskFromTemplate as removeTaskFromMilestoneTemplateStore,
+  duplicateTaskInTemplate as duplicateTaskInMilestoneTemplateStore,
 } from "./milestoneTemplatesStore.js";
 import {
   X,
@@ -743,6 +747,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
   const [templateDrafts, setTemplateDrafts] = useState({});
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
@@ -761,6 +766,7 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   useEffect(() => {
     if (!templateLibraryOpen) {
       setTemplateDrafts({});
+      setEditingTemplateId(null);
       return;
     }
     setTemplateDrafts((prev) =>
@@ -780,6 +786,13 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
       }, {})
     );
   }, [templateLibraryOpen, milestoneTemplates]);
+
+  useEffect(() => {
+    if (!editingTemplateId) return;
+    if (!milestoneTemplates.some((tpl) => tpl.id === editingTemplateId)) {
+      setEditingTemplateId(null);
+    }
+  }, [editingTemplateId, milestoneTemplates]);
 
   useEffect(() => {
     if (!templateLibraryOpen) return;
@@ -1429,6 +1442,33 @@ useEffect(() => {
   const removeMilestoneTemplate = (id) => {
     const next = removeMilestoneTemplateStore(id);
     onChangeMilestoneTemplates?.(next);
+    setEditingTemplateId((prev) => (prev === id ? null : prev));
+  };
+
+  const toggleTemplateEditor = (id) => {
+    setEditingTemplateId((prev) => (prev === id ? null : id));
+  };
+
+  const addTemplateTask = (id) => {
+    const next = addTaskToMilestoneTemplateStore(id);
+    onChangeMilestoneTemplates?.(next);
+    setEditingTemplateId(id);
+  };
+
+  const updateTemplateTaskField = (templateId, taskId, field, value) => {
+    const next = updateTaskInMilestoneTemplateStore(templateId, taskId, { [field]: value });
+    onChangeMilestoneTemplates?.(next);
+  };
+
+  const removeTemplateTask = (templateId, taskId) => {
+    const next = removeTaskFromMilestoneTemplateStore(templateId, taskId);
+    onChangeMilestoneTemplates?.(next);
+  };
+
+  const duplicateTemplateTask = (templateId, taskId) => {
+    const next = duplicateTaskInMilestoneTemplateStore(templateId, taskId);
+    onChangeMilestoneTemplates?.(next);
+    setEditingTemplateId(templateId);
   };
 
   const handleTemplateDraftChange = (id, field, value) => {
@@ -1478,6 +1518,17 @@ useEffect(() => {
   };
 
   const handleCreateTemplate = () => {
+    const existingIds = new Set(milestoneTemplates.map((tpl) => tpl.id));
+    const next = createEmptyMilestoneTemplate();
+    onChangeMilestoneTemplates?.(next);
+    const created = next.find((tpl) => !existingIds.has(tpl.id));
+    if (created) {
+      setEditingTemplateId(created.id);
+      setTemplateDrafts((prev) => ({
+        ...prev,
+        [created.id]: { title: created.title || "", goal: created.goal || "" },
+      }));
+    }
     const next = createEmptyMilestoneTemplate();
     onChangeMilestoneTemplates?.(next);
     setTemplateLibraryOpen(true);
@@ -2518,6 +2569,7 @@ useEffect(() => {
                     const isDirty =
                       draft.title !== (tpl.title || "") ||
                       (draft.goal || "") !== (tpl.goal || "");
+                    const isEditing = editingTemplateId === tpl.id;
                     return (
                       <div key={tpl.id} className="rounded-3xl border border-slate-200/80 bg-slate-50/90 p-5 shadow-sm">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
@@ -2551,6 +2603,24 @@ useEffect(() => {
                               placeholder="What is this template for?"
                             />
                           </div>
+                          <div className="flex flex-col gap-2 sm:w-52">
+                            <button
+                              type="button"
+                              onClick={() => toggleTemplateEditor(tpl.id)}
+                              className="glass-button w-full"
+                            >
+                              {isEditing ? (
+                                <>
+                                  <ChevronUp className="icon" />
+                                  <span>Hide tasks</span>
+                                </>
+                              ) : (
+                                <>
+                                  <ListChecks className="icon" />
+                                  <span>Edit tasks</span>
+                                </>
+                              )}
+                            </button>
                           <div className="flex flex-col gap-2 sm:w-48">
                             <button
                               type="button"
@@ -2588,6 +2658,121 @@ useEffect(() => {
                             </button>
                           </div>
                         </div>
+                        {isEditing && (
+                          <div className="mt-5 space-y-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                                <ListChecks className="icon" />
+                                <span>Template tasks</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => addTemplateTask(tpl.id)}
+                                className="glass-button inline-flex items-center gap-2"
+                              >
+                                <Plus className="icon" />
+                                <span>Add task</span>
+                              </button>
+                            </div>
+                            {(!tpl.tasks || tpl.tasks.length === 0) ? (
+                              <div className="rounded-2xl border border-dashed border-slate-300/80 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
+                                No tasks yet. Add tasks to build out this milestone template.
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {tpl.tasks.map((task, index) => (
+                                  <div
+                                    key={task.id}
+                                    className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm"
+                                  >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                      <div>
+                                        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                          Task {index + 1}
+                                        </div>
+                                        <div className="text-sm font-medium text-slate-700">
+                                          {task.title?.trim() || "Untitled task"}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => duplicateTemplateTask(tpl.id, task.id)}
+                                          className="glass-icon-button w-8 h-8"
+                                          title="Duplicate task"
+                                          aria-label="Duplicate task"
+                                        >
+                                          <Copy className="icon" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (
+                                              window.confirm(
+                                                "Remove this task from the template? This action cannot be undone."
+                                              )
+                                            ) {
+                                              removeTemplateTask(tpl.id, task.id);
+                                            }
+                                          }}
+                                          className="glass-icon-button w-8 h-8 text-red-600 hover:text-red-700"
+                                          title="Delete task"
+                                          aria-label="Delete task"
+                                        >
+                                          <Trash2 className="icon" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <div className="mt-4 space-y-3">
+                                      <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                          Task title
+                                        </label>
+                                        <input
+                                          type="text"
+                                          value={task.title || ""}
+                                          onChange={(event) =>
+                                            updateTemplateTaskField(tpl.id, task.id, "title", event.target.value)
+                                          }
+                                          className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
+                                          placeholder="What needs to be done?"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                          Details
+                                        </label>
+                                        <textarea
+                                          value={task.details || ""}
+                                          onChange={(event) =>
+                                            updateTemplateTaskField(tpl.id, task.id, "details", event.target.value)
+                                          }
+                                          className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
+                                          rows={3}
+                                          placeholder="Add context or acceptance criteria"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                          Notes for assignees
+                                        </label>
+                                        <textarea
+                                          value={task.note || ""}
+                                          onChange={(event) =>
+                                            updateTemplateTaskField(tpl.id, task.id, "note", event.target.value)
+                                          }
+                                          className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
+                                          rows={2}
+                                          placeholder="Reminders, links, or tips for whoever owns this task"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
