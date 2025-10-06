@@ -2306,8 +2306,15 @@ useEffect(() => {
                       <div className="absolute left-4 right-4 sm:left-auto sm:right-0 mt-2 max-h-[70vh] sm:max-h-none overflow-y-auto glass-surface p-2 z-20 flex flex-col gap-1 w-auto sm:w-60">
                         <button
                           type="button"
-                          onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
-                          className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === 'all' ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
+                          onClick={() => {
+                            setMilestoneFilter('all');
+                            setMilestoneFilterOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${
+                            milestoneFilter === 'all'
+                              ? 'bg-slate-100/80 font-medium text-slate-900'
+                              : 'text-slate-700 hover:bg-slate-100/80'
+                          }`}
                         >
                           All milestones
                         </button>
@@ -2315,8 +2322,15 @@ useEffect(() => {
                           <button
                             key={m.id}
                             type="button"
-                            onClick={() => { setMilestoneFilter(m.id); setMilestoneFilterOpen(false); }}
-                            className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === m.id ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
+                            onClick={() => {
+                              setMilestoneFilter(m.id);
+                              setMilestoneFilterOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${
+                              milestoneFilter === m.id
+                                ? 'bg-slate-100/80 font-medium text-slate-900'
+                                : 'text-slate-700 hover:bg-slate-100/80'
+                            }`}
                           >
                             {m.title}
                           </button>
@@ -2355,109 +2369,109 @@ useEffect(() => {
                 )}
               </button>
             </div>
+          </div>
+          <motion.div
+            initial={false}
+            animate={milestonesCollapsed ? "collapsed" : "open"}
+            variants={{
+              open: { height: "auto", opacity: 1 },
+              collapsed: { height: 0, opacity: 0 },
+            }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden"
+            aria-hidden={milestonesCollapsed}
+          >
             <div className="section-body tight">
               <p className="text-sm text-slate-500">Tap the Milestones bar to expand or collapse.</p>
-              <motion.div
-                initial={false}
-                animate={milestonesCollapsed ? "collapsed" : "open"}
-                variants={{
-                  open: { height: "auto", opacity: 1 },
-                  collapsed: { height: 0, opacity: 0 },
-                }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden mt-3"
-                aria-hidden={milestonesCollapsed}
+              <div
+                className="mt-3 stack-sm"
+                onDragOver={onMilestoneDragOver(null)}
+                onDragLeave={onMilestoneDragLeave}
+                onDrop={onMilestoneDrop(null)}
               >
-                <div
-                  className="stack-sm"
-                  onDragOver={onMilestoneDragOver(null)}
-                  onDragLeave={onMilestoneDragLeave}
-                  onDrop={onMilestoneDrop(null)}
-                >
-                  <AnimatePresence initial={false}>
-                    {filteredMilestones.map((m) => (
-                      <motion.div
-                        key={m.id}
-                        layout
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                        draggable
-                        onDragStart={onMilestoneDragStart(m.id)}
-                        onDragOver={onMilestoneDragOver(m.id)}
-                        onDragLeave={onMilestoneDragLeave}
-                        onDrop={onMilestoneDrop(m.id)}
-                        className={dragMilestoneOverId === m.id ? "ring-2 ring-indigo-400 rounded-lg" : ""}
-                      >
-                        <MilestoneCard
-                          milestone={m}
-                          tasks={groupedTasks[m.id] || []}
-                          tasksAll={tasksRaw}
-                          taskSort={milestoneTaskSort}
-                          onTaskSortChange={setMilestoneTaskSort}
-                          team={team}
-                          milestones={milestones}
-                          onUpdate={updateTask}
-                          onDelete={deleteTask}
-                          onDuplicate={duplicateTask}
-                          onDuplicateMilestone={duplicateMilestone}
-                          onDeleteMilestone={deleteMilestone}
-                          onUpdateMilestone={updateMilestone}
-                          onSaveMilestone={handleSave}
-                          onSaveAsTemplate={saveMilestoneTemplate}
-                          onAddTask={addTask}
-                          onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
-                          onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
-                          reporter={null}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                  {dragMilestoneOverId === null && dragMilestoneId.current && (
-                    <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
-                  )}
-                  {milestoneFilter === "all" && unassignedTasks.length > 0 && (
-                    <div className="mt-6">
-                      <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
-                            <p className="text-sm text-slate-600">
-                              Assign these tasks to a milestone to track progress alongside the rest of your plan.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleDeleteUnassignedTasksClick}
-                            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
-                          >
-                            <Trash2 className="icon" />
-                            Delete all
-                          </button>
+                <AnimatePresence initial={false}>
+                  {filteredMilestones.map((m) => (
+                    <motion.div
+                      key={m.id}
+                      layout
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.2 }}
+                      draggable
+                      onDragStart={onMilestoneDragStart(m.id)}
+                      onDragOver={onMilestoneDragOver(m.id)}
+                      onDragLeave={onMilestoneDragLeave}
+                      onDrop={onMilestoneDrop(m.id)}
+                      className={dragMilestoneOverId === m.id ? "ring-2 ring-indigo-400 rounded-lg" : ""}
+                    >
+                      <MilestoneCard
+                        milestone={m}
+                        tasks={groupedTasks[m.id] || []}
+                        tasksAll={tasksRaw}
+                        taskSort={milestoneTaskSort}
+                        onTaskSortChange={setMilestoneTaskSort}
+                        team={team}
+                        milestones={milestones}
+                        onUpdate={updateTask}
+                        onDelete={deleteTask}
+                        onDuplicate={duplicateTask}
+                        onDuplicateMilestone={duplicateMilestone}
+                        onDeleteMilestone={deleteMilestone}
+                        onUpdateMilestone={updateMilestone}
+                        onSaveMilestone={handleSave}
+                        onSaveAsTemplate={saveMilestoneTemplate}
+                        onAddTask={addTask}
+                        onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
+                        onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
+                        reporter={null}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                {dragMilestoneOverId === null && dragMilestoneId.current && (
+                  <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
+                )}
+                {milestoneFilter === "all" && unassignedTasks.length > 0 && (
+                  <div className="mt-6">
+                    <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
+                          <p className="text-sm text-slate-600">
+                            Assign these tasks to a milestone to track progress alongside the rest of your plan.
+                          </p>
                         </div>
-                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {unassignedTasks.map((task) => (
-                            <TaskCard
-                              key={task.id}
-                              task={task}
-                              tasks={tasksRaw}
-                              team={team}
-                              milestones={milestones}
-                              onUpdate={updateTask}
-                              onDelete={deleteTask}
-                              onDuplicate={duplicateTask}
-                              onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
-                              onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
-                              reporter={null}
-                            />
-                          ))}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={handleDeleteUnassignedTasksClick}
+                          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
+                        >
+                          <Trash2 className="icon" />
+                          Delete all
+                        </button>
+                      </div>
+                      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {unassignedTasks.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            tasks={tasksRaw}
+                            team={team}
+                            milestones={milestones}
+                            onUpdate={updateTask}
+                            onDelete={deleteTask}
+                            onDuplicate={duplicateTask}
+                            onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
+                            onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
+                            reporter={null}
+                          />
+                        ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              </motion.div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </section>
