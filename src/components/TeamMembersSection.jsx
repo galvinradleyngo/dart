@@ -145,21 +145,23 @@ export default function TeamMembersSection({
   onToggle = () => {},
 }) {
   return (
-    <section className="glass-surface p-4 sm:p-6">
-      <div
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2 px-1 cursor-pointer"
-        onClick={onToggle}
-      >
-          <h2 className="font-semibold flex items-center gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
-              <Users className="icon icon-lg" aria-hidden="true" />
-            </span>
-            <span className="flex items-baseline gap-2">
-              <span>Team Members</span>
-              <span className="text-sm font-normal text-slate-600/90">({team.length})</span>
-            </span>
-          </h2>
-        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+    <section className="glass-surface" data-collapsed={collapsed}>
+      <div className="section-header">
+        <button
+          type="button"
+          className="flex flex-1 items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400 rounded-2xl"
+          onClick={onToggle}
+          aria-expanded={!collapsed}
+        >
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
+            <Users className="icon icon-lg" aria-hidden="true" />
+          </span>
+          <span className="flex items-baseline gap-2">
+            <span className="section-title">Team Members</span>
+            <span className="text-sm font-normal text-slate-700">({team.length})</span>
+          </span>
+        </button>
+        <div className="flex items-center gap-2">
           {!collapsed && (
             <>
               <select
@@ -170,7 +172,7 @@ export default function TeamMembersSection({
                     e.target.value = "";
                   }
                 }}
-                className="text-sm rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 shadow-sm"
+                className="text-sm rounded-2xl border border-white/60 bg-white/80 px-3 py-1.5 text-slate-700 shadow-sm"
               >
                 <option value="">Add existing...</option>
                 {people
@@ -195,26 +197,28 @@ export default function TeamMembersSection({
             onClick={onToggle}
             aria-expanded={!collapsed}
             aria-label={collapsed ? "Expand team members" : "Collapse team members"}
-            className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
+            className="section-toggle"
           >
             {collapsed ? <ChevronDown className="icon" /> : <ChevronUp className="icon" />}
           </button>
         </div>
       </div>
       {!collapsed && (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {team.map((m) => (
-            <TeamMemberCard
-              key={m.id}
-              member={m}
-              courseLDIds={courseLDIds}
-              courseSMEIds={courseSMEIds}
-              onUpdate={onUpdateMember}
-              onDelete={onDeleteMember}
-              onToggleCourseWide={onToggleCourseWide}
-              onOpenUser={onOpenUser}
-            />
-          ))}
+        <div className="section-body">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {team.map((m) => (
+              <TeamMemberCard
+                key={m.id}
+                member={m}
+                courseLDIds={courseLDIds}
+                courseSMEIds={courseSMEIds}
+                onUpdate={onUpdateMember}
+                onDelete={onDeleteMember}
+                onToggleCourseWide={onToggleCourseWide}
+                onOpenUser={onOpenUser}
+              />
+            ))}
+          </div>
         </div>
       )}
     </section>
