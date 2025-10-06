@@ -2399,6 +2399,7 @@ useEffect(() => {
                       onDuplicateMilestone={duplicateMilestone}
                       onDeleteMilestone={deleteMilestone}
                       onUpdateMilestone={updateMilestone}
+                      onSaveMilestone={handleSave}
                       onSaveAsTemplate={saveMilestoneTemplate}
                       onAddTask={addTask}
                       onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
