@@ -31,6 +31,8 @@ import {
   saveMilestoneTemplatesRemote,
   createTemplateFromMilestone,
   removeTemplate as removeMilestoneTemplateStore,
+  updateTemplate as updateMilestoneTemplateStore,
+  createEmptyTemplate as createEmptyMilestoneTemplate,
 } from "./milestoneTemplatesStore.js";
 import {
   X,
@@ -739,7 +741,8 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [tasksCollapsed, setTasksCollapsed] = useState(true);
   const [listPriority, setListPriority] = useState(null);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const [selectedMilestoneTemplate, setSelectedMilestoneTemplate] = useState("");
+  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
+  const [templateDrafts, setTemplateDrafts] = useState({});
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
@@ -754,6 +757,41 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const statusMenuRef = useRef(null);
   const milestoneSectionRef = useRef(null);
   const tasksSectionRef = useRef(null);
+
+  useEffect(() => {
+    if (!templateLibraryOpen) {
+      setTemplateDrafts({});
+      return;
+    }
+    setTemplateDrafts((prev) =>
+      milestoneTemplates.reduce((acc, tpl) => {
+        const existing = prev[tpl.id] || {};
+        acc[tpl.id] = {
+          title:
+            Object.prototype.hasOwnProperty.call(existing, "title")
+              ? existing.title
+              : tpl.title || "",
+          goal:
+            Object.prototype.hasOwnProperty.call(existing, "goal")
+              ? existing.goal
+              : tpl.goal || "",
+        };
+        return acc;
+      }, {})
+    );
+  }, [templateLibraryOpen, milestoneTemplates]);
+
+  useEffect(() => {
+    if (!templateLibraryOpen) return;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setTemplateLibraryOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [templateLibraryOpen]);
 
   const updateCourseState = useCallback((updater, options = {}) => {
     const { capture = true } = options;
@@ -1386,13 +1424,68 @@ useEffect(() => {
     const tasks = state.tasks.filter((t) => t.milestoneId === id);
     const next = createTemplateFromMilestone(src, tasks);
     onChangeMilestoneTemplates?.(next);
-    setSelectedMilestoneTemplate("");
   };
 
   const removeMilestoneTemplate = (id) => {
     const next = removeMilestoneTemplateStore(id);
     onChangeMilestoneTemplates?.(next);
-    setSelectedMilestoneTemplate("");
+  };
+
+  const handleTemplateDraftChange = (id, field, value) => {
+    setTemplateDrafts((prev) => ({
+      ...prev,
+      [id]: {
+        title: "",
+        goal: "",
+        ...(prev[id] || {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const persistTemplateDraft = (id) => {
+    const draft = templateDrafts[id];
+    if (!draft) return;
+    const tpl = milestoneTemplates.find((t) => t.id === id);
+    if (!tpl) return;
+    const nextTitle = (draft.title || "").trim() || "Untitled template";
+    const nextGoal = draft.goal || "";
+    if (tpl.title === nextTitle && (tpl.goal || "") === nextGoal) return;
+    const next = updateMilestoneTemplateStore(id, { title: nextTitle, goal: nextGoal });
+    onChangeMilestoneTemplates?.(next);
+    setTemplateDrafts((prev) => ({
+      ...prev,
+      [id]: { title: nextTitle, goal: nextGoal },
+    }));
+  };
+
+  const resetTemplateDraft = (id) => {
+    const tpl = milestoneTemplates.find((t) => t.id === id);
+    if (!tpl) {
+      setTemplateDrafts((prev) => {
+        const { [id]: _removed, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+    setTemplateDrafts((prev) => ({
+      ...prev,
+      [id]: {
+        title: tpl.title || "",
+        goal: tpl.goal || "",
+      },
+    }));
+  };
+
+  const handleCreateTemplate = () => {
+    const next = createEmptyMilestoneTemplate();
+    onChangeMilestoneTemplates?.(next);
+    setTemplateLibraryOpen(true);
+  };
+
+  const handleAddTemplateToCourse = (tplId) => {
+    addMilestoneFromTemplate(tplId);
+    setTemplateLibraryOpen(false);
   };
 
   // Milestone DnD
@@ -2084,38 +2177,15 @@ useEffect(() => {
                         </div>
                       )}
                     </div>
-                    {milestoneTemplates.length > 0 && (
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <select
-                          value={selectedMilestoneTemplate}
-                          onChange={(e) => setSelectedMilestoneTemplate(e.target.value)}
-                          className="text-sm rounded-2xl border border-white/60 bg-white/80 px-3 py-2 shadow-sm w-full sm:w-auto backdrop-blur"
-                        >
-                          <option value="">Select template</option>
-                          {milestoneTemplates.map((mt) => (
-                            <option key={mt.id} value={mt.id}>{mt.title}</option>
-                          ))}
-                        </select>
-                        {selectedMilestoneTemplate && (
-                          <>
-                            <button
-                              onClick={() => { addMilestoneFromTemplate(selectedMilestoneTemplate); setSelectedMilestoneTemplate(''); }}
-                              className="glass-button"
-                            >
-                              Add from Template
-                            </button>
-                            <button
-                              onClick={() => removeMilestoneTemplate(selectedMilestoneTemplate)}
-                              className="glass-icon-button w-10 h-10"
-                              title="Delete template"
-                              aria-label="Delete template"
-                            >
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => setTemplateLibraryOpen(true)}
+                        className="glass-button w-full sm:w-auto"
+                      >
+                        Template library{milestoneTemplates.length ? ` (${milestoneTemplates.length})` : ""}
+                      </button>
+                    </div>
                     <button
                       onClick={() => addMilestone()}
                       className="glass-button w-full sm:w-auto"
@@ -2400,6 +2470,133 @@ useEffect(() => {
             </div>
           </motion.div>
         </section>
+      {templateLibraryOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8">
+          <div
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setTemplateLibraryOpen(false)}
+          />
+          <div className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/95 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200/80 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Template library</h2>
+                <p className="text-sm text-slate-500">Keep milestone templates separate from live course milestones.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTemplateLibraryOpen(false)}
+                className="glass-icon-button"
+                aria-label="Close template library"
+              >
+                <X className="icon" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-6 py-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-slate-600">
+                  {milestoneTemplates.length
+                    ? `${milestoneTemplates.length} template${milestoneTemplates.length === 1 ? "" : "s"}`
+                    : "No templates yet."}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCreateTemplate}
+                  className="glass-button inline-flex items-center gap-2"
+                >
+                  <Plus className="icon" />
+                  <span>New template</span>
+                </button>
+              </div>
+              {milestoneTemplates.length === 0 ? (
+                <div className="mt-6 rounded-3xl border border-dashed border-slate-300/80 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
+                  Save an existing milestone as a template or create a blank one to start building your library.
+                </div>
+              ) : (
+                <div className="mt-6 space-y-4">
+                  {milestoneTemplates.map((tpl) => {
+                    const draft = templateDrafts[tpl.id] || { title: tpl.title || "", goal: tpl.goal || "" };
+                    const isDirty =
+                      draft.title !== (tpl.title || "") ||
+                      (draft.goal || "") !== (tpl.goal || "");
+                    return (
+                      <div key={tpl.id} className="rounded-3xl border border-slate-200/80 bg-slate-50/90 p-5 shadow-sm">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+                          <div className="flex-1 space-y-3">
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Template name
+                            </label>
+                            <input
+                              type="text"
+                              value={draft.title}
+                              onChange={(event) => handleTemplateDraftChange(tpl.id, "title", event.target.value)}
+                              onBlur={() => persistTemplateDraft(tpl.id)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" && !event.shiftKey) {
+                                  event.preventDefault();
+                                  persistTemplateDraft(tpl.id);
+                                }
+                              }}
+                              className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
+                              placeholder="Untitled template"
+                            />
+                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Goal / notes
+                            </label>
+                            <textarea
+                              value={draft.goal}
+                              onChange={(event) => handleTemplateDraftChange(tpl.id, "goal", event.target.value)}
+                              onBlur={() => persistTemplateDraft(tpl.id)}
+                              className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
+                              rows={3}
+                              placeholder="What is this template for?"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-2 sm:w-48">
+                            <button
+                              type="button"
+                              onClick={() => handleAddTemplateToCourse(tpl.id)}
+                              className="glass-button w-full"
+                            >
+                              Add to course
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => persistTemplateDraft(tpl.id)}
+                              className="glass-button w-full"
+                              disabled={!isDirty}
+                            >
+                              Save changes
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => resetTemplateDraft(tpl.id)}
+                              className="glass-button w-full"
+                              disabled={!isDirty}
+                            >
+                              Reset
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm("Delete this template? This action cannot be undone.")) {
+                                  removeMilestoneTemplate(tpl.id);
+                                }
+                              }}
+                              className="glass-button w-full text-red-600 hover:text-red-700"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       {editingTask && (
         <TaskModal
           task={editingTask}

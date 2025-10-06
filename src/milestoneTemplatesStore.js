@@ -69,9 +69,24 @@ export const removeTemplate = (id) => {
   return templates;
 };
 
+export const updateTemplate = (id, updates = {}) => {
+  const templates = loadMilestoneTemplates();
+  const next = templates.map((tpl) =>
+    tpl.id === id ? { ...tpl, ...updates } : tpl
+  );
+  saveMilestoneTemplates(next);
+  saveMilestoneTemplatesRemote(next).catch(() => {});
+  return next;
+};
+
 export const createTemplateFromMilestone = (milestone, tasks = []) => {
   const templateTasks = tasks.map(({ id, order, milestoneId, ...rest }) => ({ ...rest }));
   const template = { id: uid(), title: milestone.title, goal: milestone.goal, tasks: templateTasks };
+  return addTemplate(template);
+};
+
+export const createEmptyTemplate = () => {
+  const template = { id: uid(), title: "New template", goal: "", tasks: [] };
   return addTemplate(template);
 };
 
