@@ -1817,7 +1817,7 @@ useEffect(() => {
         <Undo2 className="icon" aria-hidden="true" />
         <span>Undo</span>
       </button>
-      <span className="text-sm font-medium text-slate-600/90 whitespace-nowrap px-3 py-1 rounded-full bg-white/80 border border-white/60 shadow-sm">
+      <span className="text-sm font-medium text-slate-700 whitespace-nowrap px-3 py-1 rounded-full bg-white/80 border border-white/60 shadow-sm">
         {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
       </span>
       <button
@@ -1964,13 +1964,13 @@ useEffect(() => {
           </div>
         </div>
         {/* Secondary row: course title and template pill */}
-        <div className="max-w-7xl mx-auto px-4 pb-4 -mt-1 space-y-2 sm:space-y-1">
+        <div className="max-w-7xl mx-auto px-4 pb-4 -mt-1 stack-sm sm:space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-base sm:text-xl font-semibold leading-tight flex-1 min-w-0 text-slate-800"><InlineText className="break-words" value={state.course.name} onChange={(v)=>updateCourseState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
+            <h1 className="text-xl sm:text-2xl font-semibold leading-tight flex-1 min-w-0 text-slate-800"><InlineText className="break-words" value={state.course.name} onChange={(v)=>updateCourseState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
             {isTemplateLabel && <span className="text-sm font-medium px-3 py-1 rounded-full bg-violet-100/80 text-violet-700 border border-violet-200/70 shadow-[0_10px_18px_rgba(79,70,229,0.18)] whitespace-nowrap">Course Template</span>}
           </div>
           <div className="flex flex-col gap-2 text-sm sm:mt-0 sm:flex-row sm:items-center sm:gap-4">
-            <p className="text-slate-600/90 leading-snug sm:flex-1 sm:min-w-[280px]">
+            <p className="text-slate-700 leading-snug sm:flex-1 sm:min-w-[280px]">
               <InlineText
                 value={state.course.description}
                 onChange={(v)=>updateCourseState((s)=>({ ...s, course: { ...s.course, description: v } }))}
@@ -1986,13 +1986,12 @@ useEffect(() => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+      <main className="max-w-7xl mx-auto px-4 py-6 stack-lg">
         {/* Link Library */}
-        <section className="glass-surface p-4 sm:p-6">
-          <div className="flex flex-col gap-3">
-            <div
-              role="button"
-              tabIndex={0}
+        <section className="glass-surface" data-collapsed={linkLibraryCollapsed}>
+          <div className="section-header">
+            <button
+              type="button"
               onClick={toggleLinkLibraryCollapsed}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
@@ -2004,29 +2003,34 @@ useEffect(() => {
               }}
               aria-expanded={!linkLibraryCollapsed}
               aria-label={linkLibraryCollapsed ? 'Expand course link library' : 'Collapse course link library'}
-              className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-2xl cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
+              className="flex flex-1 items-center gap-3 rounded-2xl px-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
             >
-              <h2 className="text-lg font-semibold flex items-center gap-3">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
-                  <LinkIcon className="icon icon-lg" aria-hidden="true" />
-                </span>
-                <span className="flex items-baseline gap-2">
-                  <span>Link Library</span>
-                  <span className="text-sm font-normal text-slate-600/90">({linkLibrary.length})</span>
-                </span>
-              </h2>
-              <div className="flex items-center gap-2">
-                <span className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11" aria-hidden="true">
-                  {linkLibraryCollapsed ? <ChevronDown className="icon" /> : <ChevronUp className="icon" />}
-                </span>
-              </div>
+              <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
+                <LinkIcon className="icon icon-lg" aria-hidden="true" />
+              </span>
+              <span className="flex items-baseline gap-2">
+                <span className="section-title">Link Library</span>
+                <span className="text-sm font-normal text-slate-700">({linkLibrary.length})</span>
+              </span>
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleLinkLibraryCollapsed}
+                aria-expanded={!linkLibraryCollapsed}
+                aria-label={linkLibraryCollapsed ? 'Expand course link library' : 'Collapse course link library'}
+                className="section-toggle"
+              >
+                {linkLibraryCollapsed ? <ChevronDown className="icon" /> : <ChevronUp className="icon" />}
+              </button>
             </div>
-            {!linkLibraryCollapsed && (
-              <div className="space-y-4">
-                <form
-                  className="glass-card p-4 space-y-3 sm:space-y-0 sm:flex sm:items-end sm:gap-3"
-                  onSubmit={handleAddCourseLink}
-                >
+          </div>
+          {!linkLibraryCollapsed && (
+            <div className="section-body stack-md">
+              <form
+                className="glass-card p-4 space-y-3 sm:space-y-0 sm:flex sm:items-end sm:gap-3"
+                onSubmit={handleAddCourseLink}
+              >
                   <label className="flex-1 text-sm text-slate-700">
                     <span className="font-medium">Label</span>
                     <input
@@ -2056,7 +2060,7 @@ useEffect(() => {
                   </button>
                 </form>
                 {linkLibrary.length === 0 ? (
-                  <div className="glass-card p-4 text-sm text-slate-600/90">
+                  <div className="glass-card p-4 text-sm text-slate-700">
                     No links yet. Add your go-to resources above.
                   </div>
                 ) : (
@@ -2174,7 +2178,6 @@ useEffect(() => {
                 )}
               </div>
             )}
-          </div>
         </section>
 
         {/* Dashboard Rings */}
@@ -2270,196 +2273,212 @@ useEffect(() => {
           onToggle={() => setTeamCollapsed((v) => !v)}
         />
         {/* Milestones */}
-          <section ref={milestoneSectionRef} className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6 text-sm sm:text-[14px]">
-            <div
-              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-2 px-1 cursor-pointer"
-              onClick={() => setMilestonesCollapsed(v => !v)}
+        <section
+          ref={milestoneSectionRef}
+          className="-mx-4 sm:mx-0 glass-surface text-sm sm:text-[14px]"
+          data-collapsed={milestonesCollapsed}
+        >
+          <div className="section-header flex-col sm:flex-row sm:items-center sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setMilestonesCollapsed((v) => !v)}
+              aria-expanded={!milestonesCollapsed}
+              title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
+              className="flex flex-1 items-center gap-3 text-left"
             >
-              <h2 className="font-semibold flex items-center gap-2">
-                Milestones
-              </h2>
-              <div
-                className="flex flex-wrap items-center gap-2 w-full sm:w-auto"
-                onClick={e => e.stopPropagation()}
-              >
-                {!milestonesCollapsed && (
-                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <div className="relative" ref={milestoneFilterRef}>
-                      <button
-                        type="button"
-                        onClick={() => setMilestoneFilterOpen((v) => !v)}
-                        aria-haspopup="menu"
-                        aria-expanded={milestoneFilterOpen}
-                        className="glass-button"
-                      >
-                        <Filter className="icon text-slate-500" />
-                        <span className="max-w-[10rem] truncate">{activeFilterLabel}</span>
-                      </button>
-                      {milestoneFilterOpen && (
-                        <div className="absolute left-4 right-4 sm:left-auto sm:right-0 mt-2 max-h-[70vh] sm:max-h-none overflow-y-auto glass-surface p-2 z-20 flex flex-col gap-1 w-auto sm:w-60">
-                          <button
-                            type="button"
-                            onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
-                            className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === 'all' ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
-                          >
-                            All milestones
-                          </button>
-                          {milestones.map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => { setMilestoneFilter(m.id); setMilestoneFilterOpen(false); }}
-                              className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === m.id ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
-                            >
-                              {m.title}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
-                      <button
-                        type="button"
-                        onClick={() => setTemplateLibraryOpen(true)}
-                        className="glass-button w-full sm:w-auto"
-                      >
-                        Template library{milestoneTemplates.length ? ` (${milestoneTemplates.length})` : ""}
-                      </button>
-                    </div>
+              <span className="section-title">Milestones</span>
+            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+              {!milestonesCollapsed && (
+                <>
+                  <div className="relative" ref={milestoneFilterRef}>
                     <button
-                      onClick={() => addMilestone()}
+                      type="button"
+                      onClick={() => setMilestoneFilterOpen((v) => !v)}
+                      aria-haspopup="menu"
+                      aria-expanded={milestoneFilterOpen}
+                      className="glass-button"
+                    >
+                      <Filter className="icon text-slate-500" />
+                      <span className="max-w-[10rem] truncate">{activeFilterLabel}</span>
+                    </button>
+                    {milestoneFilterOpen && (
+                      <div className="absolute left-4 right-4 sm:left-auto sm:right-0 mt-2 max-h-[70vh] sm:max-h-none overflow-y-auto glass-surface p-2 z-20 flex flex-col gap-1 w-auto sm:w-60">
+                        <button
+                          type="button"
+                          onClick={() => { setMilestoneFilter('all'); setMilestoneFilterOpen(false); }}
+                          className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === 'all' ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
+                        >
+                          All milestones
+                        </button>
+                        {milestones.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => { setMilestoneFilter(m.id); setMilestoneFilterOpen(false); }}
+                            className={`w-full px-3 py-2 text-left text-sm rounded-xl transition ${milestoneFilter === m.id ? 'bg-slate-100/80 font-medium text-slate-900' : 'text-slate-700 hover:bg-slate-100/80'}`}
+                          >
+                            {m.title}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setTemplateLibraryOpen(true)}
                       className="glass-button w-full sm:w-auto"
                     >
-                      Add Milestone
+                      Template library{milestoneTemplates.length ? ` (${milestoneTemplates.length})` : ""}
                     </button>
                   </div>
-                )}
-                <button
-                  onClick={() => setMilestonesCollapsed(v => !v)}
-                  title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
-                  aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
-                  aria-expanded={!milestonesCollapsed}
-                  className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
-                >
-                  {milestonesCollapsed ? (
-                    <ChevronDown className="icon" />
-                  ) : (
-                    <ChevronUp className="icon" />
-                  )}
-                </button>
-            </div>
-          </div>
-          <p className="text-sm text-slate-500/90 mt-1">
-            Tap the Milestones bar to expand or collapse.
-          </p>
-          <motion.div
-            initial={false}
-            animate={milestonesCollapsed ? "collapsed" : "open"}
-            variants={{
-              open: { height: "auto", opacity: 1 },
-              collapsed: { height: 0, opacity: 0 },
-            }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-            aria-hidden={milestonesCollapsed}
-          >
-            <div
-              className="space-y-2"
-              onDragOver={onMilestoneDragOver(null)}
-              onDragLeave={onMilestoneDragLeave}
-              onDrop={onMilestoneDrop(null)}
-            >
-              <AnimatePresence initial={false}>
-                {filteredMilestones.map(m => (
-                  <motion.div
-                    key={m.id}
-                    layout
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.2 }}
-                    draggable
-                    onDragStart={onMilestoneDragStart(m.id)}
-                    onDragOver={onMilestoneDragOver(m.id)}
-                    onDragLeave={onMilestoneDragLeave}
-                    onDrop={onMilestoneDrop(m.id)}
-                    className={dragMilestoneOverId === m.id ? 'ring-2 ring-indigo-400 rounded-lg' : ''}
+                  <button
+                    onClick={() => addMilestone()}
+                    className="glass-button w-full sm:w-auto"
                   >
-                    <MilestoneCard
-                      milestone={m}
-                      tasks={groupedTasks[m.id] || []}
-                      tasksAll={tasksRaw}
-                      taskSort={milestoneTaskSort}
-                      onTaskSortChange={setMilestoneTaskSort}
-                      team={team}
-                      milestones={milestones}
-                      onUpdate={updateTask}
-                      onDelete={deleteTask}
-                      onDuplicate={duplicateTask}
-                      onDuplicateMilestone={duplicateMilestone}
-                      onDeleteMilestone={deleteMilestone}
-                      onUpdateMilestone={updateMilestone}
-                      onSaveMilestone={handleSave}
-                      onSaveAsTemplate={saveMilestoneTemplate}
-                      onAddTask={addTask}
-                      onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
-                      onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
-                      reporter={null}
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-              {dragMilestoneOverId === null && dragMilestoneId.current && (
-                <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
+                    Add Milestone
+                  </button>
+                </>
               )}
-              {milestoneFilter === "all" && unassignedTasks.length > 0 && (
-                <div className="mt-6">
-                  <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
-                        <p className="text-sm text-slate-600">
-                          Assign these tasks to a milestone to track progress alongside the rest of your plan.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleDeleteUnassignedTasksClick}
-                        className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
+              <button
+                onClick={() => setMilestonesCollapsed((v) => !v)}
+                title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
+                aria-label={milestonesCollapsed ? 'Expand milestones' : 'Collapse milestones'}
+                aria-expanded={!milestonesCollapsed}
+                className="section-toggle"
+              >
+                {milestonesCollapsed ? (
+                  <ChevronDown className="icon" />
+                ) : (
+                  <ChevronUp className="icon" />
+                )}
+              </button>
+            </div>
+            <div className="section-body tight">
+              <p className="text-sm text-slate-500">Tap the Milestones bar to expand or collapse.</p>
+              <motion.div
+                initial={false}
+                animate={milestonesCollapsed ? "collapsed" : "open"}
+                variants={{
+                  open: { height: "auto", opacity: 1 },
+                  collapsed: { height: 0, opacity: 0 },
+                }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden mt-3"
+                aria-hidden={milestonesCollapsed}
+              >
+                <div
+                  className="stack-sm"
+                  onDragOver={onMilestoneDragOver(null)}
+                  onDragLeave={onMilestoneDragLeave}
+                  onDrop={onMilestoneDrop(null)}
+                >
+                  <AnimatePresence initial={false}>
+                    {filteredMilestones.map((m) => (
+                      <motion.div
+                        key={m.id}
+                        layout
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.2 }}
+                        draggable
+                        onDragStart={onMilestoneDragStart(m.id)}
+                        onDragOver={onMilestoneDragOver(m.id)}
+                        onDragLeave={onMilestoneDragLeave}
+                        onDrop={onMilestoneDrop(m.id)}
+                        className={dragMilestoneOverId === m.id ? "ring-2 ring-indigo-400 rounded-lg" : ""}
                       >
-                        <Trash2 className="icon" />
-                        Delete all
-                      </button>
-                    </div>
-                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {unassignedTasks.map((task) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          tasks={tasksRaw}
+                        <MilestoneCard
+                          milestone={m}
+                          tasks={groupedTasks[m.id] || []}
+                          tasksAll={tasksRaw}
+                          taskSort={milestoneTaskSort}
+                          onTaskSortChange={setMilestoneTaskSort}
                           team={team}
                           milestones={milestones}
                           onUpdate={updateTask}
                           onDelete={deleteTask}
                           onDuplicate={duplicateTask}
-                          onAddLink={(id, url) => patchTaskLinks(id, 'add', url)}
-                          onRemoveLink={(id, idx) => patchTaskLinks(id, 'remove', idx)}
+                          onDuplicateMilestone={duplicateMilestone}
+                          onDeleteMilestone={deleteMilestone}
+                          onUpdateMilestone={updateMilestone}
+                          onSaveMilestone={handleSave}
+                          onSaveAsTemplate={saveMilestoneTemplate}
+                          onAddTask={addTask}
+                          onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
+                          onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
                           reporter={null}
                         />
-                      ))}
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  {dragMilestoneOverId === null && dragMilestoneId.current && (
+                    <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
+                  )}
+                  {milestoneFilter === "all" && unassignedTasks.length > 0 && (
+                    <div className="mt-6">
+                      <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold text-slate-800">Unassigned tasks</h3>
+                            <p className="text-sm text-slate-600">
+                              Assign these tasks to a milestone to track progress alongside the rest of your plan.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleDeleteUnassignedTasksClick}
+                            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/60"
+                          >
+                            <Trash2 className="icon" />
+                            Delete all
+                          </button>
+                        </div>
+                        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          {unassignedTasks.map((task) => (
+                            <TaskCard
+                              key={task.id}
+                              task={task}
+                              tasks={tasksRaw}
+                              team={team}
+                              milestones={milestones}
+                              onUpdate={updateTask}
+                              onDelete={deleteTask}
+                              onDuplicate={duplicateTask}
+                              onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
+                              onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
+                              reporter={null}
+                            />
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-              )}
+              </motion.div>
             </div>
-          </motion.div>
+          </div>
         </section>
 
         {/* Tasks */}
-        <section ref={tasksSectionRef} className="-mx-4 sm:mx-0 glass-surface p-4 sm:p-6">
-          <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
-            <h2 className="font-semibold flex items-center gap-2">☑ Course Tasks</h2>
-            <div className="flex items-center gap-2">
+        <section
+          ref={tasksSectionRef}
+          className="-mx-4 sm:mx-0 glass-surface"
+          data-collapsed={tasksCollapsed}
+        >
+          <div className="section-header flex-wrap gap-2 sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => setTasksCollapsed((v) => !v)}
+              aria-expanded={!tasksCollapsed}
+              title={tasksCollapsed ? "Expand Course Tasks" : "Collapse Course Tasks"}
+              className="flex flex-1 items-center gap-2 text-left"
+            >
+              <span className="section-title flex items-center gap-2">☑ Course Tasks</span>
+            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
               <Toggle
                 value={view}
                 onChange={setView}
@@ -2480,7 +2499,7 @@ useEffect(() => {
                 title={tasksCollapsed ? "Expand Course Tasks" : "Collapse Course Tasks"}
                 aria-label={tasksCollapsed ? "Expand course tasks" : "Collapse course tasks"}
                 aria-expanded={!tasksCollapsed}
-                className="glass-icon-button w-9 h-9 sm:w-11 sm:h-11"
+                className="section-toggle"
               >
                 {tasksCollapsed ? (
                   <ChevronDown className="icon" />
@@ -2501,9 +2520,9 @@ useEffect(() => {
             className="overflow-hidden"
             aria-hidden={tasksCollapsed}
           >
-            <div>
+            <div className="section-body">
               {view === "list" && listPriority && (
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-600/90">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-slate-700">
                   <div className="relative" ref={statusMenuRef}>
                     <button
                       type="button"
@@ -2540,7 +2559,7 @@ useEffect(() => {
                               }}
                               role="menuitemradio"
                               aria-checked={active}
-                              className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
+                          className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                                 active
                                   ? "bg-slate-100 text-slate-900"
                                   : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -2610,7 +2629,7 @@ useEffect(() => {
               )}
             </div>
           </motion.div>
-          </section>
+        </section>
           {templateLibraryOpen && (
             <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8">
               <div
@@ -2879,13 +2898,13 @@ function DashboardRing({ title, subtitle, value, color, icon, mode = "percent", 
       >
         <div className="text-center">
           <div className="text-[14px] font-semibold leading-none">{display}</div>
-          <div className="text-sm text-slate-600/90">
+          <div className="text-sm text-slate-700">
             {mode === "percent" ? "Progress" : "Count"}
           </div>
         </div>
       </Ring>
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-slate-600/90 flex items-center gap-2">
+        <div className="text-sm text-slate-700 flex items-center gap-2">
           {icon && <span className="flex-shrink-0">{icon}</span>}
           <span>{title}</span>
         </div>
@@ -3090,7 +3109,7 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
                   {collapsed ? (
                     <>
                       <div className="mt-1">{renderStatusControl(t)}</div>
-                      <div className="text-sm text-slate-600/90 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
+                      <div className="text-sm text-slate-700 mt-1 truncate"><InlineText value={t.details} onChange={(v)=>onUpdate(t.id,{ details:v })} placeholder="Details…" /></div>
                       {t.note && <div className="text-sm text-slate-600 mt-1 flex items-center gap-1 truncate"><StickyNote className="icon flex-shrink-0 text-amber-500" />{t.note}</div>}
                       <div className="mt-2 flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2 min-w-0">
@@ -3892,7 +3911,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 <Home className="icon shrink-0" aria-hidden="true" />
                 <span className="truncate">User Dashboard</span>
               </h1>
-              {user && <div className="text-sm text-slate-600/90 truncate">{user.name}</div>}
+              {user && <div className="text-sm text-slate-700 truncate">{user.name}</div>}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -3913,7 +3932,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             >
               Save
             </button>
-            <span className="text-sm text-slate-600/90">
+            <span className="text-sm text-slate-700">
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : 'Unsaved'}
             </span>
           </div>
@@ -3947,7 +3966,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             <>
               <SectionCard title="Upcoming Deadlines">
                 {!hasActionableDeadlines ? (
-                  <div className="text-sm text-slate-600/90">No overdue tasks or deadlines in the next 2 weeks.</div>
+                  <div className="text-sm text-slate-700">No overdue tasks or deadlines in the next 2 weeks.</div>
                 ) : (
                   <ul className="space-y-3">
                     {overdueTasks.length > 0 && (
@@ -4002,9 +4021,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 }
               >
                 {blocksCollapsed ? (
-                  <div className="text-sm text-slate-600/90">Panel collapsed. Select “Show” to review blocks.</div>
+                  <div className="text-sm text-slate-700">Panel collapsed. Select “Show” to review blocks.</div>
                 ) : !userId ? (
-                  <div className="text-sm text-slate-600/90">Select a user to view block assignments.</div>
+                  <div className="text-sm text-slate-700">Select a user to view block assignments.</div>
                 ) : (
                   <div className="space-y-4">
                     <div className="flex flex-wrap gap-2">
@@ -4032,7 +4051,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         <div>
                           <h3 className="text-sm font-semibold text-slate-700/90">My Blocks</h3>
                           {myActiveBlocks.length === 0 ? (
-                            <div className="mt-2 rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                            <div className="mt-2 rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-700">
                               All clear! You haven’t reported any active blocks.
                             </div>
                           ) : (
@@ -4079,7 +4098,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         <div>
                           <h3 className="text-sm font-semibold text-slate-700/90">Blocks I Can Help Address</h3>
                           {assistBlocks.length === 0 ? (
-                            <div className="mt-2 rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                            <div className="mt-2 rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-700">
                               No blocks are currently tagging you.
                             </div>
                           ) : (
@@ -4129,7 +4148,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         </div>
                       </div>
                     ) : resolvedHistory.length === 0 ? (
-                      <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                      <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-700">
                         No resolved blocks tracked yet.
                       </div>
                     ) : (
@@ -4194,7 +4213,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               )}
             >
               {myCourses.length === 0 ? (
-                <div className="text-sm text-slate-600/90">No courses</div>
+                <div className="text-sm text-slate-700">No courses</div>
               ) : (
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {myCourses.map((c, index) => {
@@ -4213,7 +4232,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         <div className="flex items-center justify-between">
                           <div className="min-w-0">
                             <div className="font-medium truncate">{courseName}</div>
-                            <div className="text-sm text-slate-600/90 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
+                            <div className="text-sm text-slate-700 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
                           </div>
                           <button
                             onClick={() => courseId && onOpenCourse(courseId)}
@@ -4239,7 +4258,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               title="My Milestones"
             >
               {myCourses.length === 0 ? (
-                <div className="text-sm text-slate-600/90">No milestones</div>
+                <div className="text-sm text-slate-700">No milestones</div>
               ) : (
                 <div className="space-y-4">
                   {myCourses.map((c, index) => {
@@ -4349,9 +4368,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   </div>
                                 </summary>
                                 <div className="p-4 space-y-3">
-                                  {m.goal && <p className="text-sm text-slate-600/90">{m.goal}</p>}
+                                  {m.goal && <p className="text-sm text-slate-700">{m.goal}</p>}
                                   {sortedTasks.length === 0 ? (
-                                    <div className="text-sm text-slate-600/90">No tasks assigned to you.</div>
+                                    <div className="text-sm text-slate-700">No tasks assigned to you.</div>
                                   ) : (
                                     <ul className="space-y-2">
                                       {sortedTasks.map((t) => (
@@ -4404,7 +4423,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'board' && (
             <SectionCard title="☑ My Tasks – Board View" actions={<button onClick={handleNewTask} className="glass-button">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-slate-600/90">No tasks assigned.</div>
+                <div className="text-sm text-slate-700">No tasks assigned.</div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {[
@@ -4477,7 +4496,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           {activeTab === 'calendar' && (
             <SectionCard title="☑ My Tasks – Calendar View" actions={<button onClick={handleNewTask} className="glass-button">New Task</button>}>
               {myTasks.length === 0 ? (
-                <div className="text-sm text-slate-600/90">No tasks assigned.</div>
+                <div className="text-sm text-slate-700">No tasks assigned.</div>
               ) : (
                 <CalendarView
                   monthDate={calMonth}
@@ -5371,7 +5390,7 @@ export function CoursesHub({
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-500 shadow-[0_12px_32px_rgba(15,23,42,0.18)]"/>
             <div className="min-w-0">
               <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
-              <div className="text-sm text-slate-600/90 truncate flex items-center gap-2">
+              <div className="text-sm text-slate-700 truncate flex items-center gap-2">
                 <CoursesIcon className="shrink-0" />
                 <span className="truncate">Courses Hub</span>
               </div>
@@ -5404,17 +5423,17 @@ export function CoursesHub({
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 stack-lg">
 
         {/* Team member management */}
-        <section className="glass-surface p-4 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold flex items-center gap-3">
+        <section className="glass-surface">
+          <div className="section-header">
+            <div className="flex items-center gap-3">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900/5 text-slate-600 shadow-[0_12px_28px_-20px_rgba(15,23,42,0.28)]">
                 <Users className="icon icon-lg" aria-hidden="true" />
               </span>
-              <span>Team Members</span>
-            </h2>
+              <span className="section-title">Team Members</span>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={addPerson}
@@ -5430,15 +5449,16 @@ export function CoursesHub({
               </button>
             </div>
           </div>
-          {people.length === 0 ? (
-            <div className="text-sm text-slate-600/90">No team members</div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {[...people]
-                .sort((a, b) => {
-                  const roleCmp = roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType);
-                  return roleCmp !== 0 ? roleCmp : a.name.localeCompare(b.name);
-                })
+          <div className="section-body">
+            {people.length === 0 ? (
+              <div className="text-sm text-slate-700">No team members</div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {[...people]
+                  .sort((a, b) => {
+                    const roleCmp = roleOrder.indexOf(a.roleType) - roleOrder.indexOf(b.roleType);
+                    return roleCmp !== 0 ? roleCmp : a.name.localeCompare(b.name);
+                  })
                 .map((m) => {
                   const interactive = !membersEditing;
                   const cardColor = resolveMemberColor(m);
@@ -5567,7 +5587,7 @@ export function CoursesHub({
                             </button>
                             <button
                               onClick={() => removePerson(m.id)}
-                              className="glass-button text-sm px-3 py-1.5 text-rose-600 hover:text-rose-700"
+                              className="glass-button-danger text-sm px-3 py-1.5"
                             >
                               Remove
                             </button>
@@ -5583,14 +5603,15 @@ export function CoursesHub({
                             />
                           </div>
                           <div className="font-medium leading-tight group-hover:underline">{m.name}</div>
-                          <div className="text-sm text-slate-600/90">{m.roleType}</div>
+                          <div className="text-sm text-slate-700">{m.roleType}</div>
                         </>
                       )}
                     </div>
                   );
                 })}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Link Library */}
@@ -5618,7 +5639,7 @@ export function CoursesHub({
                 </span>
                 <span className="flex items-baseline gap-2">
                   <span>Link Library</span>
-                  <span className="text-sm font-normal text-slate-600/90">({linkLibrary.length})</span>
+                  <span className="text-sm font-normal text-slate-700">({linkLibrary.length})</span>
                 </span>
               </h2>
               <div className="flex items-center gap-2">
@@ -5662,7 +5683,7 @@ export function CoursesHub({
                   </button>
                 </form>
                 {linkLibrary.length === 0 ? (
-                  <div className="glass-card p-4 text-sm text-slate-600/90">
+                  <div className="glass-card p-4 text-sm text-slate-700">
                     No links yet. Add your go-to resources above.
                   </div>
                 ) : (
@@ -5791,7 +5812,7 @@ export function CoursesHub({
           {courses.length === 0 ? (
             <div className="glass-card p-6 text-center">
               <div className="text-lg font-semibold mb-2">No courses yet</div>
-              <p className="text-sm text-slate-600/90 mb-4">Use your Course Template to spin up your first course.</p>
+              <p className="text-sm text-slate-700 mb-4">Use your Course Template to spin up your first course.</p>
               <button onClick={onAddCourse} className="glass-button-primary">Add Course</button>
             </div>
           ) : (
@@ -5821,13 +5842,13 @@ export function CoursesHub({
                     className="group w-full glass-card p-4 cursor-pointer hover:ring-2 hover:ring-indigo-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0"><div className="font-semibold truncate text-slate-800">{c.course.name}</div><div className="text-sm text-slate-600/90 truncate">{c.course.description}</div></div>
+                      <div className="min-w-0"><div className="font-semibold truncate text-slate-800">{c.course.name}</div><div className="text-sm text-slate-700 truncate">{c.course.description}</div></div>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-3">
                       <Ring className="w-14 h-14 xs:w-16 xs:h-16" stroke={10} progress={t.pct} color="#10b981">
                         <div className="text-center">
                           <div className="text-sm font-semibold">{t.pct}%</div>
-                          <div className="text-sm text-slate-600/90">{t.done}/{t.total}</div>
+                          <div className="text-sm text-slate-700">{t.done}/{t.total}</div>
                         </div>
                       </Ring>
                       <div className="text-sm space-y-1"><div>In progress: <b>{t.inprog}</b></div><div>To do: <b>{t.todo}</b></div><div>Next due: <b>{t.nextDue || '—'}</b></div></div>
@@ -5894,7 +5915,7 @@ export function CoursesHub({
                           </div>
                           {blockTab === "active" ? (
                             activeBlocks.length === 0 ? (
-                              <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                              <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-700">
                                 No active blocks for this course.
                               </div>
                             ) : (
@@ -5940,7 +5961,7 @@ export function CoursesHub({
                               </ul>
                             )
                           ) : resolvedBlocks.length === 0 ? (
-                            <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-600/90">
+                            <div className="rounded-xl border border-white/60 bg-white/70 p-4 text-sm text-slate-700">
                               No resolved blocks yet.
                             </div>
                           ) : (
@@ -6080,7 +6101,7 @@ export function CoursesHub({
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <h2 className="text-lg font-semibold text-slate-800">Course version history</h2>
-                <p className="text-sm text-slate-600/90">
+                <p className="text-sm text-slate-700">
                   Deleted courses remain available here until you remove them.
                 </p>
               </div>
@@ -6088,7 +6109,7 @@ export function CoursesHub({
                 <button
                   type="button"
                   onClick={handleClearCourseHistory}
-                  className="glass-button text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="glass-button-danger disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={historyActionPending || courseHistoryLoading || courseHistoryEntries.length === 0}
                 >
                   {historyActionPending ? 'Clearing…' : 'Clear all'}
@@ -6105,11 +6126,11 @@ export function CoursesHub({
             </div>
             <div className="mt-4 overflow-y-auto max-h-[60vh]">
               {courseHistoryLoading ? (
-                <div className="py-10 text-center text-sm text-slate-600/90">
+                <div className="py-10 text-center text-sm text-slate-700">
                   Loading recent history…
                 </div>
               ) : courseHistoryEntries.length === 0 ? (
-                <div className="py-10 text-center text-sm text-slate-600/90">
+                <div className="py-10 text-center text-sm text-slate-700">
                   No deleted courses in history yet.
                 </div>
               ) : (
@@ -6175,7 +6196,7 @@ export function CoursesHub({
                               <button
                                 type="button"
                                 onClick={() => handleDeleteHistoryEntry(entry)}
-                                className="glass-button whitespace-nowrap text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="glass-button-danger whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={isDeleting}
                               >
                                 {isDeleting ? 'Removing…' : 'Delete'}
@@ -6208,7 +6229,7 @@ export function CoursesHub({
                               </div>
                             )}
                             {description ? (
-                              <div className="text-sm text-slate-600/90 whitespace-pre-wrap break-words">
+                              <div className="text-sm text-slate-700 whitespace-pre-wrap break-words">
                                 {description}
                               </div>
                             ) : null}
@@ -6224,7 +6245,7 @@ export function CoursesHub({
                             <button
                               type="button"
                               onClick={() => handleDeleteHistoryEntry(entry)}
-                              className="glass-button whitespace-nowrap text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="glass-button-danger whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                               disabled={isDeleting}
                             >
                               {isDeleting ? 'Removing…' : 'Delete'}
