@@ -207,12 +207,13 @@ export default function MilestoneCard({
                 e.stopPropagation();
                 onSaveMilestone(milestone.id);
               }}
-              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+              className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 sm:text-sm"
               title="Save milestone to course"
               aria-label="Save milestone to course"
               type="button"
             >
               <Save className="icon" />
+              <span>Save</span>
             </button>
           )}
           {onSaveAsTemplate && (
@@ -221,12 +222,13 @@ export default function MilestoneCard({
                 e.stopPropagation();
                 onSaveAsTemplate(milestone.id);
               }}
-              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 transition hover:bg-amber-100 sm:text-sm"
               title="Save as milestone template"
               aria-label="Save as milestone template"
               type="button"
             >
               <BookmarkPlus className="icon" />
+              <span>Template</span>
             </button>
           )}
           {onDeleteMilestone && (
