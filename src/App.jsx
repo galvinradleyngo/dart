@@ -2513,7 +2513,7 @@ useEffect(() => {
                 />
               </div>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         {/* Tasks */}
