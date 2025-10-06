@@ -145,6 +145,8 @@ const TEMPLATE_COLOR_SCHEMES = [
   },
 ];
 
+const DART_LOGO_URL = `${import.meta.env.BASE_URL}dartlogo.png`;
+
 const STATUS_PRIORITY_LABELS = {
   inprogress: "In Progress",
   todo: "To Do",
@@ -1994,7 +1996,7 @@ useEffect(() => {
             </button>
           )}
           <img
-            src="/dartlogo.png"
+            src={DART_LOGO_URL}
             alt="DART logo"
             className="h-9 w-auto max-w-[150px] object-contain drop-shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
           />
@@ -5446,7 +5448,7 @@ export function CoursesHub({
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <img
-              src="/dartlogo.png"
+              src={DART_LOGO_URL}
               alt="DART logo"
               className="h-9 w-auto max-w-[150px] object-contain drop-shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
             />
