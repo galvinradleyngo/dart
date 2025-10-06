@@ -803,13 +803,14 @@ function UnassignedTasksPanel({
   onAddLink,
   onRemoveLink,
   onDeleteAll,
+  className = "",
 }) {
   if (!show || !tasks?.length) {
     return null;
   }
 
   return (
-    <div>
+    <div className={className}>
       <div className="glass-card border border-dashed border-indigo-200/70 bg-indigo-50/40 p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -2441,7 +2442,7 @@ useEffect(() => {
           >
             <div className="section-body tight">
               <p className="text-sm text-slate-500">Tap the Milestones bar to expand or collapse.</p>
-              <div className="mt-3 space-y-6">
+              <div className="mt-3">
                 <div
                   className="stack-sm"
                   onDragOver={onMilestoneDragOver(null)}
@@ -2508,6 +2509,7 @@ useEffect(() => {
                   onAddLink={(id, url) => patchTaskLinks(id, "add", url)}
                   onRemoveLink={(id, idx) => patchTaskLinks(id, "remove", idx)}
                   onDeleteAll={handleDeleteUnassignedTasksClick}
+                  className="mt-6"
                 />
               </div>
             </div>
