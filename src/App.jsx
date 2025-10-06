@@ -102,6 +102,49 @@ import {
   normalizeCourseHistoryEntryList,
 } from "./courseHistoryStore.js";
 
+const TEMPLATE_COLOR_SCHEMES = [
+  {
+    cardBg: "bg-indigo-50/80",
+    cardBorder: "border-indigo-200/80",
+    ribbon: "bg-indigo-400/70",
+    labelText: "text-indigo-700",
+    badgeBg: "bg-indigo-100/90",
+    badgeText: "text-indigo-700",
+    inputBorder: "border-indigo-200/70",
+    focusRing: "focus:border-indigo-400 focus:ring-indigo-300/70",
+  },
+  {
+    cardBg: "bg-emerald-50/80",
+    cardBorder: "border-emerald-200/80",
+    ribbon: "bg-emerald-400/70",
+    labelText: "text-emerald-700",
+    badgeBg: "bg-emerald-100/90",
+    badgeText: "text-emerald-700",
+    inputBorder: "border-emerald-200/70",
+    focusRing: "focus:border-emerald-400 focus:ring-emerald-300/70",
+  },
+  {
+    cardBg: "bg-sky-50/80",
+    cardBorder: "border-sky-200/80",
+    ribbon: "bg-sky-400/70",
+    labelText: "text-sky-700",
+    badgeBg: "bg-sky-100/90",
+    badgeText: "text-sky-700",
+    inputBorder: "border-sky-200/70",
+    focusRing: "focus:border-sky-400 focus:ring-sky-300/70",
+  },
+  {
+    cardBg: "bg-amber-50/80",
+    cardBorder: "border-amber-200/80",
+    ribbon: "bg-amber-400/70",
+    labelText: "text-amber-700",
+    badgeBg: "bg-amber-100/90",
+    badgeText: "text-amber-700",
+    inputBorder: "border-amber-200/70",
+    focusRing: "focus:border-amber-400 focus:ring-amber-300/70",
+  },
+];
+
 const STATUS_PRIORITY_LABELS = {
   inprogress: "In Progress",
   todo: "To Do",
@@ -2610,17 +2653,35 @@ useEffect(() => {
                     </div>
                   ) : (
                     <div className="mt-6 space-y-4">
-                      {milestoneTemplates.map((tpl) => {
+                      {milestoneTemplates.map((tpl, index) => {
+                        const accent = TEMPLATE_COLOR_SCHEMES[index % TEMPLATE_COLOR_SCHEMES.length];
                         const draft = templateDrafts[tpl.id] || { title: tpl.title || "", goal: tpl.goal || "" };
                         const isDirty =
                           draft.title !== (tpl.title || "") ||
                           (draft.goal || "") !== (tpl.goal || "");
                         const isEditing = editingTemplateId === tpl.id;
                         return (
-                          <div key={tpl.id} className="rounded-3xl border border-slate-200/80 bg-slate-50/90 p-5 shadow-sm">
+                          <div
+                            key={tpl.id}
+                            className={`relative rounded-3xl border ${accent.cardBorder} ${accent.cardBg} p-5 shadow-sm transition-shadow`}
+                          >
+                            <span
+                              className={`pointer-events-none absolute inset-x-0 top-0 h-1.5 ${accent.ribbon}`}
+                              aria-hidden="true"
+                            />
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
                               <div className="flex-1 space-y-3">
-                                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <div className="flex items-center justify-between">
+                                  <span
+                                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${accent.badgeBg} ${accent.badgeText}`}
+                                  >
+                                    {`Milestone ${index + 1}`}
+                                  </span>
+                                  <span className="text-xs font-medium text-slate-500">
+                                    {isDirty ? "Unsaved changes" : "Saved"}
+                                  </span>
+                                </div>
+                                <label className={`block text-xs font-semibold uppercase tracking-wide ${accent.labelText}`}>
                                   Template name
                                 </label>
                                 <input
@@ -2634,17 +2695,17 @@ useEffect(() => {
                                       persistTemplateDraft(tpl.id);
                                     }
                                   }}
-                                  className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
+                                  className={`w-full rounded-2xl border bg-white/95 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 ${accent.inputBorder} ${accent.focusRing}`}
                                   placeholder="Untitled template"
                                 />
-                                <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <label className={`block text-xs font-semibold uppercase tracking-wide ${accent.labelText}`}>
                                   Goal / notes
                                 </label>
                                 <textarea
                                   value={draft.goal}
                                   onChange={(event) => handleTemplateDraftChange(tpl.id, "goal", event.target.value)}
                                   onBlur={() => persistTemplateDraft(tpl.id)}
-                                  className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
+                                  className={`w-full rounded-2xl border bg-white/95 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 ${accent.inputBorder} ${accent.focusRing}`}
                                   rows={3}
                                   placeholder="What is this template for?"
                                 />
