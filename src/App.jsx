@@ -182,6 +182,32 @@ const cloneDeep = (value) => {
   return JSON.parse(JSON.stringify(value));
 };
 
+const extractTemplateTitleSortInfo = (task = {}) => {
+  const rawTitle = (task?.title ?? "").trim();
+  const match = rawTitle.match(/^(\d{1,2})\b/);
+  if (match) {
+    const digits = match[1].length;
+    return {
+      group: digits === 1 ? 0 : 1,
+      number: Number(match[1]),
+      title: rawTitle,
+    };
+  }
+  return { group: 2, number: null, title: rawTitle };
+};
+
+const compareTemplateTasksByTitle = (a, b) => {
+  const infoA = extractTemplateTitleSortInfo(a);
+  const infoB = extractTemplateTitleSortInfo(b);
+  if (infoA.group !== infoB.group) return infoA.group - infoB.group;
+  if (infoA.group !== 2 && infoA.number !== infoB.number) {
+    return infoA.number - infoB.number;
+  }
+  return infoA.title.localeCompare(infoB.title, undefined, { sensitivity: "base" });
+};
+
+const sortTemplateTasks = (tasks = []) => [...tasks].sort(compareTemplateTasksByTitle);
+
 const toMillis = (value, fallback) => {
   if (value && typeof value.toMillis === "function") return value.toMillis();
   if (value instanceof Date) return value.getTime();
@@ -1455,9 +1481,31 @@ useEffect(() => {
     setEditingTemplateId(id);
   };
 
-  const updateTemplateTaskField = (templateId, taskId, field, value) => {
-    const updatedTemplates = updateTaskInMilestoneTemplateStore(templateId, taskId, { [field]: value });
+  const updateTemplateTask = (templateId, taskId, patch = {}) => {
+    if (!patch || typeof patch !== "object") return;
+    const nextPatch = { ...patch };
+    if (Object.prototype.hasOwnProperty.call(nextPatch, "milestoneId")) {
+      delete nextPatch.milestoneId;
+    }
+    const updatedTemplates = updateTaskInMilestoneTemplateStore(templateId, taskId, nextPatch);
     onChangeMilestoneTemplates?.(updatedTemplates);
+  };
+
+  const addTemplateTaskLink = (templateId, taskId, url) => {
+    if (!url) return;
+    const template = milestoneTemplates.find((tpl) => tpl.id === templateId);
+    const task = template?.tasks?.find((item) => item.id === taskId);
+    const links = task?.links || [];
+    updateTemplateTask(templateId, taskId, { links: [...links, url] });
+  };
+
+  const removeTemplateTaskLink = (templateId, taskId, index) => {
+    if (index < 0) return;
+    const template = milestoneTemplates.find((tpl) => tpl.id === templateId);
+    const task = template?.tasks?.find((item) => item.id === taskId);
+    if (!task || !Array.isArray(task.links)) return;
+    const links = task.links.filter((_, idx) => idx !== index);
+    updateTemplateTask(templateId, taskId, { links });
   };
 
   const removeTemplateTask = (templateId, taskId) => {
@@ -2677,95 +2725,36 @@ useEffect(() => {
                                   </div>
                                 ) : (
                                   <div className="space-y-3">
-                                    {tpl.tasks.map((task, index) => (
-                                      <div
-                                        key={task.id}
-                                        className="rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-sm"
-                                      >
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                          <div>
-                                            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                              Task {index + 1}
-                                            </div>
-                                            <div className="text-sm font-medium text-slate-700">
-                                              {task.title?.trim() || "Untitled task"}
-                                            </div>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <button
-                                              type="button"
-                                              onClick={() => duplicateTemplateTask(tpl.id, task.id)}
-                                              className="glass-icon-button w-8 h-8"
-                                              title="Duplicate task"
-                                              aria-label="Duplicate task"
-                                            >
-                                              <Copy className="icon" />
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                if (
-                                                  window.confirm(
-                                                    "Remove this task from the template? This action cannot be undone."
-                                                  )
-                                                ) {
-                                                  removeTemplateTask(tpl.id, task.id);
-                                                }
-                                              }}
-                                              className="glass-icon-button w-8 h-8 text-red-600 hover:text-red-700"
-                                              title="Delete task"
-                                              aria-label="Delete task"
-                                            >
-                                              <Trash2 className="icon" />
-                                            </button>
-                                          </div>
-                                        </div>
-                                        <div className="mt-4 space-y-3">
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                              Task title
-                                            </label>
-                                            <input
-                                              type="text"
-                                              value={task.title || ""}
-                                              onChange={(event) =>
-                                                updateTemplateTaskField(tpl.id, task.id, "title", event.target.value)
-                                              }
-                                              className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
-                                              placeholder="What needs to be done?"
-                                            />
-                                          </div>
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                              Details
-                                            </label>
-                                            <textarea
-                                              value={task.details || ""}
-                                              onChange={(event) =>
-                                                updateTemplateTaskField(tpl.id, task.id, "details", event.target.value)
-                                              }
-                                              className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
-                                              rows={3}
-                                              placeholder="Add context or acceptance criteria"
-                                            />
-                                          </div>
-                                          <div>
-                                            <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                              Notes for assignees
-                                            </label>
-                                            <textarea
-                                              value={task.note || ""}
-                                              onChange={(event) =>
-                                                updateTemplateTaskField(tpl.id, task.id, "note", event.target.value)
-                                              }
-                                              className="w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/70"
-                                              rows={2}
-                                              placeholder="Reminders, links, or tips for whoever owns this task"
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
+                                    {sortTemplateTasks(tpl.tasks).map((task) => {
+                                      const taskWithContext = {
+                                        ...task,
+                                        courseName: tpl.title ? `Template · ${tpl.title}` : "Template task",
+                                        milestoneName: tpl.title || "Template",
+                                      };
+                                      return (
+                                        <TaskCard
+                                          key={task.id}
+                                          task={taskWithContext}
+                                          tasks={tpl.tasks || []}
+                                          team={team}
+                                          milestones={[]}
+                                          onUpdate={(id, patch) => updateTemplateTask(tpl.id, id, patch)}
+                                          onDelete={(id) => {
+                                            if (
+                                              window.confirm(
+                                                "Remove this task from the template? This action cannot be undone."
+                                              )
+                                            ) {
+                                              removeTemplateTask(tpl.id, id);
+                                            }
+                                          }}
+                                          onDuplicate={(id) => duplicateTemplateTask(tpl.id, id)}
+                                          onAddLink={(id, url) => addTemplateTaskLink(tpl.id, id, url)}
+                                          onRemoveLink={(id, idx) => removeTemplateTaskLink(tpl.id, id, idx)}
+                                          reporter={null}
+                                        />
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
