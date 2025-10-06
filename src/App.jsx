@@ -102,6 +102,26 @@ import {
   normalizeCourseHistoryEntryList,
 } from "./courseHistoryStore.js";
 
+const GradientLogo = ({ className = "" }) => {
+  const combinedClassName = [
+    "grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[linear-gradient(135deg,#16a34a,#22c55e)] shadow-[0_8px_20px_rgba(15,23,42,0.18)]",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <div role="img" aria-label="DART logo" className={combinedClassName}>
+      <svg viewBox="0 0 24 24" className="h-5 w-5 text-white" aria-hidden="true">
+        <path
+          fill="currentColor"
+          d="M5.5 4h6.75c3.91 0 6.75 2.71 6.75 6.5s-2.84 6.5-6.75 6.5H9.5V20H5.5V4zm4 4v5h2.75c1.69 0 2.75-1.07 2.75-2.5S13.94 8 12.25 8H9.5z"
+        />
+      </svg>
+    </div>
+  );
+};
+
 const TEMPLATE_COLOR_SCHEMES = [
   {
     cardBg: "bg-indigo-50/80",
@@ -1993,11 +2013,7 @@ useEffect(() => {
               <span>Back to Courses</span>
             </button>
           )}
-          <img
-            src="src/dartlogo.png"
-            alt="DART logo"
-            className="h-9 w-auto max-w-[150px] object-contain drop-shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
-          />
+          <GradientLogo />
           {/* DART banner title */}
           <div className="hidden sm:block text-[15px] font-semibold text-slate-700/90 tracking-tight truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
           <div className="flex-1" />
@@ -5445,11 +5461,7 @@ export function CoursesHub({
       <header className="sticky top-0 z-20 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <img
-              src="src/dartlogo.png"
-              alt="DART logo"
-              className="h-9 w-auto max-w-[150px] object-contain drop-shadow-[0_8px_20px_rgba(15,23,42,0.18)]"
-            />
+            <GradientLogo />
             <div className="min-w-0">
               <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">DART: Design and Development Accountability and Responsibility Tracker</div>
               <div className="text-sm text-slate-700 truncate flex items-center gap-2">
