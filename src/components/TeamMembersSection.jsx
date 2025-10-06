@@ -144,6 +144,22 @@ export default function TeamMembersSection({
   collapsed = false,
   onToggle = () => {},
 }) {
+  const sortedTeam = React.useMemo(() => {
+    return [...team].sort((a, b) => {
+      const aIsSME = a.roleType === "SME";
+      const bIsSME = b.roleType === "SME";
+
+      if (aIsSME !== bIsSME) {
+        return aIsSME ? 1 : -1;
+      }
+
+      return a.name.localeCompare(b.name, undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+    });
+  }, [team]);
+
   return (
     <section className="glass-surface" data-collapsed={collapsed}>
       <div className="section-header">
@@ -206,7 +222,7 @@ export default function TeamMembersSection({
       {!collapsed && (
         <div className="section-body">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {team.map((m) => (
+            {sortedTeam.map((m) => (
               <TeamMemberCard
                 key={m.id}
                 member={m}
