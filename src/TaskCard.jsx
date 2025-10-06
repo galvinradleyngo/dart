@@ -189,7 +189,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       </div>
       {collapsed ? (
         isUserBoardVariant ? (
-          <div className="mt-2 flex flex-col gap-2 text-sm text-slate-600/90">
+          <div className="mt-2 flex flex-col gap-2 text-sm text-slate-700">
             <div className="text-[13px] font-semibold text-slate-700 truncate" title={courseName}>
               {courseName}
             </div>
@@ -209,7 +209,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 onChange={(v) => update(t.id, { title: v })}
               />
             </div>
-            <div className="text-sm text-slate-600/90 leading-snug">
+            <div className="text-sm text-slate-700 leading-snug">
               <InlineText
                 className="text-sm leading-snug"
                 value={t.details}
@@ -218,7 +218,7 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
               />
             </div>
             {t.note && (
-              <div className="text-sm text-slate-600/90 flex items-center gap-1">
+              <div className="text-sm text-slate-700 flex items-center gap-1">
                 <StickyNote className="icon flex-shrink-0 text-amber-500" /> {t.note}
               </div>
             )}
@@ -292,11 +292,11 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                 </select>
               )}
             </div>
-            <div className="text-sm text-slate-600/90 mt-1 truncate">
+            <div className="text-sm text-slate-700 mt-1 truncate">
               <InlineText value={t.details} onChange={(v) => update(t.id, { details: v })} placeholder="Details…" />
             </div>
             {t.note && (
-              <div className="text-sm text-slate-600/90 mt-1 flex items-center gap-1 truncate">
+              <div className="text-sm text-slate-700 mt-1 flex items-center gap-1 truncate">
                 <StickyNote className="icon flex-shrink-0 text-amber-500" /> {t.note}
               </div>
             )}
