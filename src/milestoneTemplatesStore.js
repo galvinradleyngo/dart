@@ -34,8 +34,11 @@ const templateTaskDefaults = () => migrateTask({
 });
 
 const persistTemplates = (templates) => {
+  console.log('[Templates] Persisting templates:', templates.length, 'templates');
   saveMilestoneTemplates(templates);
-  saveMilestoneTemplatesRemote(templates).catch(() => {});
+  saveMilestoneTemplatesRemote(templates).catch((err) => {
+    console.warn('[Templates] Failed to save to remote:', err);
+  });
   return templates;
 };
 
@@ -80,8 +83,10 @@ export const loadMilestoneTemplatesRemote = async () => {
   try {
     const snap = await getDoc(doc(db, "app", "milestoneTemplates"));
     const data = snap.exists() ? snap.data().milestoneTemplates || [] : [];
+    console.log('[Templates] Loaded from remote:', data.length, 'templates');
     return data.map((tpl) => ({ ...tpl, tasks: (tpl.tasks || []).map(migrateTask) }));
-  } catch {
+  } catch (err) {
+    console.warn('[Templates] Failed to load from remote:', err);
     return [];
   }
 };
@@ -108,6 +113,7 @@ export const removeTemplate = (id) => {
   // Track deleted template ID to prevent re-seeding
   const deletedIds = loadDeletedTemplateIds();
   if (!deletedIds.includes(id)) {
+    console.log('[Templates] Tracking deleted template:', id);
     saveDeletedTemplateIds([...deletedIds, id]);
   }
   return mutateTemplates((templates) => templates.filter((t) => t.id !== id));

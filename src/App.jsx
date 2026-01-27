@@ -6375,8 +6375,12 @@ export default function PMApp() {
   const [milestoneTemplates, setMilestoneTemplates] = useState(() => {
     const stored = loadMilestoneTemplates();
     const deletedIds = loadDeletedTemplateIds();
+    console.log('[Templates] Initializing with', stored.length, 'stored templates and', deletedIds.length, 'deleted IDs');
     const merged = mergeById(stored, defaultMilestoneTemplates, deletedIds);
-    if (merged.length !== stored.length) saveMilestoneTemplates(merged);
+    if (merged.length !== stored.length) {
+      console.log('[Templates] Merged templates changed from', stored.length, 'to', merged.length);
+      saveMilestoneTemplates(merged);
+    }
     return merged;
   });
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -6395,13 +6399,19 @@ export default function PMApp() {
     (async () => {
       const remote = await loadMilestoneTemplatesRemote();
       if (remote.length) {
+        console.log('[Templates] Syncing with remote:', remote.length, 'templates');
         setMilestoneTemplates((prev) => {
           const deletedIds = loadDeletedTemplateIds();
+          console.log('[Templates] Merging remote with', prev.length, 'local templates, excluding', deletedIds.length, 'deleted IDs');
           const merged = mergeById(prev, remote, deletedIds);
-          if (merged.length !== prev.length) saveMilestoneTemplates(merged);
+          if (merged.length !== prev.length) {
+            console.log('[Templates] After remote sync, template count changed from', prev.length, 'to', merged.length);
+            saveMilestoneTemplates(merged);
+          }
           return merged;
         });
       } else {
+        console.log('[Templates] No remote templates found, uploading local state');
         saveMilestoneTemplatesRemote(milestoneTemplates).catch(() => {});
       }
     })();
