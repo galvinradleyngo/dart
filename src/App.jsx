@@ -1586,6 +1586,12 @@ useEffect(() => {
     const updatedTemplates = removeMilestoneTemplateStore(id);
     onChangeMilestoneTemplates?.(updatedTemplates);
     setEditingTemplateId((prev) => (prev === id ? null : prev));
+    // Clear any draft data for the deleted template
+    setTemplateDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const toggleTemplateEditor = (id) => {
