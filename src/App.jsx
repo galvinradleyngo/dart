@@ -30,6 +30,7 @@ import {
   saveMilestoneTemplates,
   loadMilestoneTemplatesRemote,
   saveMilestoneTemplatesRemote,
+  loadDeletedTemplateIds,
   createTemplateFromMilestone,
   removeTemplate as removeMilestoneTemplateStore,
   updateTemplate as updateMilestoneTemplateStore,
@@ -222,9 +223,13 @@ const resolveMemberColor = (member) =>
     roleColor(member?.roleType || "Other")
   );
 
-const mergeById = (base = [], extra = []) => {
+const mergeById = (base = [], extra = [], deletedIds = []) => {
   const map = new Map(base.map(t => [t.id, t]));
-  extra.forEach(t => { if (!map.has(t.id)) map.set(t.id, t); });
+  extra.forEach(t => { 
+    if (!map.has(t.id) && !deletedIds.includes(t.id)) {
+      map.set(t.id, t); 
+    }
+  });
   return Array.from(map.values());
 };
 
@@ -6369,7 +6374,8 @@ export default function PMApp() {
   });
   const [milestoneTemplates, setMilestoneTemplates] = useState(() => {
     const stored = loadMilestoneTemplates();
-    const merged = mergeById(stored, defaultMilestoneTemplates);
+    const deletedIds = loadDeletedTemplateIds();
+    const merged = mergeById(stored, defaultMilestoneTemplates, deletedIds);
     if (merged.length !== stored.length) saveMilestoneTemplates(merged);
     return merged;
   });
@@ -6390,7 +6396,8 @@ export default function PMApp() {
       const remote = await loadMilestoneTemplatesRemote();
       if (remote.length) {
         setMilestoneTemplates((prev) => {
-          const merged = mergeById(prev, remote);
+          const deletedIds = loadDeletedTemplateIds();
+          const merged = mergeById(prev, remote, deletedIds);
           if (merged.length !== prev.length) saveMilestoneTemplates(merged);
           return merged;
         });
