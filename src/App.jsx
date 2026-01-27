@@ -30,6 +30,7 @@ import {
   saveMilestoneTemplates,
   loadMilestoneTemplatesRemote,
   saveMilestoneTemplatesRemote,
+  loadDeletedTemplateIds,
   createTemplateFromMilestone,
   removeTemplate as removeMilestoneTemplateStore,
   updateTemplate as updateMilestoneTemplateStore,
@@ -222,9 +223,13 @@ const resolveMemberColor = (member) =>
     roleColor(member?.roleType || "Other")
   );
 
-const mergeById = (base = [], extra = []) => {
+const mergeById = (base = [], extra = [], deletedIds = []) => {
   const map = new Map(base.map(t => [t.id, t]));
-  extra.forEach(t => { if (!map.has(t.id)) map.set(t.id, t); });
+  extra.forEach(t => { 
+    if (!map.has(t.id) && !deletedIds.includes(t.id)) {
+      map.set(t.id, t); 
+    }
+  });
   return Array.from(map.values());
 };
 
@@ -1581,6 +1586,12 @@ useEffect(() => {
     const updatedTemplates = removeMilestoneTemplateStore(id);
     onChangeMilestoneTemplates?.(updatedTemplates);
     setEditingTemplateId((prev) => (prev === id ? null : prev));
+    // Clear any draft data for the deleted template
+    setTemplateDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
   };
 
   const toggleTemplateEditor = (id) => {
@@ -6369,8 +6380,13 @@ export default function PMApp() {
   });
   const [milestoneTemplates, setMilestoneTemplates] = useState(() => {
     const stored = loadMilestoneTemplates();
-    const merged = mergeById(stored, defaultMilestoneTemplates);
-    if (merged.length !== stored.length) saveMilestoneTemplates(merged);
+    const deletedIds = loadDeletedTemplateIds();
+    console.log('[Templates] Initializing with', stored.length, 'stored templates and', deletedIds.length, 'deleted IDs');
+    const merged = mergeById(stored, defaultMilestoneTemplates, deletedIds);
+    if (merged.length !== stored.length) {
+      console.log('[Templates] Merged templates changed from', stored.length, 'to', merged.length);
+      saveMilestoneTemplates(merged);
+    }
     return merged;
   });
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -6389,12 +6405,19 @@ export default function PMApp() {
     (async () => {
       const remote = await loadMilestoneTemplatesRemote();
       if (remote.length) {
+        console.log('[Templates] Syncing with remote:', remote.length, 'templates');
         setMilestoneTemplates((prev) => {
-          const merged = mergeById(prev, remote);
-          if (merged.length !== prev.length) saveMilestoneTemplates(merged);
+          const deletedIds = loadDeletedTemplateIds();
+          console.log('[Templates] Merging remote with', prev.length, 'local templates, excluding', deletedIds.length, 'deleted IDs');
+          const merged = mergeById(prev, remote, deletedIds);
+          if (merged.length !== prev.length) {
+            console.log('[Templates] After remote sync, template count changed from', prev.length, 'to', merged.length);
+            saveMilestoneTemplates(merged);
+          }
           return merged;
         });
       } else {
+        console.log('[Templates] No remote templates found, uploading local state');
         saveMilestoneTemplatesRemote(milestoneTemplates).catch(() => {});
       }
     })();
