@@ -3739,13 +3739,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, [isPmUser, myCoursesAll]);
 
   const teamTaskRows = useMemo(() => {
-    const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
+    const nowTime = Date.now();
+    const weekEnd = nowTime + (7 * 24 * 60 * 60 * 1000);
     const withMetrics = teamTaskSummary.map((entry) => {
       const open = entry.counts.todo + entry.counts.inprogress + entry.counts.blocked;
       const dueThisWeek = entry.tasks.filter((task) => {
         if (!task.dueDate || task.status === 'done' || task.status === 'skip') return false;
         const due = new Date(task.dueDate).getTime();
-        return !Number.isNaN(due) && due >= todayTime && due <= weekEnd;
+        return !Number.isNaN(due) && due >= nowTime && due <= weekEnd;
       }).length;
       return {
         ...entry,
@@ -3782,9 +3783,11 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       if (b.open !== a.open) return b.open - a.open;
       return (a.member?.name || '').localeCompare(b.member?.name || '');
     });
-  }, [teamTaskSummary, teamTaskPreset, teamTaskSortBy, todayTime]);
+  }, [teamTaskSummary, teamTaskPreset, teamTaskSortBy]);
 
   const teamTriage = useMemo(() => {
+    const nowTime = Date.now();
+    const weekEnd = nowTime + (7 * 24 * 60 * 60 * 1000);
     return teamTaskSummary.reduce(
       (acc, entry) => {
         acc.open += entry.counts.todo + entry.counts.inprogress + entry.counts.blocked;
@@ -3793,14 +3796,13 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         acc.dueWeek += entry.tasks.filter((task) => {
           if (!task.dueDate || task.status === 'done' || task.status === 'skip') return false;
           const due = new Date(task.dueDate).getTime();
-          const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
-          return !Number.isNaN(due) && due >= todayTime && due <= weekEnd;
+          return !Number.isNaN(due) && due >= nowTime && due <= weekEnd;
         }).length;
         return acc;
       },
       { open: 0, blocked: 0, overdue: 0, dueWeek: 0 }
     );
-  }, [teamTaskSummary, todayTime]);
+  }, [teamTaskSummary]);
 
   useEffect(() => {
     if (!isPmUser) return;
@@ -3820,28 +3822,28 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
   const selectedTeamMemberTasks = useMemo(() => {
     if (!selectedTeamMember) return [];
+    const nowTime = Date.now();
+    const weekEnd = nowTime + (7 * 24 * 60 * 60 * 1000);
     return selectedTeamMember.tasks.filter((task) => {
       if (teamTaskPreset === 'all') return true;
       if (teamTaskPreset === 'attention') {
         const due = task.dueDate ? new Date(task.dueDate).getTime() : null;
-        const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
-        const dueWeek = due != null && !Number.isNaN(due) && due >= todayTime && due <= weekEnd;
-        const overdue = due != null && !Number.isNaN(due) && due < todayTime && task.status !== 'done' && task.status !== 'skip';
+        const dueWeek = due != null && !Number.isNaN(due) && due >= nowTime && due <= weekEnd;
+        const overdue = due != null && !Number.isNaN(due) && due < nowTime && task.status !== 'done' && task.status !== 'skip';
         return overdue || task.status === 'blocked' || dueWeek;
       }
       if (teamTaskPreset === 'blocked') return task.status === 'blocked';
       if (teamTaskPreset === 'overdue') {
         const due = task.dueDate ? new Date(task.dueDate).getTime() : null;
-        return due != null && !Number.isNaN(due) && due < todayTime && task.status !== 'done' && task.status !== 'skip';
+        return due != null && !Number.isNaN(due) && due < nowTime && task.status !== 'done' && task.status !== 'skip';
       }
       if (teamTaskPreset === 'week') {
         const due = task.dueDate ? new Date(task.dueDate).getTime() : null;
-        const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
-        return due != null && !Number.isNaN(due) && due >= todayTime && due <= weekEnd && task.status !== 'done' && task.status !== 'skip';
+        return due != null && !Number.isNaN(due) && due >= nowTime && due <= weekEnd && task.status !== 'done' && task.status !== 'skip';
       }
       return true;
     });
-  }, [selectedTeamMember, teamTaskPreset, todayTime]);
+  }, [selectedTeamMember, teamTaskPreset]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], blocked: [], done: [], skip: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
