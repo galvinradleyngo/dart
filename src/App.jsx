@@ -34,7 +34,6 @@ import {
   saveDeletedTemplateIds,
   loadDeletedTemplateIdsRemote,
   saveDeletedTemplateIdsRemote,
-  createTemplateFromMilestone,
 } from "./milestoneTemplatesStore.js";
 import {
   X,
@@ -912,7 +911,7 @@ function UnassignedTasksPanel({
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
-function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], milestoneTemplates = [], onChangeMilestoneTemplates, onOpenUser, onOpenTemplates }) {
+function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], milestoneTemplates = [], taskTemplates = [], onChangeMilestoneTemplates, onOpenUser, onOpenTemplates }) {
   const [state, setCourseState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
@@ -933,6 +932,8 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [listPriority, setListPriority] = useState(null);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
+  const [selectedMilestoneTemplateId, setSelectedMilestoneTemplateId] = useState('');
+  const [selectedTaskTemplateId, setSelectedTaskTemplateId] = useState('');
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
   const [newLinkUrl, setNewLinkUrl] = useState("");
@@ -1399,6 +1400,31 @@ useEffect(() => {
         ],
       };
     });
+  const addTaskFromTemplate = (templateId, milestoneId = null) =>
+    updateCourseState((s) => {
+      const template = taskTemplates.find((tpl) => tpl.id === templateId);
+      if (!template) return s;
+      const desiredId = milestoneId ?? null;
+      const validMilestoneId = desiredId && s.milestones.some((m) => m.id === desiredId) ? desiredId : null;
+      const defaultAssignee =
+        s.course.courseLDIds[0] || (s.team.find((m) => m.roleType === 'LD')?.id ?? null);
+      const clonedTask = {
+        ...template,
+        id: uid(),
+        order: s.tasks.length,
+        milestoneId: validMilestoneId,
+        status: 'todo',
+        startDate: '',
+        dueDate: '',
+        completedDate: '',
+        depTaskId: null,
+        assigneeIds: defaultAssignee ? [defaultAssignee] : [],
+        assigneeId: defaultAssignee ?? null,
+        links: ensureArray(template.links),
+        blocks: [],
+      };
+      return { ...s, tasks: [...s.tasks, clonedTask] };
+    });
   const duplicateTask = (id) =>
     updateCourseState((s) => {
       const orig = s.tasks.find((t) => t.id === id);
@@ -1572,12 +1598,36 @@ useEffect(() => {
         tasks: [...s.tasks, ...clonedTasks],
       };
     });
-  const saveMilestoneTemplate = (id) => {
+  const saveMilestoneTemplate = async (id) => {
     const src = state.milestones.find((m) => m.id === id);
     if (!src) return;
     const tasks = state.tasks.filter((t) => t.milestoneId === id);
-    const updatedTemplates = createTemplateFromMilestone(src, tasks);
-    onChangeMilestoneTemplates?.(updatedTemplates);
+    const templateTasks = tasks.map(({ id: _taskId, order: _order, milestoneId: _msId, ...rest }) => ({
+      ...rest,
+      id: uid(),
+      depTaskId: null,
+      links: ensureArray(rest.links),
+      status: rest.status || 'todo',
+      workDays: clamp(Number(rest.workDays) || 1, 1, 365),
+      startDate: '',
+      dueDate: '',
+      completedDate: '',
+      blocks: Array.isArray(rest.blocks) ? rest.blocks.map((block) => ({ ...block })) : [],
+    }));
+    const nextTemplate = {
+      id: uid(),
+      title: src.title || 'Untitled template',
+      goal: src.goal || '',
+      tasks: templateTasks,
+    };
+    const nextTemplates = [...milestoneTemplates, nextTemplate];
+    try {
+      await saveMilestoneTemplatesRemoteStrict(nextTemplates);
+      saveMilestoneTemplates(nextTemplates);
+      onChangeMilestoneTemplates?.(nextTemplates);
+    } catch {
+      window.alert('Could not save milestone template to Firebase. Please try again.');
+    }
   };
 
   // Milestone DnD
@@ -2226,7 +2276,7 @@ useEffect(() => {
         {/* Milestones */}
         <section
           ref={milestoneSectionRef}
-          className="-mx-4 sm:mx-0 glass-surface text-sm sm:text-[14px]"
+          className="-mx-4 sm:mx-0 glass-surface border border-emerald-200/70 bg-gradient-to-br from-emerald-50/45 via-white to-emerald-50/20 text-sm sm:text-[14px]"
           data-collapsed={milestonesCollapsed}
         >
           <div className="section-header flex-col sm:flex-row sm:items-center sm:gap-4">
@@ -2237,7 +2287,7 @@ useEffect(() => {
               title={milestonesCollapsed ? 'Expand Milestones' : 'Collapse Milestones'}
               className="flex flex-1 items-center gap-3 text-left"
             >
-              <span className="section-title">Milestones</span>
+              <span className="section-title text-emerald-900">Milestones</span>
             </button>
             <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
               {!milestonesCollapsed && (
@@ -2290,12 +2340,36 @@ useEffect(() => {
                     )}
                   </div>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                    <select
+                      value={selectedMilestoneTemplateId}
+                      onChange={(e) => setSelectedMilestoneTemplateId(e.target.value)}
+                      className="rounded-xl border border-white/60 bg-white/85 px-3 py-2 text-sm shadow-sm w-full sm:w-auto sm:min-w-[14rem]"
+                    >
+                      <option value="">Add from milestone template…</option>
+                      {milestoneTemplates.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>
+                          {tpl.title || 'Untitled template'}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedMilestoneTemplateId) return;
+                        addMilestoneFromTemplate(selectedMilestoneTemplateId);
+                        setSelectedMilestoneTemplateId('');
+                      }}
+                      className="glass-button w-full sm:w-auto"
+                      disabled={!selectedMilestoneTemplateId}
+                    >
+                      Add from Template
+                    </button>
                     <button
                       type="button"
                       onClick={() => onOpenTemplates?.('milestone')}
                       className="glass-button w-full sm:w-auto"
                     >
-                      Template library{milestoneTemplates.length ? ` (${milestoneTemplates.length})` : ""}
+                      Manage
                     </button>
                   </div>
                   <button
@@ -2358,7 +2432,7 @@ useEffect(() => {
                           onDragOver={onMilestoneDragOver(m.id)}
                           onDragLeave={onMilestoneDragLeave}
                           onDrop={onMilestoneDrop(m.id)}
-                          className={isDragTarget ? "ring-2 ring-indigo-400 rounded-lg" : ""}
+                          className={isDragTarget ? "ring-2 ring-emerald-400 rounded-lg" : ""}
                         >
                           <MilestoneCard
                             milestone={m}
@@ -2386,7 +2460,7 @@ useEffect(() => {
                     })}
                   </AnimatePresence>
                   {dragMilestoneOverId === null && dragMilestoneId.current && (
-                    <div className="h-2 rounded border-2 border-dashed border-indigo-400"></div>
+                    <div className="h-2 rounded border-2 border-dashed border-emerald-400"></div>
                   )}
                 </div>
                 <UnassignedTasksPanel
@@ -2440,6 +2514,42 @@ useEffect(() => {
               >
                 Add Task
               </button>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={selectedTaskTemplateId}
+                  onChange={(e) => setSelectedTaskTemplateId(e.target.value)}
+                  className="rounded-xl border border-white/60 bg-white/85 px-3 py-2 text-sm shadow-sm w-full sm:w-auto sm:min-w-[14rem]"
+                >
+                  <option value="">Add from task template…</option>
+                  {taskTemplates.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {tpl.title || 'Untitled task template'}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedTaskTemplateId) return;
+                    addTaskFromTemplate(
+                      selectedTaskTemplateId,
+                      milestoneFilter !== 'all' ? milestoneFilter : null
+                    );
+                    setSelectedTaskTemplateId('');
+                  }}
+                  className="glass-button"
+                  disabled={!selectedTaskTemplateId}
+                >
+                  Add from Template
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenTemplates?.('task')}
+                  className="glass-button"
+                >
+                  Manage
+                </button>
+              </div>
               <button
                 onClick={() => setTasksCollapsed((v) => !v)}
                 title={tasksCollapsed ? "Expand Course Tasks" : "Collapse Course Tasks"}
@@ -4469,6 +4579,28 @@ function TemplatesHub({
     if (newTemplate.id) setExpandedMilestoneTemplateId(newTemplate.id);
   }, [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]);
 
+  const duplicateMilestoneTemplate = useCallback(
+    async (id) => {
+      const source = milestoneTemplates.find((tpl) => tpl.id === id);
+      if (!source) return;
+      await maybeBackupBeforeMutation();
+      const copy = {
+        ...source,
+        id: uid(),
+        title: source.title ? `${source.title} (copy)` : 'Untitled template (copy)',
+        tasks: ensureArray(source.tasks).map((task) => ({
+          ...task,
+          id: uid(),
+          depTaskId: null,
+        })),
+      };
+      const saved = await persistMilestoneTemplates([...milestoneTemplates, copy]);
+      if (!saved) return;
+      setExpandedMilestoneTemplateId(copy.id);
+    },
+    [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]
+  );
+
   const addMilestoneTemplateTask = useCallback(
     async (templateId) => {
       await maybeBackupBeforeMutation();
@@ -4940,6 +5072,7 @@ function TemplatesHub({
         <div ref={milestoneSectionRef}>
         <SectionCard
           title="Milestone Templates"
+          className="border border-emerald-200/80 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/70"
           actions={<button onClick={createMilestoneTemplate} className="glass-button">New Milestone Template</button>}
         >
           {!milestoneTemplates.length ? (
@@ -4954,7 +5087,7 @@ function TemplatesHub({
                 return (
                   <div
                     key={tpl.id}
-                    className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                    className="rounded-2xl border border-emerald-200/80 bg-white/95 p-4 shadow-sm"
                     draggable
                     onDragStart={() => {
                       dragMilestoneTemplateId.current = tpl.id;
@@ -4962,17 +5095,48 @@ function TemplatesHub({
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleMilestoneTemplateDrop(tpl.id)}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setExpandedMilestoneTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
-                      className="w-full flex items-center justify-between gap-3 text-left"
-                    >
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-800 truncate">{tpl.title || 'Untitled template'}</div>
-                        <div className="text-xs text-slate-500">{templateTasks.length} task(s)</div>
+                    <div className="w-full flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedMilestoneTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
+                        className="min-w-0 flex-1 flex items-center justify-between gap-3 text-left"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-emerald-900 truncate">{tpl.title || 'Untitled template'}</div>
+                          <div className="text-xs text-emerald-700/80">{templateTasks.length} task(s)</div>
+                        </div>
+                        {isExpanded ? <ChevronUp className="icon text-emerald-700" /> : <ChevronDown className="icon text-emerald-700" />}
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedMilestoneTemplateId(tpl.id)}
+                          className="glass-icon-button w-8 h-8 text-emerald-700 hover:text-emerald-800"
+                          title="Edit template"
+                          aria-label="Edit template"
+                        >
+                          <Pencil className="icon" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => duplicateMilestoneTemplate(tpl.id)}
+                          className="glass-icon-button w-8 h-8 text-slate-600 hover:text-slate-800"
+                          title="Duplicate template"
+                          aria-label="Duplicate template"
+                        >
+                          <Copy className="icon" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteMilestoneTemplate(tpl.id)}
+                          className="glass-icon-button w-8 h-8 text-rose-600 hover:text-rose-700"
+                          title="Delete template"
+                          aria-label="Delete template"
+                        >
+                          <Trash2 className="icon" />
+                        </button>
                       </div>
-                      {isExpanded ? <ChevronUp className="icon" /> : <ChevronDown className="icon" />}
-                    </button>
+                    </div>
 
                     {isExpanded ? (
                       <div className="mt-3 space-y-3">
@@ -5213,6 +5377,7 @@ function TemplatesHub({
         <div ref={taskSectionRef}>
         <SectionCard
           title="Task Templates"
+          className="border border-sky-200/80 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/70"
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={createTaskTemplate} className="glass-button">New Task Template</button>
@@ -5258,7 +5423,7 @@ function TemplatesHub({
                 return (
                   <div
                     key={tpl.id}
-                    className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                    className="rounded-2xl border border-sky-200/80 bg-white/95 p-4 shadow-sm"
                     draggable
                     onDragStart={() => {
                       dragTaskTemplateId.current = tpl.id;
@@ -5266,17 +5431,48 @@ function TemplatesHub({
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={() => handleTaskTemplateDrop(tpl.id)}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setExpandedTaskTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
-                      className="w-full flex items-center justify-between gap-3 text-left"
-                    >
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-slate-800 truncate">{tpl.title || 'Untitled task template'}</div>
-                        <div className="text-xs text-slate-500">Default workdays: {Number(tpl.workDays) || 1}</div>
+                    <div className="w-full flex items-center justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedTaskTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
+                        className="min-w-0 flex-1 flex items-center justify-between gap-3 text-left"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-sky-900 truncate">{tpl.title || 'Untitled task template'}</div>
+                          <div className="text-xs text-sky-700/80">Default workdays: {Number(tpl.workDays) || 1}</div>
+                        </div>
+                        {isExpanded ? <ChevronUp className="icon text-sky-700" /> : <ChevronDown className="icon text-sky-700" />}
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedTaskTemplateId(tpl.id)}
+                          className="glass-icon-button w-8 h-8 text-sky-700 hover:text-sky-800"
+                          title="Edit template"
+                          aria-label="Edit template"
+                        >
+                          <Pencil className="icon" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => duplicateTaskTemplate(tpl.id)}
+                          className="glass-icon-button w-8 h-8 text-slate-600 hover:text-slate-800"
+                          title="Duplicate template"
+                          aria-label="Duplicate template"
+                        >
+                          <Copy className="icon" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteTaskTemplate(tpl.id)}
+                          className="glass-icon-button w-8 h-8 text-rose-600 hover:text-rose-700"
+                          title="Delete template"
+                          aria-label="Delete template"
+                        >
+                          <Trash2 className="icon" />
+                        </button>
                       </div>
-                      {isExpanded ? <ChevronUp className="icon" /> : <ChevronDown className="icon" />}
-                    </button>
+                    </div>
 
                     {isExpanded ? (
                       <div className="mt-3 space-y-3">
@@ -7271,11 +7467,21 @@ export default function PMApp() {
   const handleMilestoneTemplatesChange = (next) => {
     setMilestoneTemplates(next);
   };
-  const handleTaskTemplatesChange = (next) => {
-    const normalized = saveTaskTemplates(next);
-    setTaskTemplates(normalized);
-    saveTaskTemplatesRemote(normalized).catch(() => {});
-  };
+  const handleTaskTemplatesChange = useCallback(
+    async (next) => {
+      const normalized = normalizeTaskTemplateList(next);
+      try {
+        await saveTaskTemplatesRemoteStrict(normalized);
+        saveTaskTemplates(normalized);
+        setTaskTemplates(normalized);
+        return true;
+      } catch {
+        window.alert('Could not save task templates to Firebase. Please try again.');
+        return false;
+      }
+    },
+    []
+  );
   useEffect(() => {
     (async () => {
       const [remote, remoteDeletedIds] = await Promise.all([
@@ -7506,8 +7712,16 @@ export default function PMApp() {
     // open template editor
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
-    const handleChange = (s) => { saveTemplate(s); saveTemplateRemote(s).catch(()=>{}); };
-    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} onOpenTemplates={openTemplates} />;
+    const handleChange = (s) => {
+      saveTemplateRemoteStrict(s)
+        .then(() => {
+          saveTemplate(s);
+        })
+        .catch(() => {
+          window.alert('Could not save course template to Firebase. Please check your connection.');
+        });
+    };
+    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} milestoneTemplates={milestoneTemplates} taskTemplates={taskTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} onOpenTemplates={openTemplates} />;
   } else {
     // open selected course
     const courses = loadCourses();
@@ -7521,7 +7735,7 @@ export default function PMApp() {
       else all.push(s);
       saveCourses(all);
     };
-    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} onOpenTemplates={openTemplates} />;
+    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} milestoneTemplates={milestoneTemplates} taskTemplates={taskTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} onOpenTemplates={openTemplates} />;
   }
   return (
     <SoundContext.Provider value={soundEnabled}>
