@@ -4727,6 +4727,9 @@ export function CoursesHub({
   const [blockPanels, setBlockPanels] = useState({});
   const [blockTabs, setBlockTabs] = useState({});
   const [resolveRequest, setResolveRequest] = useState(null);
+  const [backupPending, setBackupPending] = useState(false);
+  const [backupToastMessage, setBackupToastMessage] = useState('');
+  const importFileRef = useRef(null);
   const courseHistoryEntriesRef = useRef(courseHistoryEntries);
 
   const sanitizeCourseHistoryEntry = useCallback(
@@ -5430,6 +5433,65 @@ export function CoursesHub({
     },
     [onApplyPlatformBackup, onPeopleChange, pushHistory]
   );
+
+  const downloadSnapshot = useCallback((snapshot) => {
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      const filename = `dart-backup-${date}.json`;
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, []);
+
+  const handleManualBackup = useCallback(async () => {
+    if (backupPending) return;
+    setBackupPending(true);
+    try {
+      const snapshot = collectPlatformSnapshot();
+      downloadSnapshot(snapshot);
+      await createPlatformBackup();
+      setBackupToastMessage('Backup saved!');
+      setTimeout(() => setBackupToastMessage(''), 3000);
+    } catch {
+      setBackupToastMessage('Backup failed. Try again.');
+      setTimeout(() => setBackupToastMessage(''), 4000);
+    } finally {
+      setBackupPending(false);
+    }
+  }, [backupPending, createPlatformBackup, downloadSnapshot]);
+
+  const handleImportFile = useCallback(async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.courses)) {
+        window.alert('Invalid backup file. Please select a valid DART backup JSON.');
+        return;
+      }
+      const confirmed = window.confirm(
+        'Restore from this backup? This will overwrite all current data including courses, schedule, people, templates, and links.'
+      );
+      if (!confirmed) return;
+      await handleRetrieveHistoryEntry({ kind: 'backup', snapshot: parsed });
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        window.alert('Could not read file. Is it a valid JSON backup?');
+      } else {
+        window.alert('Restore failed. Please try again.');
+      }
+    }
+  }, [handleRetrieveHistoryEntry]);
+
   const handleAddCourse = () => {
     pushHistory({ type: 'bulk', snapshot: courses });
     onAddCourse();
@@ -5500,6 +5562,36 @@ export function CoursesHub({
                 <span className="hidden sm:inline">Version history</span>
                 <span className="sm:hidden">History</span>
               </button>
+              <button
+                onClick={handleManualBackup}
+                disabled={backupPending}
+                className="glass-button flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Backup now and download a copy"
+              >
+                {backupPending ? <Loader2 className="icon animate-spin" /> : <Download className="icon" />}
+                <span className="hidden sm:inline">Backup now</span>
+                <span className="sm:hidden">Backup</span>
+              </button>
+              <button
+                onClick={() => importFileRef.current?.click()}
+                className="glass-button flex items-center justify-center gap-2"
+                title="Restore from a backup file"
+              >
+                <Upload className="icon" />
+                <span className="hidden sm:inline">Import backup</span>
+                <span className="sm:hidden">Import</span>
+              </button>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept=".json,application/json"
+                className="sr-only"
+                onChange={handleImportFile}
+                aria-label="Import backup file"
+              />
+              {backupToastMessage && (
+                <span className="text-xs font-medium text-emerald-700 whitespace-nowrap">{backupToastMessage}</span>
+              )}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
               <button
@@ -6283,6 +6375,15 @@ export function CoursesHub({
                               </div>
                             </div>
                             <div className="flex flex-row gap-2 sm:flex-col sm:items-end">
+                              <button
+                                type="button"
+                                onClick={() => downloadSnapshot(entry.snapshot)}
+                                className="glass-button whitespace-nowrap flex items-center justify-center gap-1"
+                                title="Download this backup as a JSON file"
+                              >
+                                <Download className="icon" />
+                                <span>Download</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleRetrieveHistoryEntry(entry)}
