@@ -5003,7 +5003,7 @@ function TemplatesHub({
       <header className="sticky top-0 z-20 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">Template Management</div>
+            <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">Templates Hub</div>
             <div className="text-sm text-slate-700 truncate">Manage course, milestone, and task templates safely.</div>
           </div>
           <button onClick={onBack} className="glass-button inline-flex items-center gap-2 whitespace-nowrap">
@@ -6074,7 +6074,7 @@ export function CoursesHub({
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <button onClick={onOpenTemplates} className="glass-button w-full sm:w-auto">Templates</button>
+              <button onClick={onOpenTemplates} className="glass-button w-full sm:w-auto">Templates Hub</button>
               <button
                 onClick={() => setHistoryModalOpen(true)}
                 className="glass-button flex items-center justify-center gap-2"
