@@ -35,13 +35,6 @@ import {
   loadDeletedTemplateIdsRemote,
   saveDeletedTemplateIdsRemote,
   createTemplateFromMilestone,
-  removeTemplate as removeMilestoneTemplateStore,
-  updateTemplate as updateMilestoneTemplateStore,
-  createEmptyTemplate as createEmptyMilestoneTemplate,
-  addTaskToTemplate as addTaskToMilestoneTemplateStore,
-  updateTaskInTemplate as updateTaskInMilestoneTemplateStore,
-  removeTaskFromTemplate as removeTaskFromMilestoneTemplateStore,
-  duplicateTaskInTemplate as duplicateTaskInMilestoneTemplateStore,
 } from "./milestoneTemplatesStore.js";
 import {
   X,
@@ -116,48 +109,7 @@ const DartLogo = ({ className = "" }) => (
   />
 );
 
-const TEMPLATE_COLOR_SCHEMES = [
-  {
-    cardBg: "bg-indigo-50/80",
-    cardBorder: "border-indigo-200/80",
-    ribbon: "bg-indigo-400/70",
-    labelText: "text-indigo-700",
-    badgeBg: "bg-indigo-100/90",
-    badgeText: "text-indigo-700",
-    inputBorder: "border-indigo-200/70",
-    focusRing: "focus:border-indigo-400 focus:ring-indigo-300/70",
-  },
-  {
-    cardBg: "bg-emerald-50/80",
-    cardBorder: "border-emerald-200/80",
-    ribbon: "bg-emerald-400/70",
-    labelText: "text-emerald-700",
-    badgeBg: "bg-emerald-100/90",
-    badgeText: "text-emerald-700",
-    inputBorder: "border-emerald-200/70",
-    focusRing: "focus:border-emerald-400 focus:ring-emerald-300/70",
-  },
-  {
-    cardBg: "bg-sky-50/80",
-    cardBorder: "border-sky-200/80",
-    ribbon: "bg-sky-400/70",
-    labelText: "text-sky-700",
-    badgeBg: "bg-sky-100/90",
-    badgeText: "text-sky-700",
-    inputBorder: "border-sky-200/70",
-    focusRing: "focus:border-sky-400 focus:ring-sky-300/70",
-  },
-  {
-    cardBg: "bg-amber-50/80",
-    cardBorder: "border-amber-200/80",
-    ribbon: "bg-amber-400/70",
-    labelText: "text-amber-700",
-    badgeBg: "bg-amber-100/90",
-    badgeText: "text-amber-700",
-    inputBorder: "border-amber-200/70",
-    focusRing: "focus:border-amber-400 focus:ring-amber-300/70",
-  },
-];
+const TEMPLATE_COLOR_SCHEMES = [];
 
 const STATUS_PRIORITY_LABELS = {
   inprogress: "In Progress",
@@ -396,7 +348,12 @@ const normalizeTaskTemplate = (template = {}, fallbackId = uid()) => {
     title: (template.title || '').trim() || 'Untitled task template',
     details: typeof template.details === 'string' ? template.details : '',
     note: typeof template.note === 'string' ? template.note : '',
+    status: typeof template.status === 'string' && template.status ? template.status : 'todo',
+    startDate: typeof template.startDate === 'string' ? template.startDate : '',
     workDays: clamp(Number.isFinite(template.workDays) ? template.workDays : 1, 1, 365),
+    depTaskId: typeof template.depTaskId === 'string' ? template.depTaskId : null,
+    dueDate: typeof template.dueDate === 'string' ? template.dueDate : '',
+    completedDate: typeof template.completedDate === 'string' ? template.completedDate : '',
     links,
     createdAt,
     updatedAt,
@@ -955,7 +912,7 @@ function UnassignedTasksPanel({
 // =====================================================
 // Course Dashboard (formerly default export)
 // =====================================================
-function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], milestoneTemplates = [], onChangeMilestoneTemplates, onOpenUser }) {
+function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, people = [], milestoneTemplates = [], onChangeMilestoneTemplates, onOpenUser, onOpenTemplates }) {
   const [state, setCourseState] = useState(() => {
     if (boot) return { ...remapSeed(boot), schedule: loadGlobalSchedule() };
     const saved = localStorage.getItem("healthPM:state:v8");
@@ -975,9 +932,6 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const [tasksCollapsed, setTasksCollapsed] = useState(true);
   const [listPriority, setListPriority] = useState(null);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
-  const [templateDrafts, setTemplateDrafts] = useState({});
-  const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [milestoneFilterOpen, setMilestoneFilterOpen] = useState(false);
   const [linkLibraryCollapsed, setLinkLibraryCollapsed] = useState(true);
   const [newLinkLabel, setNewLinkLabel] = useState("");
@@ -992,49 +946,6 @@ function CoursePMApp({ boot, isTemplateLabel = false, onBack, onStateChange, peo
   const statusMenuRef = useRef(null);
   const milestoneSectionRef = useRef(null);
   const tasksSectionRef = useRef(null);
-
-  useEffect(() => {
-    if (!templateLibraryOpen) {
-      setTemplateDrafts({});
-      setEditingTemplateId(null);
-      return;
-    }
-    setTemplateDrafts((prev) =>
-      milestoneTemplates.reduce((acc, tpl) => {
-        const existing = prev[tpl.id] || {};
-        acc[tpl.id] = {
-          title:
-            Object.prototype.hasOwnProperty.call(existing, "title")
-              ? existing.title
-              : tpl.title || "",
-          goal:
-            Object.prototype.hasOwnProperty.call(existing, "goal")
-              ? existing.goal
-              : tpl.goal || "",
-        };
-        return acc;
-      }, {})
-    );
-  }, [templateLibraryOpen, milestoneTemplates]);
-
-  useEffect(() => {
-    if (!editingTemplateId) return;
-    if (!milestoneTemplates.some((tpl) => tpl.id === editingTemplateId)) {
-      setEditingTemplateId(null);
-    }
-  }, [editingTemplateId, milestoneTemplates]);
-
-  useEffect(() => {
-    if (!templateLibraryOpen) return;
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setTemplateLibraryOpen(false);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [templateLibraryOpen]);
 
   const updateCourseState = useCallback((updater, options = {}) => {
     const { capture = true } = options;
@@ -1669,132 +1580,6 @@ useEffect(() => {
     onChangeMilestoneTemplates?.(updatedTemplates);
   };
 
-  const removeMilestoneTemplate = (id) => {
-    const updatedTemplates = removeMilestoneTemplateStore(id);
-    onChangeMilestoneTemplates?.(updatedTemplates);
-    setEditingTemplateId((prev) => (prev === id ? null : prev));
-    // Clear any draft data for the deleted template
-    setTemplateDrafts((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-  };
-
-  const toggleTemplateEditor = (id) => {
-    setEditingTemplateId((prev) => (prev === id ? null : id));
-  };
-
-  const addTemplateTask = (id) => {
-    const updatedTemplates = addTaskToMilestoneTemplateStore(id);
-    onChangeMilestoneTemplates?.(updatedTemplates);
-    setEditingTemplateId(id);
-  };
-
-  const updateTemplateTask = (templateId, taskId, patch = {}) => {
-    if (!patch || typeof patch !== "object") return;
-    const nextPatch = { ...patch };
-    if (Object.prototype.hasOwnProperty.call(nextPatch, "milestoneId")) {
-      delete nextPatch.milestoneId;
-    }
-    const updatedTemplates = updateTaskInMilestoneTemplateStore(templateId, taskId, nextPatch);
-    onChangeMilestoneTemplates?.(updatedTemplates);
-  };
-
-  const addTemplateTaskLink = (templateId, taskId, url) => {
-    if (!url) return;
-    const template = milestoneTemplates.find((tpl) => tpl.id === templateId);
-    const task = template?.tasks?.find((item) => item.id === taskId);
-    const links = task?.links || [];
-    updateTemplateTask(templateId, taskId, { links: [...links, url] });
-  };
-
-  const removeTemplateTaskLink = (templateId, taskId, index) => {
-    if (index < 0) return;
-    const template = milestoneTemplates.find((tpl) => tpl.id === templateId);
-    const task = template?.tasks?.find((item) => item.id === taskId);
-    if (!task || !Array.isArray(task.links)) return;
-    const links = task.links.filter((_, idx) => idx !== index);
-    updateTemplateTask(templateId, taskId, { links });
-  };
-
-  const removeTemplateTask = (templateId, taskId) => {
-    const updatedTemplates = removeTaskFromMilestoneTemplateStore(templateId, taskId);
-    onChangeMilestoneTemplates?.(updatedTemplates);
-  };
-
-  const duplicateTemplateTask = (templateId, taskId) => {
-    const updatedTemplates = duplicateTaskInMilestoneTemplateStore(templateId, taskId);
-    onChangeMilestoneTemplates?.(updatedTemplates);
-    setEditingTemplateId(templateId);
-  };
-
-  const handleTemplateDraftChange = (id, field, value) => {
-    setTemplateDrafts((prev) => ({
-      ...prev,
-      [id]: {
-        title: "",
-        goal: "",
-        ...(prev[id] || {}),
-        [field]: value,
-      },
-    }));
-  };
-
-  const persistTemplateDraft = (id) => {
-    const draft = templateDrafts[id];
-    if (!draft) return;
-    const tpl = milestoneTemplates.find((t) => t.id === id);
-    if (!tpl) return;
-    const nextTitle = (draft.title || "").trim() || "Untitled template";
-    const nextGoal = draft.goal || "";
-    if (tpl.title === nextTitle && (tpl.goal || "") === nextGoal) return;
-    const updatedTemplates = updateMilestoneTemplateStore(id, { title: nextTitle, goal: nextGoal });
-    onChangeMilestoneTemplates?.(updatedTemplates);
-    setTemplateDrafts((prev) => ({
-      ...prev,
-      [id]: { title: nextTitle, goal: nextGoal },
-    }));
-  };
-
-  const resetTemplateDraft = (id) => {
-    const tpl = milestoneTemplates.find((t) => t.id === id);
-    if (!tpl) {
-      setTemplateDrafts((prev) => {
-        const { [id]: _removed, ...rest } = prev;
-        return rest;
-      });
-      return;
-    }
-    setTemplateDrafts((prev) => ({
-      ...prev,
-      [id]: {
-        title: tpl.title || "",
-        goal: tpl.goal || "",
-      },
-    }));
-  };
-
-  const handleCreateTemplate = () => {
-    const existingIds = new Set(milestoneTemplates.map((tpl) => tpl.id));
-    const updatedTemplates = createEmptyMilestoneTemplate();
-    onChangeMilestoneTemplates?.(updatedTemplates);
-    const created = updatedTemplates.find((tpl) => !existingIds.has(tpl.id));
-    if (created) {
-      setEditingTemplateId(created.id);
-      setTemplateDrafts((prev) => ({
-        ...prev,
-        [created.id]: { title: created.title || "", goal: created.goal || "" },
-      }));
-    }
-    setTemplateLibraryOpen(true);
-  };
-
-  const handleAddTemplateToCourse = (tplId) => {
-    addMilestoneFromTemplate(tplId);
-    setTemplateLibraryOpen(false);
-  };
-
   // Milestone DnD
 
   const dragMilestoneId = useRef(null);
@@ -2000,27 +1785,19 @@ useEffect(() => {
       </button>
       <button
         type="button"
-        onClick={async () => {
-          saveTemplate(state);
-          await saveTemplateRemote(state).catch(() => {});
-        }}
+        onClick={() => onOpenTemplates?.('course')}
         className="glass-icon-button"
-        title="Save as template"
-        aria-label="Save as template"
+        title="Open course templates"
+        aria-label="Open course templates"
       >
         <Copy className="icon" aria-hidden="true" />
       </button>
       <button
         type="button"
-        onClick={async () => {
-          const tpl = (await loadTemplateRemote()) || loadTemplate();
-          if (tpl)
-            updateCourseState({ ...remapSeed(tpl), schedule: loadGlobalSchedule() });
-          else alert("No template saved yet.");
-        }}
+        onClick={() => onOpenTemplates?.('course')}
         className="glass-icon-button"
-        title="Reset to saved template"
-        aria-label="Reset to saved template"
+        title="Open course templates"
+        aria-label="Open course templates"
       >
         <History className="icon" aria-hidden="true" />
       </button>
@@ -2515,7 +2292,7 @@ useEffect(() => {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                     <button
                       type="button"
-                      onClick={() => setTemplateLibraryOpen(true)}
+                      onClick={() => onOpenTemplates?.('milestone')}
                       className="glass-button w-full sm:w-auto"
                     >
                       Template library{milestoneTemplates.length ? ` (${milestoneTemplates.length})` : ""}
@@ -2799,225 +2576,6 @@ useEffect(() => {
             </div>
           </motion.div>
         </section>
-          {templateLibraryOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 py-8">
-              <div
-                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
-                onClick={() => setTemplateLibraryOpen(false)}
-              />
-              <div className="relative z-10 flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white/95 shadow-2xl">
-                <div className="flex items-center justify-between border-b border-slate-200/80 px-6 py-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-slate-900">Template library</h2>
-                    <p className="text-sm text-slate-500">Keep milestone templates separate from live course milestones.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setTemplateLibraryOpen(false)}
-                    className="glass-icon-button"
-                    aria-label="Close template library"
-                  >
-                    <X className="icon" />
-                  </button>
-                </div>
-                <div className="overflow-y-auto px-6 py-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-sm text-slate-600">
-                      {milestoneTemplates.length
-                        ? `${milestoneTemplates.length} template${milestoneTemplates.length === 1 ? "" : "s"}`
-                        : "No templates yet."}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCreateTemplate}
-                      className="glass-button inline-flex items-center gap-2"
-                    >
-                      <Plus className="icon" />
-                      <span>New template</span>
-                    </button>
-                  </div>
-                  {milestoneTemplates.length === 0 ? (
-                    <div className="mt-6 rounded-3xl border border-dashed border-slate-300/80 bg-slate-50/80 p-8 text-center text-sm text-slate-500">
-                      Save an existing milestone as a template or create a blank one to start building your library.
-                    </div>
-                  ) : (
-                    <div className="mt-6 space-y-4">
-                      {milestoneTemplates.map((tpl, index) => {
-                        const accent = TEMPLATE_COLOR_SCHEMES[index % TEMPLATE_COLOR_SCHEMES.length];
-                        const draft = templateDrafts[tpl.id] || { title: tpl.title || "", goal: tpl.goal || "" };
-                        const isDirty =
-                          draft.title !== (tpl.title || "") ||
-                          (draft.goal || "") !== (tpl.goal || "");
-                        const isEditing = editingTemplateId === tpl.id;
-                        return (
-                          <div
-                            key={tpl.id}
-                            className={`relative rounded-3xl border ${accent.cardBorder} ${accent.cardBg} p-5 shadow-sm transition-shadow`}
-                          >
-                            <span
-                              className={`pointer-events-none absolute inset-x-0 top-0 h-1.5 ${accent.ribbon}`}
-                              aria-hidden="true"
-                            />
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
-                              <div className="flex-1 space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <span
-                                    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${accent.badgeBg} ${accent.badgeText}`}
-                                  >
-                                    {`Milestone ${index + 1}`}
-                                  </span>
-                                  <span className="text-xs font-medium text-slate-500">
-                                    {isDirty ? "Unsaved changes" : "Saved"}
-                                  </span>
-                                </div>
-                                <label className={`block text-xs font-semibold uppercase tracking-wide ${accent.labelText}`}>
-                                  Template name
-                                </label>
-                                <input
-                                  type="text"
-                                  value={draft.title}
-                                  onChange={(event) => handleTemplateDraftChange(tpl.id, "title", event.target.value)}
-                                  onBlur={() => persistTemplateDraft(tpl.id)}
-                                  onKeyDown={(event) => {
-                                    if (event.key === "Enter" && !event.shiftKey) {
-                                      event.preventDefault();
-                                      persistTemplateDraft(tpl.id);
-                                    }
-                                  }}
-                                  className={`w-full rounded-2xl border bg-white/95 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 ${accent.inputBorder} ${accent.focusRing}`}
-                                  placeholder="Untitled template"
-                                />
-                                <label className={`block text-xs font-semibold uppercase tracking-wide ${accent.labelText}`}>
-                                  Goal / notes
-                                </label>
-                                <textarea
-                                  value={draft.goal}
-                                  onChange={(event) => handleTemplateDraftChange(tpl.id, "goal", event.target.value)}
-                                  onBlur={() => persistTemplateDraft(tpl.id)}
-                                  className={`w-full rounded-2xl border bg-white/95 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 ${accent.inputBorder} ${accent.focusRing}`}
-                                  rows={3}
-                                  placeholder="What is this template for?"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-2 sm:w-52">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleTemplateEditor(tpl.id)}
-                                  className="glass-button w-full"
-                                >
-                                  {isEditing ? (
-                                    <>
-                                      <ChevronUp className="icon" />
-                                      <span>Hide tasks</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <ListChecks className="icon" />
-                                      <span>Edit tasks</span>
-                                    </>
-                                  )}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleAddTemplateToCourse(tpl.id)}
-                                  className="glass-button w-full"
-                                >
-                                  Add to course
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => persistTemplateDraft(tpl.id)}
-                                  className="glass-button w-full"
-                                  disabled={!isDirty}
-                                >
-                                  Save changes
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => resetTemplateDraft(tpl.id)}
-                                  className="glass-button w-full"
-                                  disabled={!isDirty}
-                                >
-                                  Reset
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (window.confirm("Delete this template? This action cannot be undone.")) {
-                                      removeMilestoneTemplate(tpl.id);
-                                    }
-                                  }}
-                                  className="glass-button w-full text-red-600 hover:text-red-700"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </div>
-                            {isEditing && (
-                              <div className="mt-5 space-y-4">
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                  <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                    <ListChecks className="icon" />
-                                    <span>Template tasks</span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => addTemplateTask(tpl.id)}
-                                    className="glass-button inline-flex items-center gap-2"
-                                  >
-                                    <Plus className="icon" />
-                                    <span>Add task</span>
-                                  </button>
-                                </div>
-                                {(!tpl.tasks || tpl.tasks.length === 0) ? (
-                                  <div className="rounded-2xl border border-dashed border-slate-300/80 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
-                                    No tasks yet. Add tasks to build out this milestone template.
-                                  </div>
-                                ) : (
-                                  <div className="space-y-3">
-                                    {sortTemplateTasks(tpl.tasks).map((task) => {
-                                      const taskWithContext = {
-                                        ...task,
-                                        courseName: tpl.title ? `Template · ${tpl.title}` : "Template task",
-                                        milestoneName: tpl.title || "Template",
-                                      };
-                                      return (
-                                        <TaskCard
-                                          key={task.id}
-                                          task={taskWithContext}
-                                          tasks={tpl.tasks || []}
-                                          team={team}
-                                          milestones={[]}
-                                          onUpdate={(id, patch) => updateTemplateTask(tpl.id, id, patch)}
-                                          onDelete={(id) => {
-                                            if (
-                                              window.confirm(
-                                                "Remove this task from the template? This action cannot be undone."
-                                              )
-                                            ) {
-                                              removeTemplateTask(tpl.id, id);
-                                            }
-                                          }}
-                                          onDuplicate={(id) => duplicateTemplateTask(tpl.id, id)}
-                                          onAddLink={(id, url) => addTemplateTaskLink(tpl.id, id, url)}
-                                          onRemoveLink={(id, idx) => removeTemplateTaskLink(tpl.id, id, idx)}
-                                          reporter={null}
-                                        />
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
           {editingTask && (
             <TaskModal
               task={editingTask}
@@ -4769,13 +4327,34 @@ function TemplatesHub({
   taskTemplates = [],
   onChangeTaskTemplates,
   onCreatePlatformBackup,
+  initialSection = 'course',
 }) {
   const [milestoneDrafts, setMilestoneDrafts] = useState({});
   const [taskDrafts, setTaskDrafts] = useState({});
   const [expandedMilestoneTemplateId, setExpandedMilestoneTemplateId] = useState(null);
   const [expandedTaskTemplateId, setExpandedTaskTemplateId] = useState(null);
+  const [expandedMilestoneTaskIds, setExpandedMilestoneTaskIds] = useState({});
+  const [selectedTaskTemplateByMilestone, setSelectedTaskTemplateByMilestone] = useState({});
+  const dragMilestoneTemplateId = useRef(null);
+  const dragTaskTemplateId = useRef(null);
+  const dragMilestoneTask = useRef({ templateId: null, taskId: null });
+  const courseSectionRef = useRef(null);
+  const milestoneSectionRef = useRef(null);
+  const taskSectionRef = useRef(null);
   const taskImportRef = useRef(null);
   const courseImportRef = useRef(null);
+
+  useEffect(() => {
+    const map = {
+      course: courseSectionRef,
+      milestone: milestoneSectionRef,
+      task: taskSectionRef,
+    };
+    const target = map[initialSection] || map.course;
+    if (target?.current) {
+      target.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [initialSection]);
 
   useEffect(() => {
     setMilestoneDrafts((prev) => {
@@ -4797,6 +4376,9 @@ function TemplatesHub({
         next[tpl.id] = prev[tpl.id] || {
           title: tpl.title || '',
           details: tpl.details || '',
+          note: tpl.note || '',
+          status: tpl.status || 'todo',
+          startDate: tpl.startDate || '',
           workDays: String(tpl.workDays ?? 1),
         };
       });
@@ -4918,8 +4500,94 @@ function TemplatesHub({
       const saved = await persistMilestoneTemplates(updated);
       if (!saved) return;
       setExpandedMilestoneTemplateId(templateId);
+      setExpandedMilestoneTaskIds((prev) => {
+        const current = ensureArray(prev[templateId]);
+        const added = ensureArray(updated.find((tpl) => tpl.id === templateId)?.tasks).at(-1)?.id;
+        return added ? { ...prev, [templateId]: [...current, added] } : prev;
+      });
     },
     [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]
+  );
+
+  const addFromTaskTemplate = useCallback(
+    async (milestoneTemplateId) => {
+      const taskTemplateId = selectedTaskTemplateByMilestone[milestoneTemplateId];
+      if (!taskTemplateId) return;
+      const selected = taskTemplates.find((tpl) => tpl.id === taskTemplateId);
+      if (!selected) return;
+      await maybeBackupBeforeMutation();
+      const cloned = {
+        ...selected,
+        id: uid(),
+        depTaskId: null,
+      };
+      const updated = milestoneTemplates.map((tpl) =>
+        tpl.id === milestoneTemplateId
+          ? { ...tpl, tasks: [...ensureArray(tpl.tasks), cloned] }
+          : tpl
+      );
+      const saved = await persistMilestoneTemplates(updated);
+      if (!saved) return;
+      setExpandedMilestoneTaskIds((prev) => {
+        const current = ensureArray(prev[milestoneTemplateId]);
+        return { ...prev, [milestoneTemplateId]: [...current, cloned.id] };
+      });
+    },
+    [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates, selectedTaskTemplateByMilestone, taskTemplates]
+  );
+
+  const handleMilestoneTemplateDrop = useCallback(
+    async (targetId) => {
+      const sourceId = dragMilestoneTemplateId.current;
+      dragMilestoneTemplateId.current = null;
+      if (!sourceId || sourceId === targetId) return;
+      const sourceIndex = milestoneTemplates.findIndex((tpl) => tpl.id === sourceId);
+      const targetIndex = milestoneTemplates.findIndex((tpl) => tpl.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0) return;
+      const next = [...milestoneTemplates];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      await persistMilestoneTemplates(next);
+    },
+    [milestoneTemplates, persistMilestoneTemplates]
+  );
+
+  const handleTaskTemplateDrop = useCallback(
+    async (targetId) => {
+      const sourceId = dragTaskTemplateId.current;
+      dragTaskTemplateId.current = null;
+      if (!sourceId || sourceId === targetId) return;
+      const sourceIndex = taskTemplates.findIndex((tpl) => tpl.id === sourceId);
+      const targetIndex = taskTemplates.findIndex((tpl) => tpl.id === targetId);
+      if (sourceIndex < 0 || targetIndex < 0) return;
+      const next = [...taskTemplates];
+      const [moved] = next.splice(sourceIndex, 1);
+      next.splice(targetIndex, 0, moved);
+      await persistTaskTemplates(next);
+    },
+    [taskTemplates, persistTaskTemplates]
+  );
+
+  const handleMilestoneTemplateTaskDrop = useCallback(
+    async (templateId, targetTaskId) => {
+      const source = dragMilestoneTask.current;
+      dragMilestoneTask.current = { templateId: null, taskId: null };
+      if (!source?.taskId || !source?.templateId) return;
+      if (source.templateId !== templateId || source.taskId === targetTaskId) return;
+      const updated = milestoneTemplates.map((tpl) => {
+        if (tpl.id !== templateId) return tpl;
+        const tasks = ensureArray(tpl.tasks);
+        const from = tasks.findIndex((task) => task.id === source.taskId);
+        const to = tasks.findIndex((task) => task.id === targetTaskId);
+        if (from < 0 || to < 0) return tpl;
+        const nextTasks = [...tasks];
+        const [moved] = nextTasks.splice(from, 1);
+        nextTasks.splice(to, 0, moved);
+        return { ...tpl, tasks: nextTasks };
+      });
+      await persistMilestoneTemplates(updated);
+    },
+    [milestoneTemplates, persistMilestoneTemplates]
   );
 
   const updateMilestoneTemplateTask = useCallback(
@@ -5056,6 +4724,45 @@ function TemplatesHub({
     [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]
   );
 
+  const patchTaskTemplate = useCallback(
+    async (id, patch = {}) => {
+      const source = taskTemplates.find((tpl) => tpl.id === id);
+      if (!source) return null;
+      const next = normalizeTaskTemplate({
+        ...source,
+        ...patch,
+        updatedAt: Date.now(),
+      });
+      const saved = await persistTaskTemplates(
+        taskTemplates.map((tpl) => (tpl.id === id ? next : tpl))
+      );
+      return saved ? next : null;
+    },
+    [persistTaskTemplates, taskTemplates]
+  );
+
+  const addTaskTemplateLink = useCallback(
+    async (id, url) => {
+      const source = taskTemplates.find((tpl) => tpl.id === id);
+      if (!source) return;
+      const normalizedUrl = normalizeUrl(url);
+      if (!normalizedUrl) return;
+      const links = [...ensureArray(source.links), normalizedUrl];
+      await patchTaskTemplate(id, { links });
+    },
+    [patchTaskTemplate, taskTemplates]
+  );
+
+  const removeTaskTemplateLink = useCallback(
+    async (id, index) => {
+      const source = taskTemplates.find((tpl) => tpl.id === id);
+      if (!source) return;
+      const links = ensureArray(source.links).filter((_, idx) => idx !== index);
+      await patchTaskTemplate(id, { links });
+    },
+    [patchTaskTemplate, taskTemplates]
+  );
+
   const saveTaskDraft = useCallback(
     async (id) => {
       const draft = taskDrafts[id];
@@ -5063,17 +4770,26 @@ function TemplatesHub({
       if (!draft || !source) return;
       const title = (draft.title || '').trim() || 'Untitled task template';
       const details = draft.details || '';
+      const note = draft.note || '';
+      const status = draft.status || 'todo';
+      const startDate = draft.startDate || '';
       const workDays = clamp(Number(draft.workDays) || 1, 1, 365);
       const nextTemplate = normalizeTaskTemplate({
         ...source,
         title,
         details,
+        note,
+        status,
+        startDate,
         workDays,
         updatedAt: Date.now(),
       });
       const changed =
         (source.title || '') !== nextTemplate.title ||
         (source.details || '') !== nextTemplate.details ||
+        (source.note || '') !== nextTemplate.note ||
+        (source.status || 'todo') !== nextTemplate.status ||
+        (source.startDate || '') !== nextTemplate.startDate ||
         Number(source.workDays || 1) !== Number(nextTemplate.workDays || 1);
       if (!changed) return;
       const saved = await persistTaskTemplates(
@@ -5085,6 +4801,9 @@ function TemplatesHub({
         [id]: {
           title: nextTemplate.title,
           details: nextTemplate.details,
+          note: nextTemplate.note,
+          status: nextTemplate.status,
+          startDate: nextTemplate.startDate,
           workDays: String(nextTemplate.workDays),
         },
       }));
@@ -5181,6 +4900,7 @@ function TemplatesHub({
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 stack-lg">
+        <div ref={courseSectionRef}>
         <SectionCard
           title="Course Template"
           actions={
@@ -5215,7 +4935,9 @@ function TemplatesHub({
             The course template is the baseline blueprint for newly created courses. Use import/export for migration and backups.
           </div>
         </SectionCard>
+        </div>
 
+        <div ref={milestoneSectionRef}>
         <SectionCard
           title="Milestone Templates"
           actions={<button onClick={createMilestoneTemplate} className="glass-button">New Milestone Template</button>}
@@ -5224,13 +4946,22 @@ function TemplatesHub({
             <div className="text-sm text-slate-700">No milestone templates yet.</div>
           ) : (
             <div className="space-y-3">
-              <div className="text-xs text-slate-500">Click a template to expand and edit.</div>
+              <div className="text-xs text-slate-500">Click to expand and edit. Drag templates to reorder.</div>
               {milestoneTemplates.map((tpl) => {
                 const draft = milestoneDrafts[tpl.id] || { title: tpl.title || '', goal: tpl.goal || '' };
                 const isExpanded = expandedMilestoneTemplateId === tpl.id;
                 const templateTasks = ensureArray(tpl.tasks);
                 return (
-                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                  <div
+                    key={tpl.id}
+                    className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                    draggable
+                    onDragStart={() => {
+                      dragMilestoneTemplateId.current = tpl.id;
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleMilestoneTemplateDrop(tpl.id)}
+                  >
                     <button
                       type="button"
                       onClick={() => setExpandedMilestoneTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
@@ -5273,70 +5004,195 @@ function TemplatesHub({
                         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <div className="text-xs font-semibold text-slate-600">Template Tasks</div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => addMilestoneTemplateTask(tpl.id)}
+                                className="glass-button text-xs"
+                              >
+                                Add Task
+                              </button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 mb-3">
+                            <select
+                              value={selectedTaskTemplateByMilestone[tpl.id] || ''}
+                              onChange={(e) =>
+                                setSelectedTaskTemplateByMilestone((prev) => ({
+                                  ...prev,
+                                  [tpl.id]: e.target.value,
+                                }))
+                              }
+                              className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                            >
+                              <option value="">Add from task templates…</option>
+                              {taskTemplates.map((taskTemplate) => (
+                                <option key={taskTemplate.id} value={taskTemplate.id}>
+                                  {taskTemplate.title || 'Untitled task template'}
+                                </option>
+                              ))}
+                            </select>
                             <button
                               type="button"
-                              onClick={() => addMilestoneTemplateTask(tpl.id)}
+                              onClick={() => addFromTaskTemplate(tpl.id)}
                               className="glass-button text-xs"
                             >
-                              Add Task
+                              Add Selected
                             </button>
                           </div>
                           {!templateTasks.length ? (
                             <div className="text-xs text-slate-500">No tasks saved under this milestone template yet.</div>
                           ) : (
                             <ul className="space-y-2">
-                              {templateTasks.map((task) => (
-                                <li key={task.id} className="rounded-lg bg-white border border-slate-200 p-2">
-                                  <input
-                                    value={task.title || ''}
-                                    onChange={(e) =>
-                                      updateMilestoneTemplateTask(tpl.id, task.id, { title: e.target.value })
-                                    }
-                                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
-                                    placeholder="Task title"
-                                  />
-                                  <div className="mt-2">
-                                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Details</label>
-                                    <textarea
-                                      value={task.details || ''}
-                                      onChange={(e) =>
-                                        updateMilestoneTemplateTask(tpl.id, task.id, { details: e.target.value })
-                                      }
-                                      className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs min-h-[60px]"
-                                      placeholder="Task details"
-                                    />
-                                  </div>
-                                  <div className="mt-2 flex items-center gap-2">
-                                    <label className="text-[11px] font-semibold text-slate-500">Workdays</label>
-                                    <input
-                                      type="number"
-                                      min={1}
-                                      max={365}
-                                      value={Number(task.workDays) || 1}
-                                      onChange={(e) =>
-                                        updateMilestoneTemplateTask(tpl.id, task.id, { workDays: e.target.value })
-                                      }
-                                      className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs"
-                                    />
-                                  </div>
-                                  <div className="mt-2 flex items-center justify-end gap-2">
+                              {templateTasks.map((task) => {
+                                const expandedForTemplate = ensureArray(expandedMilestoneTaskIds[tpl.id]);
+                                const taskOpen = expandedForTemplate.includes(task.id);
+                                const selectableDeps = templateTasks.filter((candidate) => candidate.id !== task.id);
+                                return (
+                                  <li key={task.id} className="rounded-lg bg-white border border-slate-200 p-2">
                                     <button
                                       type="button"
-                                      onClick={() => duplicateMilestoneTemplateTask(tpl.id, task.id)}
-                                      className="glass-button text-xs"
+                                      draggable
+                                      onDragStart={() => {
+                                        dragMilestoneTask.current = { templateId: tpl.id, taskId: task.id };
+                                      }}
+                                      onDragOver={(e) => e.preventDefault()}
+                                      onDrop={() => handleMilestoneTemplateTaskDrop(tpl.id, task.id)}
+                                      onClick={() =>
+                                        setExpandedMilestoneTaskIds((prev) => {
+                                          const current = ensureArray(prev[tpl.id]);
+                                          const next = current.includes(task.id)
+                                            ? current.filter((id) => id !== task.id)
+                                            : [...current, task.id];
+                                          return { ...prev, [tpl.id]: next };
+                                        })
+                                      }
+                                      className="w-full flex items-center justify-between gap-2 text-left"
                                     >
-                                      Duplicate
+                                      <div className="min-w-0">
+                                        <div className="text-sm font-medium text-slate-800 truncate">{task.title || 'Untitled task'}</div>
+                                        <div className="text-[11px] text-slate-500">
+                                          {task.status || 'todo'} · {Number(task.workDays) || 1} day(s)
+                                        </div>
+                                      </div>
+                                      {taskOpen ? <ChevronUp className="icon" /> : <ChevronDown className="icon" />}
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeMilestoneTemplateTask(tpl.id, task.id)}
-                                      className="glass-button-danger text-xs"
-                                    >
-                                      Remove
-                                    </button>
-                                  </div>
-                                </li>
-                              ))}
+
+                                    {taskOpen ? (
+                                      <div className="mt-2 space-y-2">
+                                        <input
+                                          value={task.title || ''}
+                                          onChange={(e) =>
+                                            updateMilestoneTemplateTask(tpl.id, task.id, { title: e.target.value })
+                                          }
+                                          className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                                          placeholder="Task title"
+                                        />
+                                        <textarea
+                                          value={task.details || ''}
+                                          onChange={(e) =>
+                                            updateMilestoneTemplateTask(tpl.id, task.id, { details: e.target.value })
+                                          }
+                                          className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs min-h-[60px]"
+                                          placeholder="Details"
+                                        />
+                                        <textarea
+                                          value={task.note || ''}
+                                          onChange={(e) =>
+                                            updateMilestoneTemplateTask(tpl.id, task.id, { note: e.target.value })
+                                          }
+                                          className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs min-h-[52px]"
+                                          placeholder="Note"
+                                        />
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                          <select
+                                            value={task.status || 'todo'}
+                                            onChange={(e) =>
+                                              updateMilestoneTemplateTask(tpl.id, task.id, { status: e.target.value })
+                                            }
+                                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                          >
+                                            <option value="todo">To Do</option>
+                                            <option value="inprogress">In Progress</option>
+                                            <option value="blocked">Blocked</option>
+                                            <option value="done">Done</option>
+                                            <option value="skip">Skipped</option>
+                                          </select>
+                                          <input
+                                            type="date"
+                                            value={task.startDate || ''}
+                                            onChange={(e) =>
+                                              updateMilestoneTemplateTask(tpl.id, task.id, { startDate: e.target.value })
+                                            }
+                                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                          />
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            max={365}
+                                            value={Number(task.workDays) || 1}
+                                            onChange={(e) =>
+                                              updateMilestoneTemplateTask(tpl.id, task.id, { workDays: e.target.value })
+                                            }
+                                            className="rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                          />
+                                        </div>
+                                        <select
+                                          value={task.depTaskId || ''}
+                                          onChange={(e) =>
+                                            updateMilestoneTemplateTask(tpl.id, task.id, { depTaskId: e.target.value || null })
+                                          }
+                                          className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                        >
+                                          <option value="">No dependency</option>
+                                          {selectableDeps.map((depTask) => (
+                                            <option key={depTask.id} value={depTask.id}>
+                                              {depTask.title || 'Untitled task'}
+                                            </option>
+                                          ))}
+                                        </select>
+                                        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2">
+                                          <DocumentInput
+                                            onAdd={(url) => {
+                                              const links = [...ensureArray(task.links), normalizeUrl(url)].filter(Boolean);
+                                              updateMilestoneTemplateTask(tpl.id, task.id, { links });
+                                            }}
+                                          />
+                                          {ensureArray(task.links).length ? (
+                                            <div className="mt-2">
+                                              <LinkChips
+                                                links={ensureArray(task.links)}
+                                                onRemove={(idx) => {
+                                                  const links = ensureArray(task.links).filter((_, linkIndex) => linkIndex !== idx);
+                                                  updateMilestoneTemplateTask(tpl.id, task.id, { links });
+                                                }}
+                                              />
+                                            </div>
+                                          ) : (
+                                            <div className="text-[11px] text-slate-500 mt-2">No links.</div>
+                                          )}
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-end gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => duplicateMilestoneTemplateTask(tpl.id, task.id)}
+                                            className="glass-button text-xs"
+                                          >
+                                            Duplicate
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => removeMilestoneTemplateTask(tpl.id, task.id)}
+                                            className="glass-button-danger text-xs"
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           )}
                         </div>
@@ -5352,7 +5208,9 @@ function TemplatesHub({
             </div>
           )}
         </SectionCard>
+        </div>
 
+        <div ref={taskSectionRef}>
         <SectionCard
           title="Task Templates"
           actions={
@@ -5386,16 +5244,28 @@ function TemplatesHub({
             <div className="text-sm text-slate-700">No task templates yet.</div>
           ) : (
             <div className="space-y-3">
-              <div className="text-xs text-slate-500">Click a task template to expand and edit.</div>
+              <div className="text-xs text-slate-500">Click to expand and edit. Drag templates to reorder.</div>
               {taskTemplates.map((tpl) => {
                 const draft = taskDrafts[tpl.id] || {
                   title: tpl.title || '',
                   details: tpl.details || '',
+                  note: tpl.note || '',
+                  status: tpl.status || 'todo',
+                  startDate: tpl.startDate || '',
                   workDays: String(tpl.workDays ?? 1),
                 };
                 const isExpanded = expandedTaskTemplateId === tpl.id;
                 return (
-                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                  <div
+                    key={tpl.id}
+                    className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm"
+                    draggable
+                    onDragStart={() => {
+                      dragTaskTemplateId.current = tpl.id;
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => handleTaskTemplateDrop(tpl.id)}
+                  >
                     <button
                       type="button"
                       onClick={() => setExpandedTaskTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
@@ -5418,6 +5288,9 @@ function TemplatesHub({
                               [tpl.id]: {
                                 title: e.target.value,
                                 details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                                note: prev[tpl.id]?.note ?? tpl.note ?? '',
+                                status: prev[tpl.id]?.status ?? tpl.status ?? 'todo',
+                                startDate: prev[tpl.id]?.startDate ?? tpl.startDate ?? '',
                                 workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
                               },
                             }))
@@ -5434,6 +5307,9 @@ function TemplatesHub({
                               [tpl.id]: {
                                 title: prev[tpl.id]?.title ?? tpl.title ?? '',
                                 details: e.target.value,
+                                note: prev[tpl.id]?.note ?? tpl.note ?? '',
+                                status: prev[tpl.id]?.status ?? tpl.status ?? 'todo',
+                                startDate: prev[tpl.id]?.startDate ?? tpl.startDate ?? '',
                                 workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
                               },
                             }))
@@ -5442,6 +5318,76 @@ function TemplatesHub({
                           className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[84px]"
                           placeholder="Details"
                         />
+                        <textarea
+                          value={draft.note}
+                          onChange={(e) =>
+                            setTaskDrafts((prev) => ({
+                              ...prev,
+                              [tpl.id]: {
+                                title: prev[tpl.id]?.title ?? tpl.title ?? '',
+                                details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                                note: e.target.value,
+                                status: prev[tpl.id]?.status ?? tpl.status ?? 'todo',
+                                startDate: prev[tpl.id]?.startDate ?? tpl.startDate ?? '',
+                                workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
+                              },
+                            }))
+                          }
+                          onBlur={() => saveTaskDraft(tpl.id)}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[72px]"
+                          placeholder="Note"
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Default Status</label>
+                            <select
+                              value={draft.status}
+                              onChange={(e) =>
+                                setTaskDrafts((prev) => ({
+                                  ...prev,
+                                  [tpl.id]: {
+                                    title: prev[tpl.id]?.title ?? tpl.title ?? '',
+                                    details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                                    note: prev[tpl.id]?.note ?? tpl.note ?? '',
+                                    status: e.target.value,
+                                    startDate: prev[tpl.id]?.startDate ?? tpl.startDate ?? '',
+                                    workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
+                                  },
+                                }))
+                              }
+                              onBlur={() => saveTaskDraft(tpl.id)}
+                              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            >
+                              <option value="todo">To Do</option>
+                              <option value="inprogress">In Progress</option>
+                              <option value="blocked">Blocked</option>
+                              <option value="done">Done</option>
+                              <option value="skip">Skipped</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Default Start Date</label>
+                            <input
+                              type="date"
+                              value={draft.startDate}
+                              onChange={(e) =>
+                                setTaskDrafts((prev) => ({
+                                  ...prev,
+                                  [tpl.id]: {
+                                    title: prev[tpl.id]?.title ?? tpl.title ?? '',
+                                    details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                                    note: prev[tpl.id]?.note ?? tpl.note ?? '',
+                                    status: prev[tpl.id]?.status ?? tpl.status ?? 'todo',
+                                    startDate: e.target.value,
+                                    workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
+                                  },
+                                }))
+                              }
+                              onBlur={() => saveTaskDraft(tpl.id)}
+                              className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            />
+                          </div>
+                        </div>
                         <div>
                           <label className="block text-xs font-semibold text-slate-600 mb-1">Default Workdays</label>
                           <input
@@ -5455,6 +5401,9 @@ function TemplatesHub({
                                 [tpl.id]: {
                                   title: prev[tpl.id]?.title ?? tpl.title ?? '',
                                   details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                                  note: prev[tpl.id]?.note ?? tpl.note ?? '',
+                                  status: prev[tpl.id]?.status ?? tpl.status ?? 'todo',
+                                  startDate: prev[tpl.id]?.startDate ?? tpl.startDate ?? '',
                                   workDays: e.target.value,
                                 },
                               }))
@@ -5462,6 +5411,17 @@ function TemplatesHub({
                             onBlur={() => saveTaskDraft(tpl.id)}
                             className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
                           />
+                        </div>
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                          <div className="text-xs font-semibold text-slate-600 mb-2">Document Links</div>
+                          <DocumentInput onAdd={(url) => addTaskTemplateLink(tpl.id, url)} />
+                          {ensureArray(tpl.links).length ? (
+                            <div className="mt-2">
+                              <LinkChips links={ensureArray(tpl.links)} onRemove={(idx) => removeTaskTemplateLink(tpl.id, idx)} />
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500 mt-2">No links yet.</div>
+                          )}
                         </div>
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => duplicateTaskTemplate(tpl.id)} className="glass-button">Duplicate</button>
@@ -5475,6 +5435,7 @@ function TemplatesHub({
             </div>
           )}
         </SectionCard>
+        </div>
       </main>
     </div>
   );
@@ -7275,6 +7236,7 @@ export default function PMApp() {
   const [prevView, setPrevView] = useState("hub");
   const [currentCourseId, setCurrentCourseId] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [templatesSection, setTemplatesSection] = useState('course');
   const [people, setPeople] = useState(() => {
     const stored = loadPeople();
     if (stored.length) return stored;
@@ -7472,7 +7434,11 @@ export default function PMApp() {
   const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
-  const openTemplates = () => { setPrevView(view); setView("templates"); };
+  const openTemplates = (section = 'course') => {
+    setPrevView(view);
+    setTemplatesSection(section);
+    setView("templates");
+  };
   const editTemplate = async () => {
     setPrevView(view);
     const remoteTpl = await loadTemplateRemote();
@@ -7525,6 +7491,7 @@ export default function PMApp() {
         taskTemplates={taskTemplates}
         onChangeTaskTemplates={handleTaskTemplatesChange}
         onCreatePlatformBackup={handleCreatePlatformBackup}
+        initialSection={templatesSection}
       />
     );
   } else if (view === "user") {
@@ -7540,7 +7507,7 @@ export default function PMApp() {
     const tpl = loadTemplate() || remapSeed(seed());
     const boot = { ...remapSeed(JSON.parse(JSON.stringify(tpl))), schedule: loadGlobalSchedule() };
     const handleChange = (s) => { saveTemplate(s); saveTemplateRemote(s).catch(()=>{}); };
-    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} />;
+    content = <CoursePMApp boot={boot} isTemplateLabel={true} onBack={onBack} onStateChange={handleChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} onOpenTemplates={openTemplates} />;
   } else {
     // open selected course
     const courses = loadCourses();
@@ -7554,7 +7521,7 @@ export default function PMApp() {
       else all.push(s);
       saveCourses(all);
     };
-    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} />;
+    content = <CoursePMApp boot={course} isTemplateLabel={false} onBack={onBack} onStateChange={handleCourseChange} people={people} milestoneTemplates={milestoneTemplates} onChangeMilestoneTemplates={handleMilestoneTemplatesChange} onOpenUser={openUser} onOpenTemplates={openTemplates} />;
   }
   return (
     <SoundContext.Provider value={soundEnabled}>
