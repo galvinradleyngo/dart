@@ -5,6 +5,8 @@ import { uid, getAssigneeIds } from "./utils.js";
 const MILESTONE_TPL_KEY = "healthPM:milestoneTemplates:v1";
 const DELETED_TPL_KEY = "healthPM:deletedTemplates:v1";
 
+const uniqIds = (ids = []) => [...new Set((Array.isArray(ids) ? ids : []).filter(Boolean))];
+
 const migrateTask = (t = {}) => {
   const assigneeIds = getAssigneeIds(t);
   return {
@@ -75,7 +77,27 @@ export const loadDeletedTemplateIds = () => {
 
 export const saveDeletedTemplateIds = (ids) => {
   try {
-    localStorage.setItem(DELETED_TPL_KEY, JSON.stringify(ids));
+    localStorage.setItem(DELETED_TPL_KEY, JSON.stringify(uniqIds(ids)));
+  } catch {}
+};
+
+export const loadDeletedTemplateIdsRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, "app", "milestoneTemplatesMeta"));
+    const data = snap.exists() ? snap.data().deletedTemplateIds || [] : [];
+    console.log('[Templates] Loaded deleted IDs from remote:', data.length, 'IDs');
+    return uniqIds(data);
+  } catch (err) {
+    console.warn('[Templates] Failed to load remote deleted IDs:', err);
+    return [];
+  }
+};
+
+export const saveDeletedTemplateIdsRemote = async (ids) => {
+  try {
+    await setDoc(doc(db, "app", "milestoneTemplatesMeta"), {
+      deletedTemplateIds: uniqIds(ids),
+    });
   } catch {}
 };
 
@@ -111,10 +133,14 @@ export const addTemplate = (template) => {
 
 export const removeTemplate = (id) => {
   // Track deleted template ID to prevent re-seeding
-  const deletedIds = loadDeletedTemplateIds();
+  const deletedIds = uniqIds(loadDeletedTemplateIds());
   if (!deletedIds.includes(id)) {
     console.log('[Templates] Tracking deleted template:', id);
-    saveDeletedTemplateIds([...deletedIds, id]);
+    const nextDeletedIds = uniqIds([...deletedIds, id]);
+    saveDeletedTemplateIds(nextDeletedIds);
+    saveDeletedTemplateIdsRemote(nextDeletedIds).catch((err) => {
+      console.warn('[Templates] Failed to save remote deleted IDs:', err);
+    });
   }
   return mutateTemplates((templates) => templates.filter((t) => t.id !== id));
 };

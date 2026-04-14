@@ -31,6 +31,9 @@ import {
   loadMilestoneTemplatesRemote,
   saveMilestoneTemplatesRemote,
   loadDeletedTemplateIds,
+  saveDeletedTemplateIds,
+  loadDeletedTemplateIdsRemote,
+  saveDeletedTemplateIdsRemote,
   createTemplateFromMilestone,
   removeTemplate as removeMilestoneTemplateStore,
   updateTemplate as updateMilestoneTemplateStore,
@@ -232,6 +235,9 @@ const mergeById = (base = [], extra = [], deletedIds = []) => {
   });
   return Array.from(map.values());
 };
+
+const mergeIdLists = (...lists) =>
+  [...new Set(lists.flatMap((list) => (Array.isArray(list) ? list : [])).filter(Boolean))];
 
 const HISTORY_STACK_LIMIT = 20;
 
@@ -6403,13 +6409,24 @@ export default function PMApp() {
   };
   useEffect(() => {
     (async () => {
-      const remote = await loadMilestoneTemplatesRemote();
+      const [remote, remoteDeletedIds] = await Promise.all([
+        loadMilestoneTemplatesRemote(),
+        loadDeletedTemplateIdsRemote(),
+      ]);
+      const localDeletedIds = loadDeletedTemplateIds();
+      const mergedDeletedIds = mergeIdLists(localDeletedIds, remoteDeletedIds);
+      if (mergedDeletedIds.length !== localDeletedIds.length) {
+        saveDeletedTemplateIds(mergedDeletedIds);
+      }
+      if (mergedDeletedIds.length !== remoteDeletedIds.length) {
+        saveDeletedTemplateIdsRemote(mergedDeletedIds).catch(() => {});
+      }
+
       if (remote.length) {
         console.log('[Templates] Syncing with remote:', remote.length, 'templates');
         setMilestoneTemplates((prev) => {
-          const deletedIds = loadDeletedTemplateIds();
-          console.log('[Templates] Merging remote with', prev.length, 'local templates, excluding', deletedIds.length, 'deleted IDs');
-          const merged = mergeById(prev, remote, deletedIds);
+          console.log('[Templates] Merging remote with', prev.length, 'local templates, excluding', mergedDeletedIds.length, 'deleted IDs');
+          const merged = mergeById(prev, remote, mergedDeletedIds);
           if (merged.length !== prev.length) {
             console.log('[Templates] After remote sync, template count changed from', prev.length, 'to', merged.length);
             saveMilestoneTemplates(merged);
