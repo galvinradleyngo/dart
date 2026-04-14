@@ -330,6 +330,7 @@ const saveGlobalSchedule = (sched) => { try { localStorage.setItem(GLOBAL_SCHEDU
 // =====================================================
 const TEMPLATE_KEY = "healthPM:template:v1";
 const COURSES_KEY  = "healthPM:courses:v1";
+const TASK_TEMPLATES_KEY = "healthPM:taskTemplates:v1";
 const PLATFORM_BACKUP_LAST_RUN_KEY = "healthPM:platformBackupLastRun:v1";
 const PLATFORM_BACKUP_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const PLATFORM_BACKUP_LABEL = "PLATFORM BACKUP";
@@ -381,6 +382,71 @@ const saveCoursesRemote = async (arr) => {
   } catch {}
 };
 
+const normalizeTaskTemplate = (template = {}, fallbackId = uid()) => {
+  const links = ensureArray(template.links)
+    .map((entry) => (typeof entry === 'string' ? normalizeUrl(entry.trim()) : null))
+    .filter(Boolean);
+  const createdAt = Number.isFinite(template.createdAt) ? template.createdAt : Date.now();
+  const updatedAt = Number.isFinite(template.updatedAt) ? template.updatedAt : createdAt;
+  return {
+    id: typeof template.id === 'string' && template.id ? template.id : fallbackId,
+    title: (template.title || '').trim() || 'Untitled task template',
+    details: typeof template.details === 'string' ? template.details : '',
+    note: typeof template.note === 'string' ? template.note : '',
+    workDays: clamp(Number.isFinite(template.workDays) ? template.workDays : 1, 1, 365),
+    links,
+    createdAt,
+    updatedAt,
+  };
+};
+
+const normalizeTaskTemplateList = (templates = []) => {
+  const seen = new Set();
+  return ensureArray(templates).reduce((acc, template) => {
+    const normalized = normalizeTaskTemplate(template);
+    if (!normalized.id || seen.has(normalized.id)) return acc;
+    seen.add(normalized.id);
+    acc.push(normalized);
+    return acc;
+  }, []);
+};
+
+const loadTaskTemplates = () => {
+  try {
+    const raw = localStorage.getItem(TASK_TEMPLATES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return normalizeTaskTemplateList(parsed);
+  } catch {
+    return [];
+  }
+};
+
+const saveTaskTemplates = (templates = []) => {
+  const normalized = normalizeTaskTemplateList(templates);
+  try {
+    localStorage.setItem(TASK_TEMPLATES_KEY, JSON.stringify(normalized));
+  } catch {}
+  return normalized;
+};
+
+const loadTaskTemplatesRemote = async () => {
+  try {
+    const snap = await getDoc(doc(db, 'app', 'taskTemplates'));
+    const data = snap.exists() ? snap.data().taskTemplates || [] : [];
+    return normalizeTaskTemplateList(data);
+  } catch {
+    return [];
+  }
+};
+
+const saveTaskTemplatesRemote = async (templates = []) => {
+  try {
+    await setDoc(doc(db, 'app', 'taskTemplates'), {
+      taskTemplates: normalizeTaskTemplateList(templates),
+    });
+  } catch {}
+};
+
 const getMostRecentSixAmBoundary = (timestamp = Date.now()) => {
   const date = new Date(timestamp);
   date.setHours(6, 0, 0, 0);
@@ -407,6 +473,7 @@ const collectPlatformSnapshot = () => {
     schedule: cloneDeep(loadGlobalSchedule()),
     linkLibrary: cloneDeep(loadLinkLibrary()),
     milestoneTemplates: cloneDeep(loadMilestoneTemplates()),
+    taskTemplates: cloneDeep(loadTaskTemplates()),
     template: cloneDeep(loadTemplate()),
     people: cloneDeep(loadPeople()),
     soundEnabled: readSoundPreference(),
@@ -418,6 +485,7 @@ const summarizePlatformSnapshot = (snapshot = {}) => {
   const people = ensureArray(snapshot.people);
   const linkLibrary = ensureArray(snapshot.linkLibrary);
   const milestoneTemplatesList = ensureArray(snapshot.milestoneTemplates);
+  const taskTemplatesList = ensureArray(snapshot.taskTemplates);
   const courseCount = courses.length;
   const milestoneCount = courses.reduce(
     (total, course) => total + ensureArray(course?.milestones).length,
@@ -434,6 +502,7 @@ const summarizePlatformSnapshot = (snapshot = {}) => {
     peopleCount: people.length,
     linkCount: linkLibrary.length,
     templateCount: milestoneTemplatesList.length,
+    taskTemplateCount: taskTemplatesList.length,
   };
 };
 
@@ -4680,6 +4749,458 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 // =====================================================
 // Courses Hub (NEW)
 // =====================================================
+function TemplatesHub({
+  onBack,
+  onEditCourseTemplate,
+  milestoneTemplates = [],
+  onChangeMilestoneTemplates,
+  taskTemplates = [],
+  onChangeTaskTemplates,
+  onCreatePlatformBackup,
+}) {
+  const [milestoneDrafts, setMilestoneDrafts] = useState({});
+  const [taskDrafts, setTaskDrafts] = useState({});
+  const taskImportRef = useRef(null);
+  const courseImportRef = useRef(null);
+
+  useEffect(() => {
+    setMilestoneDrafts((prev) => {
+      const next = {};
+      milestoneTemplates.forEach((tpl) => {
+        next[tpl.id] = prev[tpl.id] || {
+          title: tpl.title || '',
+          goal: tpl.goal || '',
+        };
+      });
+      return next;
+    });
+  }, [milestoneTemplates]);
+
+  useEffect(() => {
+    setTaskDrafts((prev) => {
+      const next = {};
+      taskTemplates.forEach((tpl) => {
+        next[tpl.id] = prev[tpl.id] || {
+          title: tpl.title || '',
+          details: tpl.details || '',
+          workDays: String(tpl.workDays ?? 1),
+        };
+      });
+      return next;
+    });
+  }, [taskTemplates]);
+
+  const persistTaskTemplates = useCallback(
+    (nextTemplates) => {
+      const normalized = saveTaskTemplates(nextTemplates);
+      onChangeTaskTemplates?.(normalized);
+    },
+    [onChangeTaskTemplates]
+  );
+
+  const downloadAsJson = useCallback((filenamePrefix, payload) => {
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${filenamePrefix}-${date}.json`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, []);
+
+  const maybeBackupBeforeMutation = useCallback(async () => {
+    if (typeof onCreatePlatformBackup === 'function') {
+      await onCreatePlatformBackup().catch(() => {});
+    }
+  }, [onCreatePlatformBackup]);
+
+  const saveMilestoneDraft = useCallback(
+    (id) => {
+      const draft = milestoneDrafts[id];
+      if (!draft) return;
+      const current = milestoneTemplates.find((tpl) => tpl.id === id);
+      if (!current) return;
+      const title = (draft.title || '').trim() || 'Untitled template';
+      const goal = draft.goal || '';
+      if ((current.title || '') === title && (current.goal || '') === goal) return;
+      const updated = updateMilestoneTemplateStore(id, { title, goal });
+      onChangeMilestoneTemplates?.(updated);
+      setMilestoneDrafts((prev) => ({
+        ...prev,
+        [id]: { title, goal },
+      }));
+    },
+    [milestoneDrafts, milestoneTemplates, onChangeMilestoneTemplates]
+  );
+
+  const createMilestoneTemplate = useCallback(async () => {
+    await maybeBackupBeforeMutation();
+    const updated = createEmptyMilestoneTemplate();
+    onChangeMilestoneTemplates?.(updated);
+  }, [maybeBackupBeforeMutation, onChangeMilestoneTemplates]);
+
+  const deleteMilestoneTemplate = useCallback(
+    async (id) => {
+      const confirmed = window.confirm('Delete this milestone template? This can impact future course creation.');
+      if (!confirmed) return;
+      await maybeBackupBeforeMutation();
+      const updated = removeMilestoneTemplateStore(id);
+      onChangeMilestoneTemplates?.(updated);
+      setMilestoneDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    },
+    [maybeBackupBeforeMutation, onChangeMilestoneTemplates]
+  );
+
+  const createTaskTemplate = useCallback(async () => {
+    await maybeBackupBeforeMutation();
+    const entry = normalizeTaskTemplate({
+      id: uid(),
+      title: 'New task template',
+      details: '',
+      workDays: 1,
+      links: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    persistTaskTemplates([...taskTemplates, entry]);
+  }, [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]);
+
+  const duplicateTaskTemplate = useCallback(
+    async (id) => {
+      const source = taskTemplates.find((tpl) => tpl.id === id);
+      if (!source) return;
+      await maybeBackupBeforeMutation();
+      const copy = normalizeTaskTemplate({
+        ...source,
+        id: uid(),
+        title: `${source.title} (copy)`,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      persistTaskTemplates([...taskTemplates, copy]);
+    },
+    [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]
+  );
+
+  const deleteTaskTemplate = useCallback(
+    async (id) => {
+      const confirmed = window.confirm('Delete this task template?');
+      if (!confirmed) return;
+      await maybeBackupBeforeMutation();
+      persistTaskTemplates(taskTemplates.filter((tpl) => tpl.id !== id));
+      setTaskDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    },
+    [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]
+  );
+
+  const saveTaskDraft = useCallback(
+    (id) => {
+      const draft = taskDrafts[id];
+      const source = taskTemplates.find((tpl) => tpl.id === id);
+      if (!draft || !source) return;
+      const title = (draft.title || '').trim() || 'Untitled task template';
+      const details = draft.details || '';
+      const workDays = clamp(Number(draft.workDays) || 1, 1, 365);
+      const nextTemplate = normalizeTaskTemplate({
+        ...source,
+        title,
+        details,
+        workDays,
+        updatedAt: Date.now(),
+      });
+      const changed =
+        (source.title || '') !== nextTemplate.title ||
+        (source.details || '') !== nextTemplate.details ||
+        Number(source.workDays || 1) !== Number(nextTemplate.workDays || 1);
+      if (!changed) return;
+      persistTaskTemplates(
+        taskTemplates.map((tpl) => (tpl.id === id ? nextTemplate : tpl))
+      );
+      setTaskDrafts((prev) => ({
+        ...prev,
+        [id]: {
+          title: nextTemplate.title,
+          details: nextTemplate.details,
+          workDays: String(nextTemplate.workDays),
+        },
+      }));
+    },
+    [persistTaskTemplates, taskDrafts, taskTemplates]
+  );
+
+  const importTaskTemplates = useCallback(
+    async (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const incoming = normalizeTaskTemplateList(Array.isArray(parsed) ? parsed : parsed.taskTemplates);
+        if (!incoming.length) {
+          window.alert('No valid task templates found in this file.');
+          return;
+        }
+        const confirmed = window.confirm(
+          `Import ${incoming.length} task template(s)? This merges by ID and appends new templates.`
+        );
+        if (!confirmed) return;
+        await maybeBackupBeforeMutation();
+        const merged = mergeById(taskTemplates, incoming);
+        persistTaskTemplates(merged);
+      } catch {
+        window.alert('Invalid task template JSON file.');
+      }
+    },
+    [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]
+  );
+
+  const importCourseTemplate = useCallback(async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const normalized = remapSeed(parsed);
+      const confirmed = window.confirm(
+        'Import and replace the saved course template with this file?'
+      );
+      if (!confirmed) return;
+      await maybeBackupBeforeMutation();
+      saveTemplate(normalized);
+      saveTemplateRemote(normalized).catch(() => {});
+      window.alert('Course template imported.');
+    } catch {
+      window.alert('Invalid course template JSON file.');
+    }
+  }, [maybeBackupBeforeMutation]);
+
+  const downloadCourseTemplate = useCallback(() => {
+    const template = loadTemplate();
+    if (!template) {
+      window.alert('No saved course template found.');
+      return;
+    }
+    downloadAsJson('dart-course-template', template);
+  }, [downloadAsJson]);
+
+  return (
+    <div className={APP_SHELL_CLASS}>
+      <header className="sticky top-0 z-20 border-b border-white/50 bg-white/70 supports-[backdrop-filter]:bg-white/30 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_16px_48px_rgba(15,23,42,0.12)]">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm sm:text-[15px] font-semibold text-slate-700/90 truncate">Template Management</div>
+            <div className="text-sm text-slate-700 truncate">Manage course, milestone, and task templates safely.</div>
+          </div>
+          <button onClick={onBack} className="glass-button inline-flex items-center gap-2 whitespace-nowrap">
+            <Home className="icon" />
+            <span>Back to Hub</span>
+          </button>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 stack-lg">
+        <SectionCard
+          title="Course Template"
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={onEditCourseTemplate} className="glass-button">Edit Course Template</button>
+              <button onClick={downloadCourseTemplate} className="glass-button inline-flex items-center gap-2">
+                <Download className="icon" />
+                <span>Download JSON</span>
+              </button>
+              <button
+                onClick={() => courseImportRef.current?.click()}
+                className="glass-button inline-flex items-center gap-2"
+              >
+                <Upload className="icon" />
+                <span>Import JSON</span>
+              </button>
+              <input
+                ref={courseImportRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={importCourseTemplate}
+              />
+            </div>
+          }
+        >
+          <div className="text-sm text-slate-700">
+            The course template is the baseline blueprint for newly created courses. Use import/export for migration and backups.
+          </div>
+        </SectionCard>
+
+        <SectionCard
+          title="Milestone Templates"
+          actions={<button onClick={createMilestoneTemplate} className="glass-button">New Milestone Template</button>}
+        >
+          {!milestoneTemplates.length ? (
+            <div className="text-sm text-slate-700">No milestone templates yet.</div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {milestoneTemplates.map((tpl) => {
+                const draft = milestoneDrafts[tpl.id] || { title: tpl.title || '', goal: tpl.goal || '' };
+                return (
+                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm space-y-3">
+                    <div className="text-xs text-slate-500">{ensureArray(tpl.tasks).length} task(s)</div>
+                    <input
+                      value={draft.title}
+                      onChange={(e) =>
+                        setMilestoneDrafts((prev) => ({
+                          ...prev,
+                          [tpl.id]: { ...(prev[tpl.id] || {}), title: e.target.value, goal: (prev[tpl.id]?.goal ?? tpl.goal ?? '') },
+                        }))
+                      }
+                      onBlur={() => saveMilestoneDraft(tpl.id)}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="Template title"
+                    />
+                    <textarea
+                      value={draft.goal}
+                      onChange={(e) =>
+                        setMilestoneDrafts((prev) => ({
+                          ...prev,
+                          [tpl.id]: { ...(prev[tpl.id] || {}), title: (prev[tpl.id]?.title ?? tpl.title ?? ''), goal: e.target.value },
+                        }))
+                      }
+                      onBlur={() => saveMilestoneDraft(tpl.id)}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[84px]"
+                      placeholder="Goal"
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => deleteMilestoneTemplate(tpl.id)} className="glass-button-danger">Delete</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Task Templates"
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={createTaskTemplate} className="glass-button">New Task Template</button>
+              <button
+                onClick={() => downloadAsJson('dart-task-templates', taskTemplates)}
+                className="glass-button inline-flex items-center gap-2"
+              >
+                <Download className="icon" />
+                <span>Download JSON</span>
+              </button>
+              <button
+                onClick={() => taskImportRef.current?.click()}
+                className="glass-button inline-flex items-center gap-2"
+              >
+                <Upload className="icon" />
+                <span>Import JSON</span>
+              </button>
+              <input
+                ref={taskImportRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={importTaskTemplates}
+              />
+            </div>
+          }
+        >
+          {!taskTemplates.length ? (
+            <div className="text-sm text-slate-700">No task templates yet.</div>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {taskTemplates.map((tpl) => {
+                const draft = taskDrafts[tpl.id] || {
+                  title: tpl.title || '',
+                  details: tpl.details || '',
+                  workDays: String(tpl.workDays ?? 1),
+                };
+                return (
+                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm space-y-3">
+                    <input
+                      value={draft.title}
+                      onChange={(e) =>
+                        setTaskDrafts((prev) => ({
+                          ...prev,
+                          [tpl.id]: {
+                            title: e.target.value,
+                            details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                            workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
+                          },
+                        }))
+                      }
+                      onBlur={() => saveTaskDraft(tpl.id)}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                      placeholder="Task template title"
+                    />
+                    <textarea
+                      value={draft.details}
+                      onChange={(e) =>
+                        setTaskDrafts((prev) => ({
+                          ...prev,
+                          [tpl.id]: {
+                            title: prev[tpl.id]?.title ?? tpl.title ?? '',
+                            details: e.target.value,
+                            workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
+                          },
+                        }))
+                      }
+                      onBlur={() => saveTaskDraft(tpl.id)}
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[84px]"
+                      placeholder="Details"
+                    />
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Default Workdays</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={365}
+                        value={draft.workDays}
+                        onChange={(e) =>
+                          setTaskDrafts((prev) => ({
+                            ...prev,
+                            [tpl.id]: {
+                              title: prev[tpl.id]?.title ?? tpl.title ?? '',
+                              details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                              workDays: e.target.value,
+                            },
+                          }))
+                        }
+                        onBlur={() => saveTaskDraft(tpl.id)}
+                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => duplicateTaskTemplate(tpl.id)} className="glass-button">Duplicate</button>
+                      <button onClick={() => deleteTaskTemplate(tpl.id)} className="glass-button-danger">Delete</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+      </main>
+    </div>
+  );
+}
+
 function computeTotals(state) {
   const tasks = state.tasks || [];
   const total = tasks.length;
@@ -4696,7 +5217,7 @@ function computeTotals(state) {
 }
 export function CoursesHub({
   onOpenCourse,
-  onEditTemplate,
+  onOpenTemplates,
   onAddCourse,
   onOpenUser,
   people = [],
@@ -5553,7 +6074,7 @@ export function CoursesHub({
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-              <button onClick={onEditTemplate} className="glass-button w-full sm:w-auto">Edit Template</button>
+              <button onClick={onOpenTemplates} className="glass-button w-full sm:w-auto">Templates</button>
               <button
                 onClick={() => setHistoryModalOpen(true)}
                 className="glass-button flex items-center justify-center gap-2"
@@ -6496,6 +7017,7 @@ export default function PMApp() {
     }
     return merged;
   });
+  const [taskTemplates, setTaskTemplates] = useState(() => loadTaskTemplates());
   const [soundEnabled, setSoundEnabled] = useState(() => {
     const stored = localStorage.getItem('soundEnabled');
     return stored !== 'false';
@@ -6507,6 +7029,11 @@ export default function PMApp() {
   });
   const handleMilestoneTemplatesChange = (next) => {
     setMilestoneTemplates(next);
+  };
+  const handleTaskTemplatesChange = (next) => {
+    const normalized = saveTaskTemplates(next);
+    setTaskTemplates(normalized);
+    saveTaskTemplatesRemote(normalized).catch(() => {});
   };
   useEffect(() => {
     (async () => {
@@ -6540,6 +7067,22 @@ export default function PMApp() {
       }
     })();
   }, []);
+  useEffect(() => {
+    (async () => {
+      const remote = await loadTaskTemplatesRemote();
+      if (remote.length) {
+        setTaskTemplates((prev) => {
+          const merged = mergeById(prev, remote);
+          if (merged.length !== prev.length) {
+            saveTaskTemplates(merged);
+          }
+          return merged;
+        });
+      } else {
+        saveTaskTemplatesRemote(taskTemplates).catch(() => {});
+      }
+    })();
+  }, []);
   const handlePeopleChange = (next) => {
     setPeople(next);
     savePeople(next);
@@ -6563,6 +7106,9 @@ export default function PMApp() {
       const milestoneTemplatesSnapshot = Array.isArray(snapshot.milestoneTemplates)
         ? cloneDeep(snapshot.milestoneTemplates)
         : [];
+      const taskTemplatesSnapshot = Array.isArray(snapshot.taskTemplates)
+        ? normalizeTaskTemplateList(cloneDeep(snapshot.taskTemplates))
+        : [];
       const templateSnapshot = snapshot.template ? cloneDeep(snapshot.template) : null;
       const sound = snapshot.soundEnabled !== false;
 
@@ -6576,6 +7122,8 @@ export default function PMApp() {
       savePeopleRemote(peopleSnapshot).catch(() => {});
       saveMilestoneTemplates(milestoneTemplatesSnapshot);
       saveMilestoneTemplatesRemote(milestoneTemplatesSnapshot).catch(() => {});
+      saveTaskTemplates(taskTemplatesSnapshot);
+      saveTaskTemplatesRemote(taskTemplatesSnapshot).catch(() => {});
       if (templateSnapshot) {
         saveTemplate(templateSnapshot);
         saveTemplateRemote(templateSnapshot).catch(() => {});
@@ -6591,6 +7139,7 @@ export default function PMApp() {
 
       setPeople(peopleSnapshot);
       setMilestoneTemplates(milestoneTemplatesSnapshot);
+      setTaskTemplates(taskTemplatesSnapshot);
       setSoundEnabled(sound);
 
       return {
@@ -6599,12 +7148,38 @@ export default function PMApp() {
         linkLibrary,
         people: peopleSnapshot,
         milestoneTemplates: milestoneTemplatesSnapshot,
+        taskTemplates: taskTemplatesSnapshot,
         template: templateSnapshot,
         soundEnabled: sound,
       };
     },
     [setPeople, setMilestoneTemplates, setSoundEnabled]
   );
+  const handleCreatePlatformBackup = useCallback(async () => {
+    const snapshot = collectPlatformSnapshot();
+    const summary = summarizePlatformSnapshot(snapshot);
+    const createdAt = Date.now();
+    const backupEntry = {
+      kind: 'backup',
+      snapshot,
+      summary,
+      metadata: { summary },
+      label: PLATFORM_BACKUP_LABEL,
+      createdAt,
+      expiresAt: createdAt + PLATFORM_BACKUP_RETENTION_MS,
+    };
+    const fallbackEntry = addCourseHistoryEntryLocal(backupEntry);
+    if (!fallbackEntry) return null;
+    try {
+      const remote = await recordCourseHistoryEntry(fallbackEntry);
+      if (remote) {
+        removeCourseHistoryEntriesLocal([fallbackEntry.id]);
+        addCourseHistoryEntryLocal(remote);
+        return remote;
+      }
+    } catch {}
+    return fallbackEntry;
+  }, []);
   useEffect(() => {
     (async () => {
       const remote = await loadPeopleRemote();
@@ -6618,6 +7193,7 @@ export default function PMApp() {
   const version = pkg.version;
   const openCourse = (id) => { setPrevView(view); setCurrentCourseId(id); setView("course"); };
   const openUser = (id) => { setPrevView(view); setCurrentUserId(id || null); setView("user"); };
+  const openTemplates = () => { setPrevView(view); setView("templates"); };
   const editTemplate = async () => {
     setPrevView(view);
     const remoteTpl = await loadTemplateRemote();
@@ -6650,7 +7226,7 @@ export default function PMApp() {
     content = (
       <CoursesHub
         onOpenCourse={openCourse}
-        onEditTemplate={editTemplate}
+        onOpenTemplates={openTemplates}
         onAddCourse={addCourse}
         onOpenUser={openUser}
         people={people}
@@ -6658,6 +7234,18 @@ export default function PMApp() {
         onRemoveCourse={() => {}}
         onDuplicateCourse={() => {}}
         onApplyPlatformBackup={handleApplyPlatformBackup}
+      />
+    );
+  } else if (view === "templates") {
+    content = (
+      <TemplatesHub
+        onBack={() => { setView('hub'); setPrevView('hub'); setCurrentCourseId(null); }}
+        onEditCourseTemplate={editTemplate}
+        milestoneTemplates={milestoneTemplates}
+        onChangeMilestoneTemplates={handleMilestoneTemplatesChange}
+        taskTemplates={taskTemplates}
+        onChangeTaskTemplates={handleTaskTemplatesChange}
+        onCreatePlatformBackup={handleCreatePlatformBackup}
       />
     );
   } else if (view === "user") {
