@@ -368,6 +368,9 @@ const saveTemplateRemote = async (tpl) => {
     await setDoc(doc(db, 'app', 'template'), { template: tpl });
   } catch {}
 };
+const saveTemplateRemoteStrict = async (tpl) => {
+  await setDoc(doc(db, 'app', 'template'), { template: tpl });
+};
 const loadCoursesRemote = async () => {
   try {
     const snap = await getDoc(doc(db, 'app', 'courses'));
@@ -445,6 +448,15 @@ const saveTaskTemplatesRemote = async (templates = []) => {
       taskTemplates: normalizeTaskTemplateList(templates),
     });
   } catch {}
+};
+const saveTaskTemplatesRemoteStrict = async (templates = []) => {
+  await setDoc(doc(db, 'app', 'taskTemplates'), {
+    taskTemplates: normalizeTaskTemplateList(templates),
+  });
+};
+
+const saveMilestoneTemplatesRemoteStrict = async (templates = []) => {
+  await setDoc(doc(db, 'app', 'milestoneTemplates'), { milestoneTemplates: templates });
 };
 
 const getMostRecentSixAmBoundary = (timestamp = Date.now()) => {
@@ -4792,10 +4804,33 @@ function TemplatesHub({
     });
   }, [taskTemplates]);
 
+  const persistMilestoneTemplates = useCallback(
+    async (nextTemplates) => {
+      try {
+        await saveMilestoneTemplatesRemoteStrict(nextTemplates);
+        saveMilestoneTemplates(nextTemplates);
+        onChangeMilestoneTemplates?.(nextTemplates);
+        return true;
+      } catch {
+        window.alert('Could not save milestone templates to Firebase. Please try again.');
+        return false;
+      }
+    },
+    [onChangeMilestoneTemplates]
+  );
+
   const persistTaskTemplates = useCallback(
-    (nextTemplates) => {
-      const normalized = saveTaskTemplates(nextTemplates);
-      onChangeTaskTemplates?.(normalized);
+    async (nextTemplates) => {
+      const normalized = normalizeTaskTemplateList(nextTemplates);
+      try {
+        await saveTaskTemplatesRemoteStrict(normalized);
+        saveTaskTemplates(normalized);
+        onChangeTaskTemplates?.(normalized);
+        return normalized;
+      } catch {
+        window.alert('Could not save task templates to Firebase. Please try again.');
+        return null;
+      }
     },
     [onChangeTaskTemplates]
   );
@@ -4822,7 +4857,7 @@ function TemplatesHub({
   }, [onCreatePlatformBackup]);
 
   const saveMilestoneDraft = useCallback(
-    (id) => {
+    async (id) => {
       const draft = milestoneDrafts[id];
       if (!draft) return;
       const current = milestoneTemplates.find((tpl) => tpl.id === id);
@@ -4830,31 +4865,137 @@ function TemplatesHub({
       const title = (draft.title || '').trim() || 'Untitled template';
       const goal = draft.goal || '';
       if ((current.title || '') === title && (current.goal || '') === goal) return;
-      const updated = updateMilestoneTemplateStore(id, { title, goal });
-      onChangeMilestoneTemplates?.(updated);
+      const updated = milestoneTemplates.map((tpl) =>
+        tpl.id === id ? { ...tpl, title, goal } : tpl
+      );
+      const saved = await persistMilestoneTemplates(updated);
+      if (!saved) return;
       setMilestoneDrafts((prev) => ({
         ...prev,
         [id]: { title, goal },
       }));
     },
-    [milestoneDrafts, milestoneTemplates, onChangeMilestoneTemplates]
+    [milestoneDrafts, milestoneTemplates, persistMilestoneTemplates]
   );
 
   const createMilestoneTemplate = useCallback(async () => {
     await maybeBackupBeforeMutation();
-    const updated = createEmptyMilestoneTemplate();
-    onChangeMilestoneTemplates?.(updated);
-    const created = updated[updated.length - 1];
-    if (created?.id) setExpandedMilestoneTemplateId(created.id);
-  }, [maybeBackupBeforeMutation, onChangeMilestoneTemplates]);
+    const newTemplate = { id: uid(), title: 'New template', goal: '', tasks: [] };
+    const updated = [...milestoneTemplates, newTemplate];
+    const saved = await persistMilestoneTemplates(updated);
+    if (!saved) return;
+    if (newTemplate.id) setExpandedMilestoneTemplateId(newTemplate.id);
+  }, [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]);
+
+  const addMilestoneTemplateTask = useCallback(
+    async (templateId) => {
+      await maybeBackupBeforeMutation();
+      const updated = milestoneTemplates.map((tpl) =>
+        tpl.id === templateId
+          ? {
+              ...tpl,
+              tasks: [
+                ...ensureArray(tpl.tasks),
+                {
+                  id: uid(),
+                  title: '',
+                  details: '',
+                  note: '',
+                  links: [],
+                  depTaskId: null,
+                  assigneeIds: [],
+                  assigneeId: null,
+                  status: 'todo',
+                  startDate: '',
+                  workDays: 1,
+                  dueDate: '',
+                  completedDate: '',
+                },
+              ],
+            }
+          : tpl
+      );
+      const saved = await persistMilestoneTemplates(updated);
+      if (!saved) return;
+      setExpandedMilestoneTemplateId(templateId);
+    },
+    [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]
+  );
+
+  const updateMilestoneTemplateTask = useCallback(
+    async (templateId, taskId, patch = {}) => {
+      const nextPatch = { ...patch };
+      if (Object.prototype.hasOwnProperty.call(nextPatch, 'milestoneId')) {
+        delete nextPatch.milestoneId;
+      }
+      const updated = milestoneTemplates.map((tpl) => {
+        if (tpl.id !== templateId) return tpl;
+        return {
+          ...tpl,
+          tasks: ensureArray(tpl.tasks).map((task) =>
+            task.id === taskId
+              ? {
+                  ...task,
+                  ...nextPatch,
+                  workDays: clamp(Number(nextPatch.workDays ?? task.workDays ?? 1) || 1, 1, 365),
+                }
+              : task
+          ),
+        };
+      });
+      await persistMilestoneTemplates(updated);
+    },
+    [milestoneTemplates, persistMilestoneTemplates]
+  );
+
+  const removeMilestoneTemplateTask = useCallback(
+    async (templateId, taskId) => {
+      const confirmed = window.confirm('Remove this task from the milestone template?');
+      if (!confirmed) return;
+      await maybeBackupBeforeMutation();
+      const updated = milestoneTemplates.map((tpl) =>
+        tpl.id === templateId
+          ? { ...tpl, tasks: ensureArray(tpl.tasks).filter((task) => task.id !== taskId) }
+          : tpl
+      );
+      await persistMilestoneTemplates(updated);
+    },
+    [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]
+  );
+
+  const duplicateMilestoneTemplateTask = useCallback(
+    async (templateId, taskId) => {
+      await maybeBackupBeforeMutation();
+      const updated = milestoneTemplates.map((tpl) => {
+        if (tpl.id !== templateId) return tpl;
+        const tasks = ensureArray(tpl.tasks);
+        const index = tasks.findIndex((task) => task.id === taskId);
+        if (index < 0) return tpl;
+        const source = tasks[index];
+        const duplicated = {
+          ...source,
+          id: uid(),
+          title: source.title ? `${source.title} (copy)` : 'Untitled task (copy)',
+        };
+        const nextTasks = [...tasks];
+        nextTasks.splice(index + 1, 0, duplicated);
+        return { ...tpl, tasks: nextTasks };
+      });
+      const saved = await persistMilestoneTemplates(updated);
+      if (!saved) return;
+      setExpandedMilestoneTemplateId(templateId);
+    },
+    [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]
+  );
 
   const deleteMilestoneTemplate = useCallback(
     async (id) => {
       const confirmed = window.confirm('Delete this milestone template? This can impact future course creation.');
       if (!confirmed) return;
       await maybeBackupBeforeMutation();
-      const updated = removeMilestoneTemplateStore(id);
-      onChangeMilestoneTemplates?.(updated);
+      const updated = milestoneTemplates.filter((tpl) => tpl.id !== id);
+      const saved = await persistMilestoneTemplates(updated);
+      if (!saved) return;
       setMilestoneDrafts((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -4862,7 +5003,7 @@ function TemplatesHub({
       });
       setExpandedMilestoneTemplateId((prev) => (prev === id ? null : prev));
     },
-    [maybeBackupBeforeMutation, onChangeMilestoneTemplates]
+    [maybeBackupBeforeMutation, milestoneTemplates, persistMilestoneTemplates]
   );
 
   const createTaskTemplate = useCallback(async () => {
@@ -4876,7 +5017,8 @@ function TemplatesHub({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    persistTaskTemplates([...taskTemplates, entry]);
+    const saved = await persistTaskTemplates([...taskTemplates, entry]);
+    if (!saved) return;
     setExpandedTaskTemplateId(entry.id);
   }, [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]);
 
@@ -4892,7 +5034,7 @@ function TemplatesHub({
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
-      persistTaskTemplates([...taskTemplates, copy]);
+      await persistTaskTemplates([...taskTemplates, copy]);
     },
     [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]
   );
@@ -4902,7 +5044,8 @@ function TemplatesHub({
       const confirmed = window.confirm('Delete this task template?');
       if (!confirmed) return;
       await maybeBackupBeforeMutation();
-      persistTaskTemplates(taskTemplates.filter((tpl) => tpl.id !== id));
+      const saved = await persistTaskTemplates(taskTemplates.filter((tpl) => tpl.id !== id));
+      if (!saved) return;
       setTaskDrafts((prev) => {
         const next = { ...prev };
         delete next[id];
@@ -4914,7 +5057,7 @@ function TemplatesHub({
   );
 
   const saveTaskDraft = useCallback(
-    (id) => {
+    async (id) => {
       const draft = taskDrafts[id];
       const source = taskTemplates.find((tpl) => tpl.id === id);
       if (!draft || !source) return;
@@ -4933,9 +5076,10 @@ function TemplatesHub({
         (source.details || '') !== nextTemplate.details ||
         Number(source.workDays || 1) !== Number(nextTemplate.workDays || 1);
       if (!changed) return;
-      persistTaskTemplates(
+      const saved = await persistTaskTemplates(
         taskTemplates.map((tpl) => (tpl.id === id ? nextTemplate : tpl))
       );
+      if (!saved) return;
       setTaskDrafts((prev) => ({
         ...prev,
         [id]: {
@@ -4967,7 +5111,7 @@ function TemplatesHub({
         if (!confirmed) return;
         await maybeBackupBeforeMutation();
         const merged = mergeById(taskTemplates, incoming);
-        persistTaskTemplates(merged);
+        await persistTaskTemplates(merged);
       } catch {
         window.alert('Invalid task template JSON file.');
       }
@@ -4988,11 +5132,10 @@ function TemplatesHub({
       );
       if (!confirmed) return;
       await maybeBackupBeforeMutation();
-      saveTemplate(normalized);
-      saveTemplateRemote(normalized).catch(() => {});
+      await saveTemplateRemoteStrict(normalized);
       window.alert('Course template imported.');
     } catch {
-      window.alert('Invalid course template JSON file.');
+      window.alert('Could not import template to Firebase. Please check your connection and JSON format.');
     }
   }, [maybeBackupBeforeMutation]);
 
@@ -5004,6 +5147,23 @@ function TemplatesHub({
     }
     downloadAsJson('dart-course-template', template);
   }, [downloadAsJson]);
+
+  const createCourseTemplate = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Create a brand new course template? This will replace the currently saved course template.'
+    );
+    if (!confirmed) return;
+    await maybeBackupBeforeMutation();
+    const freshTemplate = remapSeed(seed());
+    try {
+      await saveTemplateRemoteStrict(freshTemplate);
+    } catch {
+      window.alert('Could not create template in Firebase. Please check your connection.');
+      return;
+    }
+    window.alert('New course template created.');
+    onEditCourseTemplate?.();
+  }, [maybeBackupBeforeMutation, onEditCourseTemplate]);
 
   return (
     <div className={APP_SHELL_CLASS}>
@@ -5025,6 +5185,10 @@ function TemplatesHub({
           title="Course Template"
           actions={
             <div className="flex flex-wrap items-center gap-2">
+              <button onClick={createCourseTemplate} className="glass-button inline-flex items-center gap-2">
+                <Plus className="icon" />
+                <span>New Template</span>
+              </button>
               <button onClick={onEditCourseTemplate} className="glass-button">Edit Course Template</button>
               <button onClick={downloadCourseTemplate} className="glass-button inline-flex items-center gap-2">
                 <Download className="icon" />
@@ -5107,18 +5271,70 @@ function TemplatesHub({
                         />
 
                         <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
-                          <div className="text-xs font-semibold text-slate-600 mb-2">Template Tasks</div>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <div className="text-xs font-semibold text-slate-600">Template Tasks</div>
+                            <button
+                              type="button"
+                              onClick={() => addMilestoneTemplateTask(tpl.id)}
+                              className="glass-button text-xs"
+                            >
+                              Add Task
+                            </button>
+                          </div>
                           {!templateTasks.length ? (
                             <div className="text-xs text-slate-500">No tasks saved under this milestone template yet.</div>
                           ) : (
                             <ul className="space-y-2">
                               {templateTasks.map((task) => (
                                 <li key={task.id} className="rounded-lg bg-white border border-slate-200 p-2">
-                                  <div className="text-sm font-medium text-slate-800">{task.title || 'Untitled task'}</div>
-                                  <div className="text-xs text-slate-500">Workdays: {Number(task.workDays) || 1}</div>
-                                  {task.details ? (
-                                    <div className="text-xs text-slate-600 mt-1 whitespace-pre-wrap">{task.details}</div>
-                                  ) : null}
+                                  <input
+                                    value={task.title || ''}
+                                    onChange={(e) =>
+                                      updateMilestoneTemplateTask(tpl.id, task.id, { title: e.target.value })
+                                    }
+                                    className="w-full rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                                    placeholder="Task title"
+                                  />
+                                  <div className="mt-2">
+                                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Details</label>
+                                    <textarea
+                                      value={task.details || ''}
+                                      onChange={(e) =>
+                                        updateMilestoneTemplateTask(tpl.id, task.id, { details: e.target.value })
+                                      }
+                                      className="w-full rounded-lg border border-slate-300 px-2 py-1 text-xs min-h-[60px]"
+                                      placeholder="Task details"
+                                    />
+                                  </div>
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <label className="text-[11px] font-semibold text-slate-500">Workdays</label>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={365}
+                                      value={Number(task.workDays) || 1}
+                                      onChange={(e) =>
+                                        updateMilestoneTemplateTask(tpl.id, task.id, { workDays: e.target.value })
+                                      }
+                                      className="w-24 rounded-lg border border-slate-300 px-2 py-1 text-xs"
+                                    />
+                                  </div>
+                                  <div className="mt-2 flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => duplicateMilestoneTemplateTask(tpl.id, task.id)}
+                                      className="glass-button text-xs"
+                                    >
+                                      Duplicate
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeMilestoneTemplateTask(tpl.id, task.id)}
+                                      className="glass-button-danger text-xs"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
                                 </li>
                               ))}
                             </ul>
