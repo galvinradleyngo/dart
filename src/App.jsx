@@ -3656,6 +3656,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
 
   const teamTaskSummary = useMemo(() => {
     if (!isPmUser) return [];
+    const nowTime = Date.now();
     const memberMap = new Map();
     myCoursesAll.forEach((course) => {
       ensureArray(course?.team).forEach((member) => {
@@ -3707,7 +3708,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         const overdue = tasks.filter((task) => {
           if (!task.dueDate) return false;
           const dueTime = new Date(task.dueDate).getTime();
-          return !Number.isNaN(dueTime) && dueTime < todayTime && task.status !== 'done';
+          return !Number.isNaN(dueTime) && dueTime < nowTime && task.status !== 'done';
         }).length;
         const nextDueTask = [...tasks]
           .filter((task) => task.dueDate && task.status !== 'done')
@@ -3732,7 +3733,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         if (aOpen !== bOpen) return bOpen - aOpen;
         return (a.member?.name || '').localeCompare(b.member?.name || '');
       });
-  }, [isPmUser, myCoursesAll, todayTime]);
+  }, [isPmUser, myCoursesAll]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], blocked: [], done: [], skip: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
