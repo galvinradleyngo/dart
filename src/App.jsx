@@ -3115,6 +3115,9 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [resolveBlockRequest, setResolveBlockRequest] = useState(null);
   const [blocksCollapsed, setBlocksCollapsed] = useState(true);
   const [blocksTab, setBlocksTab] = useState("active");
+  const [teamTaskPreset, setTeamTaskPreset] = useState('attention');
+  const [teamTaskSortBy, setTeamTaskSortBy] = useState('open');
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState('');
 
   const updateCourses = useCallback((updater, options = {}) => {
     const { capture = true } = options;
@@ -3734,6 +3737,111 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         return (a.member?.name || '').localeCompare(b.member?.name || '');
       });
   }, [isPmUser, myCoursesAll]);
+
+  const teamTaskRows = useMemo(() => {
+    const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
+    const withMetrics = teamTaskSummary.map((entry) => {
+      const open = entry.counts.todo + entry.counts.inprogress + entry.counts.blocked;
+      const dueThisWeek = entry.tasks.filter((task) => {
+        if (!task.dueDate || task.status === 'done' || task.status === 'skip') return false;
+        const due = new Date(task.dueDate).getTime();
+        return !Number.isNaN(due) && due >= todayTime && due <= weekEnd;
+      }).length;
+      return {
+        ...entry,
+        open,
+        dueThisWeek,
+      };
+    });
+
+    const filtered = withMetrics.filter((entry) => {
+      if (teamTaskPreset === 'all') return true;
+      if (teamTaskPreset === 'attention') return entry.overdue > 0 || entry.counts.blocked > 0 || entry.dueThisWeek > 0;
+      if (teamTaskPreset === 'blocked') return entry.counts.blocked > 0;
+      if (teamTaskPreset === 'overdue') return entry.overdue > 0;
+      if (teamTaskPreset === 'week') return entry.dueThisWeek > 0;
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      if (teamTaskSortBy === 'name') {
+        return (a.member?.name || '').localeCompare(b.member?.name || '');
+      }
+      if (teamTaskSortBy === 'blocked') {
+        if (b.counts.blocked !== a.counts.blocked) return b.counts.blocked - a.counts.blocked;
+        return b.open - a.open;
+      }
+      if (teamTaskSortBy === 'overdue') {
+        if (b.overdue !== a.overdue) return b.overdue - a.overdue;
+        return b.open - a.open;
+      }
+      if (teamTaskSortBy === 'dueweek') {
+        if (b.dueThisWeek !== a.dueThisWeek) return b.dueThisWeek - a.dueThisWeek;
+        return b.open - a.open;
+      }
+      if (b.open !== a.open) return b.open - a.open;
+      return (a.member?.name || '').localeCompare(b.member?.name || '');
+    });
+  }, [teamTaskSummary, teamTaskPreset, teamTaskSortBy, todayTime]);
+
+  const teamTriage = useMemo(() => {
+    return teamTaskSummary.reduce(
+      (acc, entry) => {
+        acc.open += entry.counts.todo + entry.counts.inprogress + entry.counts.blocked;
+        acc.blocked += entry.counts.blocked;
+        acc.overdue += entry.overdue;
+        acc.dueWeek += entry.tasks.filter((task) => {
+          if (!task.dueDate || task.status === 'done' || task.status === 'skip') return false;
+          const due = new Date(task.dueDate).getTime();
+          const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
+          return !Number.isNaN(due) && due >= todayTime && due <= weekEnd;
+        }).length;
+        return acc;
+      },
+      { open: 0, blocked: 0, overdue: 0, dueWeek: 0 }
+    );
+  }, [teamTaskSummary, todayTime]);
+
+  useEffect(() => {
+    if (!isPmUser) return;
+    if (!teamTaskRows.length) {
+      setSelectedTeamMemberId('');
+      return;
+    }
+    if (!teamTaskRows.some((row) => row.member?.id === selectedTeamMemberId)) {
+      setSelectedTeamMemberId(teamTaskRows[0].member?.id || '');
+    }
+  }, [isPmUser, teamTaskRows, selectedTeamMemberId]);
+
+  const selectedTeamMember = useMemo(
+    () => teamTaskRows.find((row) => row.member?.id === selectedTeamMemberId) || null,
+    [teamTaskRows, selectedTeamMemberId]
+  );
+
+  const selectedTeamMemberTasks = useMemo(() => {
+    if (!selectedTeamMember) return [];
+    return selectedTeamMember.tasks.filter((task) => {
+      if (teamTaskPreset === 'all') return true;
+      if (teamTaskPreset === 'attention') {
+        const due = task.dueDate ? new Date(task.dueDate).getTime() : null;
+        const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
+        const dueWeek = due != null && !Number.isNaN(due) && due >= todayTime && due <= weekEnd;
+        const overdue = due != null && !Number.isNaN(due) && due < todayTime && task.status !== 'done' && task.status !== 'skip';
+        return overdue || task.status === 'blocked' || dueWeek;
+      }
+      if (teamTaskPreset === 'blocked') return task.status === 'blocked';
+      if (teamTaskPreset === 'overdue') {
+        const due = task.dueDate ? new Date(task.dueDate).getTime() : null;
+        return due != null && !Number.isNaN(due) && due < todayTime && task.status !== 'done' && task.status !== 'skip';
+      }
+      if (teamTaskPreset === 'week') {
+        const due = task.dueDate ? new Date(task.dueDate).getTime() : null;
+        const weekEnd = todayTime + (7 * 24 * 60 * 60 * 1000);
+        return due != null && !Number.isNaN(due) && due >= todayTime && due <= weekEnd && task.status !== 'done' && task.status !== 'skip';
+      }
+      return true;
+    });
+  }, [selectedTeamMember, teamTaskPreset, todayTime]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], blocked: [], done: [], skip: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
@@ -4448,45 +4556,129 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               {teamTaskSummary.length === 0 ? (
                 <div className="text-sm text-slate-700">No team task data available for your courses.</div>
               ) : (
-                <div className="space-y-3">
-                  {teamTaskSummary.map(({ member, tasks, counts, overdue, nextDueTask }) => {
-                    const openCount = counts.todo + counts.inprogress + counts.blocked;
-                    const totalCount = openCount + counts.done;
-                    const progress = totalCount ? Math.round((counts.done / totalCount) * 100) : 0;
-                    return (
-                      <details key={member.id} className="glass-card group">
-                        <summary className="cursor-pointer list-none select-none p-4 flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-                          <div className="min-w-0 flex items-center gap-3">
-                            <ChevronDown className="icon transition-transform group-open:rotate-180" />
-                            <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} className="w-8 h-8 text-[14px]" />
-                            <div className="min-w-0">
-                              <div className="font-semibold text-slate-800 truncate">{member.name}</div>
-                              <div className="text-xs text-slate-600">{member.roleType}</div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="glass-card p-3 border border-slate-200/80">
+                      <div className="text-xs text-slate-500">Total Open</div>
+                      <div className="text-xl font-semibold text-slate-800">{teamTriage.open}</div>
+                    </div>
+                    <div className="glass-card p-3 border border-orange-200/80 bg-orange-50/60">
+                      <div className="text-xs text-orange-700">Blocked</div>
+                      <div className="text-xl font-semibold text-orange-800">{teamTriage.blocked}</div>
+                    </div>
+                    <div className="glass-card p-3 border border-red-200/80 bg-red-50/60">
+                      <div className="text-xs text-red-700">Overdue</div>
+                      <div className="text-xl font-semibold text-red-800">{teamTriage.overdue}</div>
+                    </div>
+                    <div className="glass-card p-3 border border-amber-200/80 bg-amber-50/60">
+                      <div className="text-xs text-amber-700">Due This Week</div>
+                      <div className="text-xl font-semibold text-amber-800">{teamTriage.dueWeek}</div>
+                    </div>
+                  </div>
+
+                  <div className="glass-card p-3 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-600">Presets:</span>
+                    {[
+                      ['attention', 'Needs Attention'],
+                      ['all', 'All'],
+                      ['blocked', 'Blocked'],
+                      ['overdue', 'Overdue'],
+                      ['week', 'Due This Week'],
+                    ].map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setTeamTaskPreset(id)}
+                        className={teamTaskPreset === id ? 'glass-button-primary' : 'glass-button'}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <span className="ml-auto text-xs font-semibold text-slate-600">Sort:</span>
+                    <select
+                      value={teamTaskSortBy}
+                      onChange={(e) => setTeamTaskSortBy(e.target.value)}
+                      className="rounded-xl border border-white/60 bg-white/85 px-3 py-1.5 text-sm shadow-sm"
+                    >
+                      <option value="open">Open Tasks</option>
+                      <option value="blocked">Blocked</option>
+                      <option value="overdue">Overdue</option>
+                      <option value="dueweek">Due This Week</option>
+                      <option value="name">Name</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_1fr]">
+                    <div className="glass-card overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-50/80 text-slate-600">
+                            <tr>
+                              <th className="px-3 py-2 text-left font-semibold">Member</th>
+                              <th className="px-3 py-2 text-right font-semibold">Open</th>
+                              <th className="px-3 py-2 text-right font-semibold">Blocked</th>
+                              <th className="px-3 py-2 text-right font-semibold">Overdue</th>
+                              <th className="px-3 py-2 text-right font-semibold">Due 7d</th>
+                              <th className="px-3 py-2 text-left font-semibold">Next Due</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {teamTaskRows.map((row) => {
+                              const isSelected = row.member.id === selectedTeamMemberId;
+                              return (
+                                <tr
+                                  key={row.member.id}
+                                  className={`border-t border-slate-100 cursor-pointer ${isSelected ? 'bg-sky-50/60' : 'hover:bg-slate-50/60'}`}
+                                  onClick={() => setSelectedTeamMemberId(row.member.id)}
+                                >
+                                  <td className="px-3 py-2">
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <Avatar name={row.member.name} roleType={row.member.roleType} avatar={row.member.avatar} className="w-7 h-7 text-[12px]" />
+                                      <div className="min-w-0">
+                                        <div className="font-medium text-slate-800 truncate">{row.member.name}</div>
+                                        <div className="text-xs text-slate-500">{row.member.roleType}</div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2 text-right font-semibold text-slate-800">{row.open}</td>
+                                  <td className="px-3 py-2 text-right font-semibold text-orange-700">{row.counts.blocked}</td>
+                                  <td className="px-3 py-2 text-right font-semibold text-red-700">{row.overdue}</td>
+                                  <td className="px-3 py-2 text-right font-semibold text-amber-700">{row.dueThisWeek}</td>
+                                  <td className="px-3 py-2 text-xs text-slate-600">{row.nextDueTask?.dueDate || '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div className="glass-card p-3 space-y-3">
+                      {!selectedTeamMember ? (
+                        <div className="text-sm text-slate-700">Select a team member to view tasks.</div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <Avatar
+                              name={selectedTeamMember.member.name}
+                              roleType={selectedTeamMember.member.roleType}
+                              avatar={selectedTeamMember.member.avatar}
+                              className="w-8 h-8 text-[14px]"
+                            />
+                            <div>
+                              <div className="font-semibold text-slate-800">{selectedTeamMember.member.name}</div>
+                              <div className="text-xs text-slate-600">{selectedTeamMember.member.roleType}</div>
                             </div>
                           </div>
-                          <div className="text-right text-xs sm:text-sm text-slate-700">
-                            <div>Open: <b>{openCount}</b> · Done: <b>{counts.done}</b></div>
-                            <div className={overdue ? 'text-red-600 font-medium' : 'text-slate-500'}>
-                              Overdue: {overdue}
-                            </div>
-                          </div>
-                        </summary>
-                        <div className="px-4 pb-4 space-y-3">
-                          <div className="h-2 rounded bg-slate-100 overflow-hidden">
-                            <div className="h-2 rounded bg-emerald-500" style={{ width: `${progress}%` }} />
-                          </div>
                           <div className="text-xs text-slate-600">
-                            To do {counts.todo} · In progress {counts.inprogress} · Blocked {counts.blocked} · Done {counts.done}
+                            Showing {selectedTeamMemberTasks.length} task{selectedTeamMemberTasks.length === 1 ? '' : 's'} for preset: {teamTaskPreset}
                           </div>
-                          <div className="text-xs text-slate-600">
-                            Next due: {nextDueTask?.dueDate || '—'}
-                          </div>
-                          {!tasks.length ? (
-                            <div className="text-sm text-slate-700">No assigned tasks.</div>
+                          {!selectedTeamMemberTasks.length ? (
+                            <div className="text-sm text-slate-700">No tasks match this preset.</div>
                           ) : (
-                            <ul className="space-y-2">
-                              {tasks.slice(0, 8).map((task) => (
-                                <li key={`${member.id}-${task.id}`} className="rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm">
+                            <ul className="space-y-2 max-h-[26rem] overflow-y-auto pr-1">
+                              {selectedTeamMemberTasks.slice(0, 30).map((task) => (
+                                <li key={`${selectedTeamMember.member.id}-${task.id}`} className="rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm">
                                   <button
                                     type="button"
                                     onClick={() => setEditing({ courseId: task.courseId, taskId: task.id })}
@@ -4494,17 +4686,23 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   >
                                     <div className="font-medium text-slate-800 truncate">{task.title || 'Untitled task'}</div>
                                     <div className="text-xs text-slate-600 truncate">
-                                      {task.courseName}{task.milestoneName ? ` · ${task.milestoneName}` : ''} · {statusLabel[task.status] || task.status} · Due {task.dueDate || '—'}
+                                      {task.courseName}{task.milestoneName ? ` · ${task.milestoneName}` : ''}
+                                    </div>
+                                    <div className="mt-1 flex items-center gap-2">
+                                      <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClasses[task.status] || statusBadgeClasses.todo}`}>
+                                        {statusLabel[task.status] || task.status}
+                                      </span>
+                                      <span className="text-[11px] text-slate-500">Due {task.dueDate || '—'}</span>
                                     </div>
                                   </button>
                                 </li>
                               ))}
                             </ul>
                           )}
-                        </div>
-                      </details>
-                    );
-                  })}
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </SectionCard>
