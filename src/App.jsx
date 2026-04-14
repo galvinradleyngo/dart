@@ -3098,7 +3098,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courseQuery, setCourseQuery] = useState('');
   const [activeTab, setActiveTab] = useState(() => {
     const stored = localStorage.getItem('userTab');
-    const validTabs = new Set(['deadlines','courses','milestones','board','calendar']);
+    const validTabs = new Set(['deadlines','courses','milestones','board','calendar','teamtasks']);
     return stored && validTabs.has(stored) ? stored : 'deadlines';
   });
   const milestoneSort = 'status';
@@ -3563,6 +3563,18 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     if (initialUserId) setUserId(initialUserId);
   }, [initialUserId]);
   const user = members.find((m) => m.id === userId);
+  const isPmUser = user?.roleType === 'PM';
+
+  useEffect(() => {
+    if (!isPmUser && activeTab === 'teamtasks') {
+      setActiveTab('deadlines');
+    }
+  }, [isPmUser, activeTab]);
+
+  const tabsToRender = useMemo(() => {
+    if (!isPmUser) return dashboardTabs;
+    return [...dashboardTabs, { id: 'teamtasks', label: 'Team Tasks', Icon: Users }];
+  }, [dashboardTabs, isPmUser]);
 
   const blockAggregatesDashboard = useMemo(
     () => aggregateBlocksByCourse(courses, members),
@@ -3641,6 +3653,86 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       return da - db;
     });
   }, [courses, userId]);
+
+  const teamTaskSummary = useMemo(() => {
+    if (!isPmUser) return [];
+    const memberMap = new Map();
+    myCoursesAll.forEach((course) => {
+      ensureArray(course?.team).forEach((member) => {
+        if (!member || !member.id || memberMap.has(member.id)) return;
+        memberMap.set(member.id, member);
+      });
+    });
+
+    const taskBuckets = new Map();
+    memberMap.forEach((_, id) => {
+      taskBuckets.set(id, []);
+    });
+
+    myCoursesAll.forEach((course) => {
+      const courseId = courseIdOf(course);
+      if (!courseId) return;
+      const courseName = course?.course?.name ?? course?.name ?? 'Untitled course';
+      const milestones = ensureArray(course?.milestones);
+      ensureArray(course?.tasks).forEach((task) => {
+        if (!task || task.status === 'skip') return;
+        const assigneeIds = getAssigneeIds(task);
+        if (!assigneeIds.length) return;
+        const milestoneName =
+          milestones.find((m) => m.id === task.milestoneId)?.title || '';
+        assigneeIds.forEach((assigneeId) => {
+          if (!taskBuckets.has(assigneeId)) return;
+          taskBuckets.get(assigneeId).push({
+            ...task,
+            courseId,
+            courseName,
+            milestoneName,
+          });
+        });
+      });
+    });
+
+    return Array.from(memberMap.values())
+      .map((member) => {
+        const tasks = taskBuckets.get(member.id) || [];
+        const counts = tasks.reduce(
+          (acc, task) => {
+            const status = task.status || 'todo';
+            if (status in acc) acc[status] += 1;
+            else acc.todo += 1;
+            return acc;
+          },
+          { todo: 0, inprogress: 0, blocked: 0, done: 0, skip: 0 }
+        );
+        const overdue = tasks.filter((task) => {
+          if (!task.dueDate) return false;
+          const dueTime = new Date(task.dueDate).getTime();
+          return !Number.isNaN(dueTime) && dueTime < todayTime && task.status !== 'done';
+        }).length;
+        const nextDueTask = [...tasks]
+          .filter((task) => task.dueDate && task.status !== 'done')
+          .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0] || null;
+
+        return {
+          member,
+          tasks: tasks.sort((a, b) => {
+            const da = a.dueDate ? new Date(a.dueDate).getTime() : Number.POSITIVE_INFINITY;
+            const db = b.dueDate ? new Date(b.dueDate).getTime() : Number.POSITIVE_INFINITY;
+            if (da !== db) return da - db;
+            return (a.courseName || '').localeCompare(b.courseName || '');
+          }),
+          counts,
+          overdue,
+          nextDueTask,
+        };
+      })
+      .sort((a, b) => {
+        const aOpen = a.counts.todo + a.counts.inprogress + a.counts.blocked;
+        const bOpen = b.counts.todo + b.counts.inprogress + b.counts.blocked;
+        if (aOpen !== bOpen) return bOpen - aOpen;
+        return (a.member?.name || '').localeCompare(b.member?.name || '');
+      });
+  }, [isPmUser, myCoursesAll, todayTime]);
   const groupedTasks = useMemo(() => {
     const g = { todo: [], inprogress: [], blocked: [], done: [], skip: [] };
     myTasks.forEach((t) => { if (g[t.status]) g[t.status].push(t); });
@@ -3783,7 +3875,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             </h2>
           )}
         <div className="mb-4 flex flex-wrap gap-2">
-          {dashboardTabs.map(({ id, label, Icon }) => {
+          {tabsToRender.map(({ id, label, Icon }) => {
             const ButtonIcon = Icon;
             const cls = activeTab === id ? 'glass-button-primary' : 'glass-button';
             return (
@@ -4349,6 +4441,73 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               )}
             </SectionCard>
           )}
+
+          {activeTab === 'teamtasks' && isPmUser && (
+            <SectionCard title="Team Tasks (PM Summary)">
+              {teamTaskSummary.length === 0 ? (
+                <div className="text-sm text-slate-700">No team task data available for your courses.</div>
+              ) : (
+                <div className="space-y-3">
+                  {teamTaskSummary.map(({ member, tasks, counts, overdue, nextDueTask }) => {
+                    const openCount = counts.todo + counts.inprogress + counts.blocked;
+                    const totalCount = openCount + counts.done;
+                    const progress = totalCount ? Math.round((counts.done / totalCount) * 100) : 0;
+                    return (
+                      <details key={member.id} className="glass-card group">
+                        <summary className="cursor-pointer list-none select-none p-4 flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+                          <div className="min-w-0 flex items-center gap-3">
+                            <ChevronDown className="icon transition-transform group-open:rotate-180" />
+                            <Avatar name={member.name} roleType={member.roleType} avatar={member.avatar} className="w-8 h-8 text-[14px]" />
+                            <div className="min-w-0">
+                              <div className="font-semibold text-slate-800 truncate">{member.name}</div>
+                              <div className="text-xs text-slate-600">{member.roleType}</div>
+                            </div>
+                          </div>
+                          <div className="text-right text-xs sm:text-sm text-slate-700">
+                            <div>Open: <b>{openCount}</b> · Done: <b>{counts.done}</b></div>
+                            <div className={overdue ? 'text-red-600 font-medium' : 'text-slate-500'}>
+                              Overdue: {overdue}
+                            </div>
+                          </div>
+                        </summary>
+                        <div className="px-4 pb-4 space-y-3">
+                          <div className="h-2 rounded bg-slate-100 overflow-hidden">
+                            <div className="h-2 rounded bg-emerald-500" style={{ width: `${progress}%` }} />
+                          </div>
+                          <div className="text-xs text-slate-600">
+                            To do {counts.todo} · In progress {counts.inprogress} · Blocked {counts.blocked} · Done {counts.done}
+                          </div>
+                          <div className="text-xs text-slate-600">
+                            Next due: {nextDueTask?.dueDate || '—'}
+                          </div>
+                          {!tasks.length ? (
+                            <div className="text-sm text-slate-700">No assigned tasks.</div>
+                          ) : (
+                            <ul className="space-y-2">
+                              {tasks.slice(0, 8).map((task) => (
+                                <li key={`${member.id}-${task.id}`} className="rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm">
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditing({ courseId: task.courseId, taskId: task.id })}
+                                    className="w-full text-left"
+                                  >
+                                    <div className="font-medium text-slate-800 truncate">{task.title || 'Untitled task'}</div>
+                                    <div className="text-xs text-slate-600 truncate">
+                                      {task.courseName}{task.milestoneName ? ` · ${task.milestoneName}` : ''} · {statusLabel[task.status] || task.status} · Due {task.dueDate || '—'}
+                                    </div>
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+          )}
         </div>
         {editing && (() => {
           const courseEntry = courses.find((x) => courseIdOf(x) === editing.courseId);
@@ -4439,6 +4598,9 @@ function TemplatesHub({
   onCreatePlatformBackup,
   initialSection = 'course',
 }) {
+  const [courseSectionCollapsed, setCourseSectionCollapsed] = useState(true);
+  const [milestoneSectionCollapsed, setMilestoneSectionCollapsed] = useState(true);
+  const [taskSectionCollapsed, setTaskSectionCollapsed] = useState(true);
   const [milestoneDrafts, setMilestoneDrafts] = useState({});
   const [taskDrafts, setTaskDrafts] = useState({});
   const [expandedMilestoneTemplateId, setExpandedMilestoneTemplateId] = useState(null);
@@ -4463,6 +4625,14 @@ function TemplatesHub({
     const target = map[initialSection] || map.course;
     if (target?.current) {
       target.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    if (initialSection === 'course') {
+      setCourseSectionCollapsed(false);
+    } else if (initialSection === 'milestone') {
+      setMilestoneSectionCollapsed(false);
+    } else if (initialSection === 'task') {
+      setTaskSectionCollapsed(false);
     }
   }, [initialSection]);
 
@@ -4573,7 +4743,7 @@ function TemplatesHub({
   const createMilestoneTemplate = useCallback(async () => {
     await maybeBackupBeforeMutation();
     const newTemplate = { id: uid(), title: 'New template', goal: '', tasks: [] };
-    const updated = [...milestoneTemplates, newTemplate];
+    const updated = [newTemplate, ...milestoneTemplates];
     const saved = await persistMilestoneTemplates(updated);
     if (!saved) return;
     if (newTemplate.id) setExpandedMilestoneTemplateId(newTemplate.id);
@@ -4817,7 +4987,7 @@ function TemplatesHub({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    const saved = await persistTaskTemplates([...taskTemplates, entry]);
+    const saved = await persistTaskTemplates([entry, ...taskTemplates]);
     if (!saved) return;
     setExpandedTaskTemplateId(entry.id);
   }, [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]);
@@ -5037,6 +5207,13 @@ function TemplatesHub({
           title="Course Template"
           actions={
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setCourseSectionCollapsed((value) => !value)}
+                className="glass-button"
+                aria-expanded={!courseSectionCollapsed}
+              >
+                {courseSectionCollapsed ? 'Expand' : 'Collapse'}
+              </button>
               <button onClick={createCourseTemplate} className="glass-button inline-flex items-center gap-2">
                 <Plus className="icon" />
                 <span>New Template</span>
@@ -5063,9 +5240,13 @@ function TemplatesHub({
             </div>
           }
         >
-          <div className="text-sm text-slate-700">
-            The course template is the baseline blueprint for newly created courses. Use import/export for migration and backups.
-          </div>
+          {courseSectionCollapsed ? (
+            <div className="text-sm text-slate-700">Section collapsed. Expand to manage the course template.</div>
+          ) : (
+            <div className="text-sm text-slate-700">
+              The course template is the baseline blueprint for newly created courses. Use import/export for migration and backups.
+            </div>
+          )}
         </SectionCard>
         </div>
 
@@ -5073,9 +5254,22 @@ function TemplatesHub({
         <SectionCard
           title="Milestone Templates"
           className="border border-emerald-200/80 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/70"
-          actions={<button onClick={createMilestoneTemplate} className="glass-button">New Milestone Template</button>}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setMilestoneSectionCollapsed((value) => !value)}
+                className="glass-button"
+                aria-expanded={!milestoneSectionCollapsed}
+              >
+                {milestoneSectionCollapsed ? 'Expand' : 'Collapse'}
+              </button>
+              <button onClick={createMilestoneTemplate} className="glass-button">New Milestone Template</button>
+            </div>
+          }
         >
-          {!milestoneTemplates.length ? (
+          {milestoneSectionCollapsed ? (
+            <div className="text-sm text-slate-700">Section collapsed. Expand to manage milestone templates.</div>
+          ) : !milestoneTemplates.length ? (
             <div className="text-sm text-slate-700">No milestone templates yet.</div>
           ) : (
             <div className="space-y-3">
@@ -5380,6 +5574,13 @@ function TemplatesHub({
           className="border border-sky-200/80 bg-gradient-to-br from-sky-50/80 via-white to-indigo-50/70"
           actions={
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setTaskSectionCollapsed((value) => !value)}
+                className="glass-button"
+                aria-expanded={!taskSectionCollapsed}
+              >
+                {taskSectionCollapsed ? 'Expand' : 'Collapse'}
+              </button>
               <button onClick={createTaskTemplate} className="glass-button">New Task Template</button>
               <button
                 onClick={() => downloadAsJson('dart-task-templates', taskTemplates)}
@@ -5405,7 +5606,9 @@ function TemplatesHub({
             </div>
           }
         >
-          {!taskTemplates.length ? (
+          {taskSectionCollapsed ? (
+            <div className="text-sm text-slate-700">Section collapsed. Expand to manage task templates.</div>
+          ) : !taskTemplates.length ? (
             <div className="text-sm text-slate-700">No task templates yet.</div>
           ) : (
             <div className="space-y-3">
