@@ -4760,6 +4760,8 @@ function TemplatesHub({
 }) {
   const [milestoneDrafts, setMilestoneDrafts] = useState({});
   const [taskDrafts, setTaskDrafts] = useState({});
+  const [expandedMilestoneTemplateId, setExpandedMilestoneTemplateId] = useState(null);
+  const [expandedTaskTemplateId, setExpandedTaskTemplateId] = useState(null);
   const taskImportRef = useRef(null);
   const courseImportRef = useRef(null);
 
@@ -4842,6 +4844,8 @@ function TemplatesHub({
     await maybeBackupBeforeMutation();
     const updated = createEmptyMilestoneTemplate();
     onChangeMilestoneTemplates?.(updated);
+    const created = updated[updated.length - 1];
+    if (created?.id) setExpandedMilestoneTemplateId(created.id);
   }, [maybeBackupBeforeMutation, onChangeMilestoneTemplates]);
 
   const deleteMilestoneTemplate = useCallback(
@@ -4856,6 +4860,7 @@ function TemplatesHub({
         delete next[id];
         return next;
       });
+      setExpandedMilestoneTemplateId((prev) => (prev === id ? null : prev));
     },
     [maybeBackupBeforeMutation, onChangeMilestoneTemplates]
   );
@@ -4872,6 +4877,7 @@ function TemplatesHub({
       updatedAt: Date.now(),
     });
     persistTaskTemplates([...taskTemplates, entry]);
+    setExpandedTaskTemplateId(entry.id);
   }, [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]);
 
   const duplicateTaskTemplate = useCallback(
@@ -4902,6 +4908,7 @@ function TemplatesHub({
         delete next[id];
         return next;
       });
+      setExpandedTaskTemplateId((prev) => (prev === id ? null : prev));
     },
     [maybeBackupBeforeMutation, persistTaskTemplates, taskTemplates]
   );
@@ -5052,39 +5059,77 @@ function TemplatesHub({
           {!milestoneTemplates.length ? (
             <div className="text-sm text-slate-700">No milestone templates yet.</div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-3">
+              <div className="text-xs text-slate-500">Click a template to expand and edit.</div>
               {milestoneTemplates.map((tpl) => {
                 const draft = milestoneDrafts[tpl.id] || { title: tpl.title || '', goal: tpl.goal || '' };
+                const isExpanded = expandedMilestoneTemplateId === tpl.id;
+                const templateTasks = ensureArray(tpl.tasks);
                 return (
-                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm space-y-3">
-                    <div className="text-xs text-slate-500">{ensureArray(tpl.tasks).length} task(s)</div>
-                    <input
-                      value={draft.title}
-                      onChange={(e) =>
-                        setMilestoneDrafts((prev) => ({
-                          ...prev,
-                          [tpl.id]: { ...(prev[tpl.id] || {}), title: e.target.value, goal: (prev[tpl.id]?.goal ?? tpl.goal ?? '') },
-                        }))
-                      }
-                      onBlur={() => saveMilestoneDraft(tpl.id)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                      placeholder="Template title"
-                    />
-                    <textarea
-                      value={draft.goal}
-                      onChange={(e) =>
-                        setMilestoneDrafts((prev) => ({
-                          ...prev,
-                          [tpl.id]: { ...(prev[tpl.id] || {}), title: (prev[tpl.id]?.title ?? tpl.title ?? ''), goal: e.target.value },
-                        }))
-                      }
-                      onBlur={() => saveMilestoneDraft(tpl.id)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[84px]"
-                      placeholder="Goal"
-                    />
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => deleteMilestoneTemplate(tpl.id)} className="glass-button-danger">Delete</button>
-                    </div>
+                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedMilestoneTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
+                      className="w-full flex items-center justify-between gap-3 text-left"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-800 truncate">{tpl.title || 'Untitled template'}</div>
+                        <div className="text-xs text-slate-500">{templateTasks.length} task(s)</div>
+                      </div>
+                      {isExpanded ? <ChevronUp className="icon" /> : <ChevronDown className="icon" />}
+                    </button>
+
+                    {isExpanded ? (
+                      <div className="mt-3 space-y-3">
+                        <input
+                          value={draft.title}
+                          onChange={(e) =>
+                            setMilestoneDrafts((prev) => ({
+                              ...prev,
+                              [tpl.id]: { ...(prev[tpl.id] || {}), title: e.target.value, goal: (prev[tpl.id]?.goal ?? tpl.goal ?? '') },
+                            }))
+                          }
+                          onBlur={() => saveMilestoneDraft(tpl.id)}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="Template title"
+                        />
+                        <textarea
+                          value={draft.goal}
+                          onChange={(e) =>
+                            setMilestoneDrafts((prev) => ({
+                              ...prev,
+                              [tpl.id]: { ...(prev[tpl.id] || {}), title: (prev[tpl.id]?.title ?? tpl.title ?? ''), goal: e.target.value },
+                            }))
+                          }
+                          onBlur={() => saveMilestoneDraft(tpl.id)}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[84px]"
+                          placeholder="Goal"
+                        />
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+                          <div className="text-xs font-semibold text-slate-600 mb-2">Template Tasks</div>
+                          {!templateTasks.length ? (
+                            <div className="text-xs text-slate-500">No tasks saved under this milestone template yet.</div>
+                          ) : (
+                            <ul className="space-y-2">
+                              {templateTasks.map((task) => (
+                                <li key={task.id} className="rounded-lg bg-white border border-slate-200 p-2">
+                                  <div className="text-sm font-medium text-slate-800">{task.title || 'Untitled task'}</div>
+                                  <div className="text-xs text-slate-500">Workdays: {Number(task.workDays) || 1}</div>
+                                  {task.details ? (
+                                    <div className="text-xs text-slate-600 mt-1 whitespace-pre-wrap">{task.details}</div>
+                                  ) : null}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => deleteMilestoneTemplate(tpl.id)} className="glass-button-danger">Delete</button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -5124,72 +5169,90 @@ function TemplatesHub({
           {!taskTemplates.length ? (
             <div className="text-sm text-slate-700">No task templates yet.</div>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-3">
+              <div className="text-xs text-slate-500">Click a task template to expand and edit.</div>
               {taskTemplates.map((tpl) => {
                 const draft = taskDrafts[tpl.id] || {
                   title: tpl.title || '',
                   details: tpl.details || '',
                   workDays: String(tpl.workDays ?? 1),
                 };
+                const isExpanded = expandedTaskTemplateId === tpl.id;
                 return (
-                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm space-y-3">
-                    <input
-                      value={draft.title}
-                      onChange={(e) =>
-                        setTaskDrafts((prev) => ({
-                          ...prev,
-                          [tpl.id]: {
-                            title: e.target.value,
-                            details: prev[tpl.id]?.details ?? tpl.details ?? '',
-                            workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
-                          },
-                        }))
-                      }
-                      onBlur={() => saveTaskDraft(tpl.id)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                      placeholder="Task template title"
-                    />
-                    <textarea
-                      value={draft.details}
-                      onChange={(e) =>
-                        setTaskDrafts((prev) => ({
-                          ...prev,
-                          [tpl.id]: {
-                            title: prev[tpl.id]?.title ?? tpl.title ?? '',
-                            details: e.target.value,
-                            workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
-                          },
-                        }))
-                      }
-                      onBlur={() => saveTaskDraft(tpl.id)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[84px]"
-                      placeholder="Details"
-                    />
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Default Workdays</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={365}
-                        value={draft.workDays}
-                        onChange={(e) =>
-                          setTaskDrafts((prev) => ({
-                            ...prev,
-                            [tpl.id]: {
-                              title: prev[tpl.id]?.title ?? tpl.title ?? '',
-                              details: prev[tpl.id]?.details ?? tpl.details ?? '',
-                              workDays: e.target.value,
-                            },
-                          }))
-                        }
-                        onBlur={() => saveTaskDraft(tpl.id)}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => duplicateTaskTemplate(tpl.id)} className="glass-button">Duplicate</button>
-                      <button onClick={() => deleteTaskTemplate(tpl.id)} className="glass-button-danger">Delete</button>
-                    </div>
+                  <div key={tpl.id} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedTaskTemplateId((prev) => (prev === tpl.id ? null : tpl.id))}
+                      className="w-full flex items-center justify-between gap-3 text-left"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-slate-800 truncate">{tpl.title || 'Untitled task template'}</div>
+                        <div className="text-xs text-slate-500">Default workdays: {Number(tpl.workDays) || 1}</div>
+                      </div>
+                      {isExpanded ? <ChevronUp className="icon" /> : <ChevronDown className="icon" />}
+                    </button>
+
+                    {isExpanded ? (
+                      <div className="mt-3 space-y-3">
+                        <input
+                          value={draft.title}
+                          onChange={(e) =>
+                            setTaskDrafts((prev) => ({
+                              ...prev,
+                              [tpl.id]: {
+                                title: e.target.value,
+                                details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                                workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
+                              },
+                            }))
+                          }
+                          onBlur={() => saveTaskDraft(tpl.id)}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="Task template title"
+                        />
+                        <textarea
+                          value={draft.details}
+                          onChange={(e) =>
+                            setTaskDrafts((prev) => ({
+                              ...prev,
+                              [tpl.id]: {
+                                title: prev[tpl.id]?.title ?? tpl.title ?? '',
+                                details: e.target.value,
+                                workDays: prev[tpl.id]?.workDays ?? String(tpl.workDays ?? 1),
+                              },
+                            }))
+                          }
+                          onBlur={() => saveTaskDraft(tpl.id)}
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm min-h-[84px]"
+                          placeholder="Details"
+                        />
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-600 mb-1">Default Workdays</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={draft.workDays}
+                            onChange={(e) =>
+                              setTaskDrafts((prev) => ({
+                                ...prev,
+                                [tpl.id]: {
+                                  title: prev[tpl.id]?.title ?? tpl.title ?? '',
+                                  details: prev[tpl.id]?.details ?? tpl.details ?? '',
+                                  workDays: e.target.value,
+                                },
+                              }))
+                            }
+                            onBlur={() => saveTaskDraft(tpl.id)}
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => duplicateTaskTemplate(tpl.id)} className="glass-button">Duplicate</button>
+                          <button onClick={() => deleteTaskTemplate(tpl.id)} className="glass-button-danger">Delete</button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
