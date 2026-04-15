@@ -38,6 +38,13 @@ const isLikelyCourseCode = (value) => {
   return /^[A-Z]{2,8}$/.test(token);
 };
 
+const resolveCourseCode = (name, code) => {
+  const cleanCode = typeof code === "string" ? code.trim() : "";
+  if (cleanCode) return cleanCode;
+  const cleanName = typeof name === "string" ? name.trim() : "";
+  return isLikelyCourseCode(cleanName) ? cleanName : "";
+};
+
 const resolveCourseTitle = (name, description, code) => {
   const cleanName = typeof name === "string" ? name.trim() : "";
   const cleanDescription = typeof description === "string" ? description.trim() : "";
@@ -117,7 +124,10 @@ export default function TaskModal({ task, courseId, courses, courseName = "", co
     selectedCourse?.course?.description ?? selectedCourse?.description ?? courseDescription,
     selectedCourse?.course?.code ?? selectedCourse?.code ?? courseCode
   );
-  const selectedCourseCode = selectedCourse?.course?.code ?? selectedCourse?.code ?? courseCode;
+  const selectedCourseCode = resolveCourseCode(
+    selectedCourse?.course?.name ?? selectedCourse?.name ?? courseName,
+    selectedCourse?.course?.code ?? selectedCourse?.code ?? courseCode
+  );
   const selectedCourseLabel = formatCourseLabel(selectedCourseName, selectedCourseCode);
   const canAddAssignee = team.some((member) => !assigneeIds.includes(member.id));
   const commitAssignees = (ids) => {
@@ -188,7 +198,7 @@ export default function TaskModal({ task, courseId, courses, courseName = "", co
                 <option key={c.course.id} value={c.course.id}>
                   {formatCourseLabel(
                     resolveCourseTitle(c?.course?.name ?? c?.name, c?.course?.description ?? c?.description, c?.course?.code ?? c?.code),
-                    c?.course?.code ?? c?.code
+                    resolveCourseCode(c?.course?.name ?? c?.name, c?.course?.code ?? c?.code)
                   )}
                 </option>
               ))}

@@ -3121,6 +3121,13 @@ const isLikelyCourseCode = (value) => {
   return /^[A-Z]{2,8}$/.test(token);
 };
 
+const resolveCourseCode = (name, code) => {
+  const cleanCode = typeof code === 'string' ? code.trim() : '';
+  if (cleanCode) return cleanCode;
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  return isLikelyCourseCode(cleanName) ? cleanName : '';
+};
+
 const resolveCourseTitle = (name, description, code) => {
   const cleanName = typeof name === 'string' ? name.trim() : '';
   const cleanDescription = typeof description === 'string' ? description.trim() : '';
@@ -3704,8 +3711,10 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     ensureArray(courses).forEach((course) => {
       const courseId = courseIdOf(course);
       if (!courseId) return;
+      const rawCourseName = course?.course?.name ?? course?.name ?? "";
+      const rawCourseCode = course?.course?.code ?? course?.code ?? "";
       const courseName = getCourseName(course);
-      const courseCode = course?.course?.code ?? course?.code ?? "";
+      const courseCode = resolveCourseCode(rawCourseName, rawCourseCode);
       const courseDescription = course?.course?.description ?? course?.description ?? "";
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
@@ -3752,8 +3761,10 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     myCoursesAll.forEach((course) => {
       const courseId = courseIdOf(course);
       if (!courseId) return;
+      const rawCourseName = course?.course?.name ?? course?.name ?? '';
+      const rawCourseCode = course?.course?.code ?? course?.code ?? '';
       const courseName = getCourseName(course);
-      const courseCode = course?.course?.code ?? course?.code ?? '';
+      const courseCode = resolveCourseCode(rawCourseName, rawCourseCode);
       const courseDescription = course?.course?.description ?? course?.description ?? '';
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {

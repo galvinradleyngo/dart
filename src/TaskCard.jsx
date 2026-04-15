@@ -105,10 +105,11 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
     normalizedNameToken.length <= 12 &&
     (/\d/.test(normalizedNameToken) || /^[A-Z]{2,8}$/.test(normalizedNameToken))
   );
+  const effectiveCourseCode = courseCode || (nameLooksLikeCode ? courseName : '');
   const courseTitle = courseName && courseName !== courseCode
     ? (nameLooksLikeCode && courseDescription ? courseDescription : courseName)
     : courseDescription || courseName || 'Untitled course';
-  const courseLabel = courseCode ? `${courseCode}${courseTitle ? ` · ${courseTitle}` : ''}` : courseTitle;
+  const courseLabel = effectiveCourseCode ? `${effectiveCourseCode}${courseTitle ? ` · ${courseTitle}` : ''}` : courseTitle;
   const milestoneName = t.milestoneName || milestone?.title || 'Unassigned';
   const formatLinkLabel = (link) => {
     try {
