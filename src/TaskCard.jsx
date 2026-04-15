@@ -96,9 +96,13 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const isUserBoardVariant = variant === 'user-board';
   const isUserBoardCollapsed = isUserBoardVariant && collapsed;
   const hasCourseContext = Boolean(t.courseName || t.courseCode);
-  const courseName = t.courseName || 'Untitled course';
+  const courseName = typeof t.courseName === 'string' ? t.courseName.trim() : '';
+  const courseDescription = typeof t.courseDescription === 'string' ? t.courseDescription.trim() : '';
   const courseCode = typeof t.courseCode === 'string' ? t.courseCode.trim() : '';
-  const courseLabel = courseCode ? `${courseCode}${courseName ? ` · ${courseName}` : ''}` : courseName;
+  const courseTitle = courseName && courseName !== courseCode
+    ? courseName
+    : courseDescription || courseName || 'Untitled course';
+  const courseLabel = courseCode ? `${courseCode}${courseTitle ? ` · ${courseTitle}` : ''}` : courseTitle;
   const milestoneName = t.milestoneName || milestone?.title || 'Unassigned';
   const formatLinkLabel = (link) => {
     try {

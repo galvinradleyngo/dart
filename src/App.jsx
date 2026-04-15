@@ -3692,6 +3692,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       if (!courseId) return;
       const courseName = getCourseName(course);
       const courseCode = course?.course?.code ?? course?.code ?? "";
+      const courseDescription = course?.course?.description ?? course?.description ?? "";
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
         if (!task) return;
@@ -3704,6 +3705,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           courseId,
           courseName,
           courseCode,
+          courseDescription,
           milestoneName,
         });
       });
@@ -3738,6 +3740,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       if (!courseId) return;
       const courseName = getCourseName(course);
       const courseCode = course?.course?.code ?? course?.code ?? '';
+      const courseDescription = course?.course?.description ?? course?.description ?? '';
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
         if (!task || task.status === 'skip') return;
@@ -3752,6 +3755,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             courseId,
             courseName,
             courseCode,
+            courseDescription,
             milestoneName,
           });
         });
@@ -3955,7 +3959,10 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       ? 'bg-amber-100/80 text-amber-700 border-amber-200/80'
       : 'bg-white/80 text-slate-600 border-white/60';
     const pillLabel = isOverdue ? 'Overdue' : isDueToday ? 'Today' : 'Scheduled';
-    const courseLabel = formatCourseLabel(t.courseName, t.courseCode);
+    const courseLabel = formatCourseLabel(
+      resolveCourseTitle(t.courseName, t.courseDescription, t.courseCode),
+      t.courseCode
+    );
     return (
       <li key={t.id}>
         <div
@@ -4754,7 +4761,10 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   >
                                     <div className="font-medium text-slate-800 truncate">{task.title || 'Untitled task'}</div>
                                     <div className="text-xs text-slate-600 truncate">
-                                      {formatCourseLabel(task.courseName, task.courseCode)}{task.milestoneName ? ` · ${task.milestoneName}` : ''}
+                                      {formatCourseLabel(
+                                        resolveCourseTitle(task.courseName, task.courseDescription, task.courseCode),
+                                        task.courseCode
+                                      )}{task.milestoneName ? ` · ${task.milestoneName}` : ''}
                                     </div>
                                     <div className="mt-1 flex items-center gap-2">
                                       <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClasses[task.status] || statusBadgeClasses.todo}`}>
