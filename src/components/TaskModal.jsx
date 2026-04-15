@@ -18,7 +18,16 @@ function statusBg(status) {
   return "bg-sky-50";
 }
 
-export default function TaskModal({ task, courseId, courses, onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose, reporter = null }) {
+const formatCourseLabel = (name, code) => {
+  const cleanName = typeof name === "string" ? name.trim() : "";
+  const cleanCode = typeof code === "string" ? code.trim() : "";
+  if (cleanCode && cleanName) return `${cleanCode} · ${cleanName}`;
+  if (cleanCode) return cleanCode;
+  if (cleanName) return cleanName;
+  return "Untitled course";
+};
+
+export default function TaskModal({ task, courseId, courses, courseName = "", courseCode = "", onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose, reporter = null }) {
   const dialogRef = useRef(null);
   const [open, setOpen] = useState(false);
   const { fireOnDone } = useCompletionConfetti();
@@ -71,6 +80,12 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
   const assigneeIds = getAssigneeIds(task);
   const assigneeSlots = assigneeIds.length ? assigneeIds : [""];
   const assignees = assigneeSlots.map((id) => team.find((m) => m.id === id) || null);
+  const selectedCourse = Array.isArray(courses)
+    ? courses.find((entry) => entry?.course?.id === courseId || entry?.id === courseId)
+    : null;
+  const selectedCourseName = selectedCourse?.course?.name ?? selectedCourse?.name ?? courseName;
+  const selectedCourseCode = selectedCourse?.course?.code ?? selectedCourse?.code ?? courseCode;
+  const selectedCourseLabel = formatCourseLabel(selectedCourseName, selectedCourseCode);
   const canAddAssignee = team.some((member) => !assigneeIds.includes(member.id));
   const commitAssignees = (ids) => {
     const unique = Array.from(new Set(ids.filter(Boolean)));
@@ -111,6 +126,12 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             <div className="font-semibold">
               <InlineText value={task.title} onChange={(v) => onUpdate(task.id, { title: v })} />
             </div>
+            <div
+              className="mt-1 inline-flex max-w-full items-center rounded-full border border-sky-200/80 bg-sky-100/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700"
+              title={selectedCourseLabel}
+            >
+              <span className="truncate">{selectedCourseLabel}</span>
+            </div>
             <div className="text-sm text-black/60">
               <InlineText
                 value={task.details}
@@ -132,7 +153,7 @@ export default function TaskModal({ task, courseId, courses, onChangeCourse, tas
             >
               {courses.map((c) => (
                 <option key={c.course.id} value={c.course.id}>
-                  {c.course.name}
+                  {formatCourseLabel(c?.course?.name ?? c?.name, c?.course?.code ?? c?.code)}
                 </option>
               ))}
             </select>

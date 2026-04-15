@@ -95,7 +95,10 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const milestone = milestones.find((m) => m.id === t.milestoneId);
   const isUserBoardVariant = variant === 'user-board';
   const isUserBoardCollapsed = isUserBoardVariant && collapsed;
+  const hasCourseContext = Boolean(t.courseName || t.courseCode);
   const courseName = t.courseName || 'Untitled course';
+  const courseCode = typeof t.courseCode === 'string' ? t.courseCode.trim() : '';
+  const courseLabel = courseCode ? `${courseCode}${courseName ? ` · ${courseName}` : ''}` : courseName;
   const milestoneName = t.milestoneName || milestone?.title || 'Unassigned';
   const formatLinkLabel = (link) => {
     try {
@@ -190,8 +193,11 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
       {collapsed ? (
         isUserBoardVariant ? (
           <div className="mt-2 flex flex-col gap-2 text-sm text-slate-700">
-            <div className="text-[13px] font-semibold text-slate-700 truncate" title={courseName}>
-              {courseName}
+            <div
+              className="inline-flex max-w-full items-center self-start rounded-full border border-sky-200/80 bg-sky-100/80 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700"
+              title={courseLabel}
+            >
+              <span className="truncate">{courseLabel}</span>
             </div>
             {t.dueDate && (
               <div>
@@ -342,6 +348,14 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
                   )}
                 </div>
                 <div className="text-xs text-slate-500/90 mt-1 truncate">
+                  {hasCourseContext && (
+                    <span
+                      className="mr-2 inline-flex max-w-full items-center rounded-full border border-sky-200/80 bg-sky-100/80 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700 align-middle"
+                      title={courseLabel}
+                    >
+                      <span className="truncate">{courseLabel}</span>
+                    </span>
+                  )}
                   {milestone ? milestone.title : '—'}
                 </div>
               </div>

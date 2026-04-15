@@ -593,7 +593,7 @@ const createSampleTasks = (today) => ([
 
 export const seed = ({ withSampleData = false } = {}) => {
   const base = {
-    course: { id: uid(), name: "Intro to Learning Design", description: "From analysis to deployment, track the whole build.", accent: "from-fuchsia-500 via-pink-500 to-rose-500", courseLDIds: [], courseSMEIds: [] },
+    course: { id: uid(), code: "", name: "Intro to Learning Design", description: "From analysis to deployment, track the whole build.", accent: "from-fuchsia-500 via-pink-500 to-rose-500", courseLDIds: [], courseSMEIds: [] },
     schedule: { workweek: [1,2,3,4,5], holidays: [] }, // back-compat; overridden by global
     team: [
       { id: uid(), name: "Alex Cruz", roleType: "LD",  color: roleColor("LD"),  accentColor: null, avatar: "" },
@@ -706,6 +706,11 @@ const remapSeed = (s) => {
   }));
   const LD = s.team.find((m) => m.roleType === "LD");
   const SME = s.team.find((m) => m.roleType === "SME");
+  const courseCode = typeof s.course?.code === "string" ? s.course.code.trim() : "";
+  s.course = {
+    ...s.course,
+    code: courseCode,
+  };
   s.course.courseLDIds  = s.course.courseLDIds?.length  ? s.course.courseLDIds  : (LD  ? [LD.id]  : []);
   s.course.courseSMEIds = s.course.courseSMEIds?.length ? s.course.courseSMEIds : (SME ? [SME.id] : []);
   const defaultLd = s.course.courseLDIds[0] ?? null;
@@ -1968,6 +1973,22 @@ useEffect(() => {
         <div className="max-w-7xl mx-auto px-4 pb-4 -mt-1 stack-sm sm:space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-semibold leading-tight flex-1 min-w-0 text-slate-800"><InlineText className="break-words" value={state.course.name} onChange={(v)=>updateCourseState((s)=>({ ...s, course: { ...s.course, name: v } }))} /></h1>
+            <label className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1.5 text-xs sm:text-sm shadow-sm">
+              <span className="font-semibold uppercase tracking-wide text-slate-600">Code</span>
+              <input
+                type="text"
+                value={state.course.code || ''}
+                onChange={(e) =>
+                  updateCourseState((s) => ({
+                    ...s,
+                    course: { ...s.course, code: e.target.value.toUpperCase() },
+                  }))
+                }
+                placeholder="e.g. CS101"
+                className="w-24 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs sm:text-sm font-semibold uppercase tracking-wide text-slate-700 outline-none focus:ring-2 focus:ring-slate-300"
+                aria-label="Course code"
+              />
+            </label>
             {isTemplateLabel && <span className="text-sm font-medium px-3 py-1 rounded-full bg-violet-100/80 text-violet-700 border border-violet-200/70 shadow-[0_10px_18px_rgba(79,70,229,0.18)] whitespace-nowrap">Course Template</span>}
           </div>
           <div className="flex flex-col gap-2 text-sm sm:mt-0 sm:flex-row sm:items-center sm:gap-4">
@@ -2689,6 +2710,9 @@ useEffect(() => {
           {editingTask && (
             <TaskModal
               task={editingTask}
+              courseId={state.course.id}
+              courseName={state.course.name}
+              courseCode={state.course.code || ''}
               tasks={state.tasks}
               team={team}
               milestones={milestones}
@@ -3075,6 +3099,15 @@ export function BoardView({ tasks, team, milestones, onUpdate, onDelete, onDragS
 export const UPCOMING_DAYS = 15;
 
 const courseIdOf = (course) => course?.course?.id ?? course?.id ?? null;
+
+const formatCourseLabel = (name, code) => {
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  const cleanCode = typeof code === 'string' ? code.trim() : '';
+  if (cleanCode && cleanName) return `${cleanCode} · ${cleanName}`;
+  if (cleanCode) return cleanCode;
+  if (cleanName) return cleanName;
+  return 'Untitled course';
+};
 
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
@@ -3620,11 +3653,12 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   );
   const myCourses = useMemo(
     () =>
-      myCoursesAll.filter((course) =>
-        (course.course?.name || "")
-          .toLowerCase()
-          .includes(courseQuery.toLowerCase())
-      ),
+      myCoursesAll.filter((course) => {
+        const query = courseQuery.toLowerCase();
+        const name = (course.course?.name || "").toLowerCase();
+        const code = (course.course?.code || "").toLowerCase();
+        return name.includes(query) || code.includes(query);
+      }),
     [myCoursesAll, courseQuery]
   );
   const myTasks = useMemo(() => {
@@ -3633,6 +3667,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       const courseId = courseIdOf(course);
       if (!courseId) return;
       const courseName = course?.course?.name ?? course?.name ?? "Untitled course";
+      const courseCode = course?.course?.code ?? course?.code ?? "";
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
         if (!task) return;
@@ -3644,6 +3679,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           ...task,
           courseId,
           courseName,
+          courseCode,
           milestoneName,
         });
       });
@@ -3677,6 +3713,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       const courseId = courseIdOf(course);
       if (!courseId) return;
       const courseName = course?.course?.name ?? course?.name ?? 'Untitled course';
+      const courseCode = course?.course?.code ?? course?.code ?? '';
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
         if (!task || task.status === 'skip') return;
@@ -3690,6 +3727,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
             ...task,
             courseId,
             courseName,
+            courseCode,
             milestoneName,
           });
         });
@@ -3893,6 +3931,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
       ? 'bg-amber-100/80 text-amber-700 border-amber-200/80'
       : 'bg-white/80 text-slate-600 border-white/60';
     const pillLabel = isOverdue ? 'Overdue' : isDueToday ? 'Today' : 'Scheduled';
+    const courseLabel = formatCourseLabel(t.courseName, t.courseCode);
     return (
       <li key={t.id}>
         <div
@@ -3901,7 +3940,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           <input
             type="checkbox"
             className="h-5 w-5 shrink-0 rounded-full border-2 border-slate-300 text-emerald-500 focus:ring-2 focus:ring-emerald-300"
-            aria-label={`${t.title} for ${t.milestoneName} in ${t.courseName}`}
+            aria-label={`${t.title} for ${t.milestoneName} in ${courseLabel}`}
             checked={t.status === 'done'}
             onChange={(e) =>
               updateTaskStatus(
@@ -3914,14 +3953,17 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           <button
             onClick={() => setEditing({ courseId: t.courseId, taskId: t.id })}
             className="flex-1 min-w-0 text-left"
-            title={`${t.title} – ${t.milestoneName} – ${t.courseName}`}
-            aria-label={`${t.title} for ${t.milestoneName} in ${t.courseName}`}
+            title={`${t.title} – ${t.milestoneName} – ${courseLabel}`}
+            aria-label={`${t.title} for ${t.milestoneName} in ${courseLabel}`}
           >
+            <div className="mb-1 inline-flex max-w-full items-center rounded-full border border-sky-200/80 bg-sky-100/70 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700" title={courseLabel}>
+              <span className="truncate">{courseLabel}</span>
+            </div>
             <div className="truncate text-[15px] font-medium leading-tight">
               {t.title || 'Untitled task'}
             </div>
             <div className="mt-0.5 truncate text-xs text-slate-600/80">
-              for {t.milestoneName} • {t.courseName}
+              for {t.milestoneName || 'Unassigned milestone'}
             </div>
           </button>
           <span className={`self-start rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide shadow-sm backdrop-blur ${pillTone}`}>
@@ -4688,7 +4730,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                                   >
                                     <div className="font-medium text-slate-800 truncate">{task.title || 'Untitled task'}</div>
                                     <div className="text-xs text-slate-600 truncate">
-                                      {task.courseName}{task.milestoneName ? ` · ${task.milestoneName}` : ''}
+                                      {formatCourseLabel(task.courseName, task.courseCode)}{task.milestoneName ? ` · ${task.milestoneName}` : ''}
                                     </div>
                                     <div className="mt-1 flex items-center gap-2">
                                       <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClasses[task.status] || statusBadgeClasses.todo}`}>
@@ -4715,11 +4757,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
           const courseId = courseIdOf(courseEntry);
           const task = ensureArray(courseEntry?.tasks).find((item) => item.id === editing.taskId);
           if (!courseEntry || !task || !courseId) return null;
+          const courseMeta = courseEntry?.course || courseEntry;
           return (
             <TaskModal
               task={task}
               courseId={courseId}
               courses={myCoursesAll}
+              courseName={courseMeta?.name || ''}
+              courseCode={courseMeta?.code || ''}
               onChangeCourse={(toId) => changeTaskCourse(courseId, task.id, toId)}
               tasks={ensureArray(courseEntry.tasks)}
               team={ensureArray(courseEntry.team)}
