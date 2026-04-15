@@ -99,8 +99,14 @@ export default function TaskCard({ task: t, team = [], milestones = [], tasks = 
   const courseName = typeof t.courseName === 'string' ? t.courseName.trim() : '';
   const courseDescription = typeof t.courseDescription === 'string' ? t.courseDescription.trim() : '';
   const courseCode = typeof t.courseCode === 'string' ? t.courseCode.trim() : '';
+  const normalizedNameToken = courseName.replace(/\s+/g, '').toUpperCase();
+  const nameLooksLikeCode = Boolean(
+    normalizedNameToken &&
+    normalizedNameToken.length <= 12 &&
+    (/\d/.test(normalizedNameToken) || /^[A-Z]{2,8}$/.test(normalizedNameToken))
+  );
   const courseTitle = courseName && courseName !== courseCode
-    ? courseName
+    ? (nameLooksLikeCode && courseDescription ? courseDescription : courseName)
     : courseDescription || courseName || 'Untitled course';
   const courseLabel = courseCode ? `${courseCode}${courseTitle ? ` · ${courseTitle}` : ''}` : courseTitle;
   const milestoneName = t.milestoneName || milestone?.title || 'Unassigned';

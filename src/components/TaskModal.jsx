@@ -30,10 +30,24 @@ const formatCourseLabel = (name, code) => {
 const normalizeCourseToken = (value) =>
   (typeof value === "string" ? value : "").replace(/\s+/g, "").toUpperCase();
 
+const isLikelyCourseCode = (value) => {
+  const token = normalizeCourseToken(value);
+  if (!token) return false;
+  if (token.length > 12) return false;
+  if (/\d/.test(token)) return true;
+  return /^[A-Z]{2,8}$/.test(token);
+};
+
 const resolveCourseTitle = (name, description, code) => {
   const cleanName = typeof name === "string" ? name.trim() : "";
   const cleanDescription = typeof description === "string" ? description.trim() : "";
   const cleanCode = typeof code === "string" ? code.trim() : "";
+  const nameLooksLikeCode = isLikelyCourseCode(cleanName);
+
+  if (cleanDescription && nameLooksLikeCode) {
+    return cleanDescription;
+  }
+
   if (cleanName && (!cleanCode || normalizeCourseToken(cleanName) !== normalizeCourseToken(cleanCode))) {
     return cleanName;
   }
