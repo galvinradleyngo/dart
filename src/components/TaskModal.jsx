@@ -27,7 +27,22 @@ const formatCourseLabel = (name, code) => {
   return "Untitled course";
 };
 
-export default function TaskModal({ task, courseId, courses, courseName = "", courseCode = "", onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose, reporter = null }) {
+const normalizeCourseToken = (value) =>
+  (typeof value === "string" ? value : "").replace(/\s+/g, "").toUpperCase();
+
+const resolveCourseTitle = (name, description, code) => {
+  const cleanName = typeof name === "string" ? name.trim() : "";
+  const cleanDescription = typeof description === "string" ? description.trim() : "";
+  const cleanCode = typeof code === "string" ? code.trim() : "";
+  if (cleanName && (!cleanCode || normalizeCourseToken(cleanName) !== normalizeCourseToken(cleanCode))) {
+    return cleanName;
+  }
+  if (cleanDescription) return cleanDescription;
+  if (cleanName) return cleanName;
+  return "Untitled course";
+};
+
+export default function TaskModal({ task, courseId, courses, courseName = "", courseCode = "", courseDescription = "", onChangeCourse, tasks, team, milestones, onUpdate, onDelete, onAddLink, onRemoveLink, onClose, reporter = null }) {
   const dialogRef = useRef(null);
   const [open, setOpen] = useState(false);
   const { fireOnDone } = useCompletionConfetti();
@@ -83,7 +98,11 @@ export default function TaskModal({ task, courseId, courses, courseName = "", co
   const selectedCourse = Array.isArray(courses)
     ? courses.find((entry) => entry?.course?.id === courseId || entry?.id === courseId)
     : null;
-  const selectedCourseName = selectedCourse?.course?.name ?? selectedCourse?.name ?? courseName;
+  const selectedCourseName = resolveCourseTitle(
+    selectedCourse?.course?.name ?? selectedCourse?.name ?? courseName,
+    selectedCourse?.course?.description ?? selectedCourse?.description ?? courseDescription,
+    selectedCourse?.course?.code ?? selectedCourse?.code ?? courseCode
+  );
   const selectedCourseCode = selectedCourse?.course?.code ?? selectedCourse?.code ?? courseCode;
   const selectedCourseLabel = formatCourseLabel(selectedCourseName, selectedCourseCode);
   const canAddAssignee = team.some((member) => !assigneeIds.includes(member.id));
@@ -153,7 +172,10 @@ export default function TaskModal({ task, courseId, courses, courseName = "", co
             >
               {courses.map((c) => (
                 <option key={c.course.id} value={c.course.id}>
-                  {formatCourseLabel(c?.course?.name ?? c?.name, c?.course?.code ?? c?.code)}
+                  {formatCourseLabel(
+                    resolveCourseTitle(c?.course?.name ?? c?.name, c?.course?.description ?? c?.description, c?.course?.code ?? c?.code),
+                    c?.course?.code ?? c?.code
+                  )}
                 </option>
               ))}
             </select>

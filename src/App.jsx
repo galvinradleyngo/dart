@@ -2713,6 +2713,7 @@ useEffect(() => {
               courseId={state.course.id}
               courseName={state.course.name}
               courseCode={state.course.code || ''}
+              courseDescription={state.course.description || ''}
               tasks={state.tasks}
               team={team}
               milestones={milestones}
@@ -3109,13 +3110,26 @@ const formatCourseLabel = (name, code) => {
   return 'Untitled course';
 };
 
+const normalizeCourseToken = (value) =>
+  (typeof value === 'string' ? value : '').replace(/\s+/g, '').toUpperCase();
+
+const resolveCourseTitle = (name, description, code) => {
+  const cleanName = typeof name === 'string' ? name.trim() : '';
+  const cleanDescription = typeof description === 'string' ? description.trim() : '';
+  const cleanCode = typeof code === 'string' ? code.trim() : '';
+  if (cleanName && (!cleanCode || normalizeCourseToken(cleanName) !== normalizeCourseToken(cleanCode))) {
+    return cleanName;
+  }
+  if (cleanDescription) return cleanDescription;
+  if (cleanName) return cleanName;
+  return 'Untitled course';
+};
+
 const getCourseName = (course) => {
-  const name = typeof course?.course?.name === 'string'
-    ? course.course.name.trim()
-    : typeof course?.name === 'string'
-    ? course.name.trim()
-    : '';
-  return name || 'Untitled course';
+  const name = course?.course?.name ?? course?.name ?? '';
+  const description = course?.course?.description ?? course?.description ?? '';
+  const code = course?.course?.code ?? course?.code ?? '';
+  return resolveCourseTitle(name, description, code);
 };
 
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
@@ -3666,7 +3680,8 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
         const query = courseQuery.toLowerCase();
         const name = (course.course?.name || "").toLowerCase();
         const code = (course.course?.code || "").toLowerCase();
-        return name.includes(query) || code.includes(query);
+        const description = (course.course?.description || "").toLowerCase();
+        return name.includes(query) || code.includes(query) || description.includes(query);
       }),
     [myCoursesAll, courseQuery]
   );
@@ -4774,6 +4789,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
               courses={myCoursesAll}
               courseName={courseMeta?.name || ''}
               courseCode={courseMeta?.code || ''}
+              courseDescription={courseMeta?.description || ''}
               onChangeCourse={(toId) => changeTaskCourse(courseId, task.id, toId)}
               tasks={ensureArray(courseEntry.tasks)}
               team={ensureArray(courseEntry.team)}
