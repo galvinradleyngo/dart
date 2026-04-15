@@ -3153,6 +3153,15 @@ const getCourseName = (course) => {
   return resolveCourseTitle(name, description, code);
 };
 
+const getCourseLabel = (course) => {
+  const rawName = course?.course?.name ?? course?.name ?? '';
+  const rawDescription = course?.course?.description ?? course?.description ?? '';
+  const rawCode = course?.course?.code ?? course?.code ?? '';
+  const title = resolveCourseTitle(rawName, rawDescription, rawCode);
+  const code = resolveCourseCode(rawName, rawCode);
+  return formatCourseLabel(title, code);
+};
+
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
@@ -4357,7 +4366,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                   {myCourses.map((c, index) => {
                     const tasks = ensureArray(c?.tasks);
                     const courseId = c?.course?.id ?? c?.id ?? '';
-                    const courseName = c?.course?.name ?? c?.name ?? 'Untitled course';
+                    const courseLabel = getCourseLabel(c);
                     const tTotal = tasks.filter((t) => getAssigneeIds(t).includes(userId)).length;
                     const tDone = tasks.filter(
                       (t) =>
@@ -4369,7 +4378,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                       <li key={courseId || index} className="glass-card p-4 flex flex-col gap-2">
                         <div className="flex items-center justify-between">
                           <div className="min-w-0">
-                            <div className="font-medium truncate">{courseName}</div>
+                            <div className="font-medium truncate">{courseLabel}</div>
                             <div className="text-sm text-slate-700 truncate">{tTotal} task{tTotal!==1?'s':''}</div>
                           </div>
                           <button
@@ -4401,7 +4410,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                 <div className="space-y-4">
                   {myCourses.map((c, index) => {
                     const courseId = courseIdOf(c) || '';
-                    const courseName = c?.course?.name ?? c?.name ?? 'Untitled course';
+                    const courseLabel = getCourseLabel(c);
                     const courseTasks = ensureArray(c?.tasks);
                     const milestones = ensureArray(c?.milestones);
                     const milestoneEntries = milestones.map((m) => {
@@ -4483,7 +4492,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
                         <summary className="cursor-pointer select-none p-4 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
                           <div className="flex items-center gap-2">
                             <ChevronDown className="icon transition-transform group-open:rotate-180" />
-                            <div className="font-medium">{courseName}</div>
+                            <div className="font-medium">{courseLabel}</div>
                           </div>
                         </summary>
                         <div className="p-4 space-y-2">
