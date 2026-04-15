@@ -3109,6 +3109,15 @@ const formatCourseLabel = (name, code) => {
   return 'Untitled course';
 };
 
+const getCourseName = (course) => {
+  const name = typeof course?.course?.name === 'string'
+    ? course.course.name.trim()
+    : typeof course?.name === 'string'
+    ? course.name.trim()
+    : '';
+  return name || 'Untitled course';
+};
+
 export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   const [courses, setCourses] = useState(() => loadCourses());
   useEffect(() => {
@@ -3666,7 +3675,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     ensureArray(courses).forEach((course) => {
       const courseId = courseIdOf(course);
       if (!courseId) return;
-      const courseName = course?.course?.name ?? course?.name ?? "Untitled course";
+      const courseName = getCourseName(course);
       const courseCode = course?.course?.code ?? course?.code ?? "";
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
@@ -3712,7 +3721,7 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
     myCoursesAll.forEach((course) => {
       const courseId = courseIdOf(course);
       if (!courseId) return;
-      const courseName = course?.course?.name ?? course?.name ?? 'Untitled course';
+      const courseName = getCourseName(course);
       const courseCode = course?.course?.code ?? course?.code ?? '';
       const milestones = ensureArray(course?.milestones);
       ensureArray(course?.tasks).forEach((task) => {
