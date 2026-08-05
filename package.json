@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/prepareViteIndex.mjs && vite",
+    "build": "node scripts/prepareViteIndex.mjs && vite build && node scripts/syncLegacyPages.mjs",
     "preview": "vite preview --port 4173",
     "fix-milestones": "node scripts/fixMilestonesConflict.js",
     "test": "vitest"
