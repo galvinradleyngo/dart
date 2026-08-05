@@ -98,6 +98,7 @@ import {
   sanitizeCourseHistoryEntryData,
   normalizeCourseHistoryEntryList,
 } from "./courseHistoryStore.js";
+import { mergeCourseSnapshots } from "./courseSync.js";
 
 const DartLogo = ({ className = "" }) => (
   <img
@@ -3171,10 +3172,14 @@ export function UserDashboard({ onOpenCourse, initialUserId, onBack }) {
   }, []);
   useEffect(() => {
     (async () => {
-      const remote = await loadCoursesRemote();
-      if (remote.length) {
-        saveCourses(remote);
-        setCourses(remote);
+      const [remote, local] = await Promise.all([
+        loadCoursesRemote(),
+        Promise.resolve(loadCourses()),
+      ]);
+      const mergedCourses = mergeCourseSnapshots(local, remote);
+      if (mergedCourses.length) {
+        saveCourses(mergedCourses);
+        setCourses(mergedCourses);
       }
     })();
   }, []);
@@ -6689,12 +6694,16 @@ export function CoursesHub({
 
   useEffect(() => {
     (async () => {
-      const remoteCourses = await loadCoursesRemote();
-      if (remoteCourses.length) {
-        saveCourses(remoteCourses);
-        setCourses(remoteCourses);
+      const [remoteCourses, localCourses] = await Promise.all([
+        loadCoursesRemote(),
+        Promise.resolve(loadCourses()),
+      ]);
+      const mergedCourses = mergeCourseSnapshots(localCourses, remoteCourses);
+      if (mergedCourses.length) {
+        saveCourses(mergedCourses);
+        saveCoursesRemote(mergedCourses).catch(() => {});
+        setCourses(mergedCourses);
       } else {
-        const localCourses = loadCourses();
         setCourses(localCourses);
         if (localCourses.length) saveCoursesRemote(localCourses).catch(() => {});
       }
@@ -8147,11 +8156,17 @@ export default function PMApp() {
   }, []);
   useEffect(() => {
     (async () => {
-      const remote = await loadPeopleRemote();
-      if (remote.length) {
-        setPeople(remote);
-        savePeople(remote);
-        syncPeopleToCourses(remote);
+      const [remote, local] = await Promise.all([
+        loadPeopleRemote(),
+        Promise.resolve(loadPeople()),
+      ]);
+      if (remote.length || local.length) {
+        const mergedPeople = mergeCourseSnapshots(local, remote);
+        const nextPeople = mergedPeople.filter((entry) => entry && typeof entry === 'object' && entry.id);
+        setPeople(nextPeople);
+        savePeople(nextPeople);
+        savePeopleRemote(nextPeople).catch(() => {});
+        syncPeopleToCourses(nextPeople);
       }
     })();
   }, []);
